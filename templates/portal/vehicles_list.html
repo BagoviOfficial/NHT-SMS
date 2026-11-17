@@ -1,0 +1,78 @@
+{% extends "portal/base_portal.html" %}
+
+{% block title %}My Registered Vehicles{% endblock %}
+
+{% block portal_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1 text-nht-navy">Registered Fleet</h4>
+        <p class="text-muted small mb-0">Monitor compliance, download digital SACCO cards, and request renewals.</p>
+    </div>
+    <a href="{% url 'portal:vehicle_register' %}" class="btn btn-nht-primary">
+        <i class="bi bi-plus-circle me-1"></i> Add New Vehicle
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light small">
+                <tr>
+                    <th>Registration Plate</th>
+                    <th>Make & Model</th>
+                    <th>Category</th>
+                    <th>Capacity</th>
+                    <th>Compliance Status</th>
+                    <th>SACCO Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in vehicles_data %}
+                    <tr>
+                        <td class="fw-bold text-nht-navy">
+                            <i class="bi bi-truck me-2 text-primary"></i>{{ item.vehicle.registration_number }}
+                        </td>
+                        <td>{{ item.vehicle.make }} {{ item.vehicle.model }} ({{ item.vehicle.year_of_manufacture }})</td>
+                        <td><span class="badge bg-light text-dark border">{{ item.vehicle.get_category_display }}</span></td>
+                        <td>{{ item.vehicle.carrying_capacity }} Seats</td>
+                        <td>
+                            {% if item.compliance.status == 'FULLY_COMPLIANT' %}
+                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Fully Compliant</span>
+                            {% elif item.compliance.status == 'EXPIRING_SOON' %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i> Expiring Soon</span>
+                            {% else %}
+                                <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i> Non-Compliant</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.vehicle.status == 'ACTIVE' %}
+                                <span class="badge bg-success-subtle text-success">Active</span>
+                            {% elif item.vehicle.status == 'PENDING' %}
+                                <span class="badge bg-warning-subtle text-warning">Pending Review</span>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary">{{ item.vehicle.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'portal:vehicle_card' item.vehicle.id %}" class="btn btn-sm btn-outline-secondary me-1" title="Digital SACCO Card" target="_blank">
+                                <i class="bi bi-qr-code"></i> Card
+                            </a>
+                            <a href="{% url 'portal:vehicle_detail' item.vehicle.id %}" class="btn btn-sm btn-outline-primary">
+                                Details
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-truck-flatbed fs-1 d-block mb-3 text-muted"></i>
+                            You currently have no registered vehicles. Click "Add New Vehicle" to register a fleet unit.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+# ==============================================================================
+# Git Ignore for NHT-SMS (Northern Highways Transporters SACCO)
+# ==============================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local environment & secrets (Never commit live credentials)
+.env
+.env.production
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+
+# Database & Automated Backups
+*.sqlite3
+*.db
+backups/
+*.sql.gz
+*.tar.gz
+
+# Media Vaults & Uploads
+media/private/*
+media/public/*
+!media/private/.gitkeep
+!media/public/.gitkeep
+
+# Collected Static Assets (Collected dynamically via collectstatic in production)
+staticfiles/
+
+# Testing & Coverage Caches
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# Editor & OS Temporary Files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node / NPM
+node_modules/
+npm-debug.log

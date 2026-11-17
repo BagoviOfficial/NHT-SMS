@@ -1,0 +1,111 @@
+{% extends "portal/base_portal.html" %}
+
+{% block title %}Communication Preferences{% endblock %}
+
+{% block portal_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1 text-nht-navy">Communication Settings</h4>
+        <p class="text-muted small mb-0">Configure your alert channels and notification categories.</p>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+        <form method="post" action="{% url 'portal:preferences' %}">
+            {% csrf_token %}
+            <h6 class="fw-bold text-nht-navy mb-3"><i class="bi bi-broadcast me-2"></i> Active Delivery Channels</h6>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="form-check form-switch p-3 border rounded">
+                        <input class="form-check-input ms-0 me-3" type="checkbox" name="sms_enabled" id="smsCheck" {% if preferences.sms_enabled %}checked{% endif %}>
+                        <label class="form-check-label fw-semibold" for="smsCheck">
+                            SMS Messaging (Africa's Talking)
+                            <div class="text-muted small fw-normal">Direct mobile alerts to {{ member.phone_number }}</div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-check form-switch p-3 border rounded">
+                        <input class="form-check-input ms-0 me-3" type="checkbox" name="whatsapp_enabled" id="waCheck" {% if preferences.whatsapp_enabled %}checked{% endif %}>
+                        <label class="form-check-label fw-semibold" for="waCheck">
+                            WhatsApp Business (Meta Cloud API)
+                            <div class="text-muted small fw-normal">Instant updates via official WhatsApp template messages</div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-check form-switch p-3 border rounded">
+                        <input class="form-check-input ms-0 me-3" type="checkbox" name="email_enabled" id="emailCheck" {% if preferences.email_enabled %}checked{% endif %}>
+                        <label class="form-check-label fw-semibold" for="emailCheck">
+                            Email Notifications
+                            <div class="text-muted small fw-normal">Statements, receipts, and compliance letters to {{ member.email }}</div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-check form-switch p-3 border rounded">
+                        <input class="form-check-input ms-0 me-3" type="checkbox" name="in_app_enabled" id="inAppCheck" {% if preferences.in_app_enabled %}checked{% endif %}>
+                        <label class="form-check-label fw-semibold" for="inAppCheck">
+                            In-App Notification Centre
+                            <div class="text-muted small fw-normal">Portal inbox alerts and dashboard notices</div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <h6 class="fw-bold text-nht-navy mb-3"><i class="bi bi-bell me-2"></i> Category Alerts</h6>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="form-check p-3 border rounded">
+                        <input class="form-check-input ms-1 me-3" type="checkbox" name="compliance_alerts" id="compAlertCheck" {% if preferences.compliance_alerts %}checked{% endif %}>
+                        <label class="form-check-label fw-semibold" for="compAlertCheck">
+                            Regulatory Expiry Reminders
+                            <div class="text-muted small fw-normal">30-day, 14-day, 7-day, and same-day permit expiry alerts</div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-check p-3 border rounded">
+                        <input class="form-check-input ms-1 me-3" type="checkbox" name="billing_alerts" id="billAlertCheck" {% if preferences.billing_alerts %}checked{% endif %}>
+                        <label class="form-check-label fw-semibold" for="billAlertCheck">
+                            Billing & Invoicing Alerts
+                            <div class="text-muted small fw-normal">Instant notifications when invoices are generated or due</div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-check p-3 border rounded">
+                        <input class="form-check-input ms-1 me-3" type="checkbox" name="renewal_alerts" id="renAlertCheck" {% if preferences.renewal_alerts %}checked{% endif %}>
+                        <label class="form-check-label fw-semibold" for="renAlertCheck">
+                            Document Renewal Milestones
+                            <div class="text-muted small fw-normal">Updates on submission, invoice payment, and certificate upload</div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-check p-3 border rounded">
+                        <input class="form-check-input ms-1 me-3" type="checkbox" name="announcements" id="annAlertCheck" {% if preferences.announcements %}checked{% endif %}>
+                        <label class="form-check-label fw-semibold" for="annAlertCheck">
+                            SACCO Announcements & General Notices
+                            <div class="text-muted small fw-normal">Executive communiques, AGM notices, and operational changes</div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-end">
+                <button type="submit" class="btn btn-nht-primary px-4">
+                    <i class="bi bi-save me-1"></i> Save Preferences
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

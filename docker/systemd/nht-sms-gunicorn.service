@@ -1,0 +1,24 @@
+[Unit]
+Description=Gunicorn daemon for NHT-SMS (Northern Highways Transporters SACCO)
+After=network.target postgresql.service redis-server.service
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+RuntimeDirectory=nht-sms
+WorkingDirectory=/var/www/nht-sms
+EnvironmentFile=/var/www/nht-sms/.env.production
+ExecStart=/var/www/nht-sms/venv/bin/gunicorn \
+          --config /var/www/nht-sms/docker/gunicorn.conf.py \
+          --bind unix:/run/nht-sms/gunicorn.sock \
+          nht_sacco.config.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=30
+PrivateTmp=true
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

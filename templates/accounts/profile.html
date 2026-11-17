@@ -1,0 +1,108 @@
+{% extends 'base/base.html' %}
+
+{% block title %}User Profile{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-navy text-white py-3 d-flex justify-content-between align-items-center" style="background-color: var(--nht-navy);">
+                <h5 class="mb-0"><i class="bi bi-person-badge-fill me-2 text-warning"></i> User Profile & Security Overview</h5>
+                <span class="badge bg-warning text-dark">{{ user.get_role_display }}</span>
+            </div>
+            <div class="card-body p-4">
+                <div class="row mb-3">
+                    <div class="col-sm-4 text-muted fw-semibold">Username:</div>
+                    <div class="col-sm-8 fw-bold">{{ user.username }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-4 text-muted fw-semibold">Full Name:</div>
+                    <div class="col-sm-8">{{ user.get_full_name|default:"Not specified" }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-4 text-muted fw-semibold">Email Address:</div>
+                    <div class="col-sm-8">{{ user.email }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-4 text-muted fw-semibold">Phone Number:</div>
+                    <div class="col-sm-8">{{ user.phone_number|default:"Not registered" }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-4 text-muted fw-semibold">National ID / Passport:</div>
+                    <div class="col-sm-8">{{ user.national_id|default:"Not registered" }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-4 text-muted fw-semibold">Account Status:</div>
+                    <div class="col-sm-8">
+                        {% if user.is_active %}
+                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Active</span>
+                        {% else %}
+                            <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i> Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-4 text-muted fw-semibold">Last Login IP:</div>
+                    <div class="col-sm-8 font-monospace text-muted">{{ user.last_login_ip|default:"None recorded" }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-4 text-muted fw-semibold">Member Since:</div>
+                    <div class="col-sm-8">{{ user.date_joined|date:"d M Y, H:i" }}</div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="d-flex gap-2">
+                    <a href="{% url 'accounts:password_change' %}" class="btn btn-nht-primary">
+                        <i class="bi bi-key-fill me-1"></i> Change Password
+                    </a>
+                    {% if is_management %}
+                        <a href="{% url 'accounts:dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-speedometer2 me-1"></i> Management Dashboard
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Login History -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3 fw-bold text-muted small text-uppercase">
+                <i class="bi bi-clock-history me-1"></i> Recent Security Logins
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 small">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Status</th>
+                            <th>IP Address</th>
+                            <th>Device</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in user.login_records.all|slice:":5" %}
+                            <tr>
+                                <td>{{ record.timestamp|date:"d M Y, H:i" }}</td>
+                                <td>
+                                    {% if record.status == 'SUCCESS' %}
+                                        <span class="badge bg-success-subtle text-success">Success</span>
+                                    {% else %}
+                                        <span class="badge bg-danger-subtle text-danger">{{ record.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="font-monospace">{{ record.ip_address|default:"-" }}</td>
+                                <td class="text-truncate" style="max-width: 250px;">{{ record.user_agent|truncatechars:45 }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">No login records found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

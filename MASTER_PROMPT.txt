@@ -1,0 +1,1594 @@
+MASTER DEVELOPMENT PROMPT
+
+NORTHERN HIGHWAYS TRANSPORTERS SACCO MANAGEMENT SYSTEM (NHT-SMS)
+
+ROLE AND DEVELOPMENT MANDATE
+
+Act as a senior enterprise software architect, principal Django engineer, PostgreSQL database architect, cybersecurity engineer, UI/UX designer, financial systems engineer and quality assurance engineer.
+
+Your assignment is to design, develop, test, document and prepare for production deployment a comprehensive, secure, web-based application named:
+
+NORTHERN HIGHWAYS TRANSPORTERS SACCO MANAGEMENT SYSTEM (NHT-SMS)
+
+This is a standalone SACCO Enterprise Resource Planning (ERP) and Fleet Compliance Management System.
+
+The application must be production-oriented, modular, scalable, maintainable and secure by design.
+
+Do not produce a superficial demonstration, static dashboard, frontend-only prototype or collection of disconnected CRUD pages.
+
+Build a functional, database-backed application with properly connected business workflows, authentication, authorisation, financial transactions, background processing, notifications, audit logging and reporting.
+
+You are authorised to inspect the development environment, available integrations, installed dependencies and project files before selecting an implementation approach.
+
+Work systematically and verify each development stage.
+
+---
+
+1. CORE DEVELOPMENT PRINCIPLES
+
+Observe the following mandatory principles throughout development.
+
+1.1 Reuse established technologies
+
+Do not reinvent functionality that is already provided by mature, maintained and security-reviewed libraries.
+
+Before implementing any major feature:
+
+1. Search for established Django packages and maintained libraries.
+2. Inspect their documentation, compatibility, maintenance status and security history.
+3. Prefer official integrations and established open-source projects.
+4. Evaluate dependencies for known vulnerabilities.
+5. Use existing libraries where they adequately meet the requirements.
+6. Write custom application code only for business-specific functionality.
+
+Do not introduce unnecessary dependencies.
+
+Avoid abandoned packages, unmaintained repositories, unknown binaries and libraries with unresolved critical vulnerabilities.
+
+Maintain a dependency inventory and document why major dependencies were selected.
+
+1.2 Security-first engineering
+
+Security must be considered at every stage, not added after development.
+
+Apply secure development principles including:
+
+- Secure by default.
+- Least privilege.
+- Defence in depth.
+- Zero trust between application components.
+- Data minimisation.
+- Separation of duties.
+- Secure session management.
+- Explicit authorisation.
+- Fail-safe error handling.
+- Comprehensive auditability.
+
+Follow OWASP ASVS Level 2 as the principal application security verification target, with additional controls for sensitive financial and personal data.
+
+Use OWASP Top 10 guidance, OWASP API Security Top 10 and relevant secure coding standards.
+
+1.3 Modular monolithic architecture
+
+Develop the application as a modular Django monolith.
+
+Keep business domains separated into Django applications while maintaining a shared authentication and database foundation.
+
+Do not introduce microservices unnecessarily.
+
+The system must be capable of future API integration with other Northern Highways Transporters applications without requiring architectural reconstruction.
+
+1.4 Complete functionality
+
+Every major interface must connect to working backend functionality.
+
+Do not use hardcoded statistics, simulated payment confirmations, fabricated member records or static demonstration data in production functionality.
+
+Development fixtures and sample data must be clearly separated from production records.
+
+---
+
+2. PROJECT CONFIGURATION
+
+Project name: NHT-SMS
+
+Full name: Northern Highways Transporters SACCO Management System.
+
+Application type: Standalone web-based SACCO ERP.
+
+Deployment target: Ubuntu Linux VPS.
+
+Recommended stack:
+
+BACKEND:
+
+- Python.
+- Django.
+- Django REST Framework.
+
+DATABASE:
+
+- PostgreSQL.
+
+FRONTEND:
+
+- HTML5.
+- CSS3.
+- Bootstrap 5.
+- JavaScript.
+- HTMX where appropriate.
+- Alpine.js where appropriate.
+
+BACKGROUND PROCESSING:
+
+- Celery.
+- Redis.
+- Celery Beat.
+
+WEB SERVER:
+
+- Nginx.
+- Gunicorn.
+
+DOCUMENT GENERATION:
+
+- ReportLab or another maintained PDF generation library.
+- openpyxl for Excel exports.
+
+API DOCUMENTATION:
+
+- drf-spectacular or an equivalent maintained OpenAPI solution.
+
+CONTAINERISATION:
+
+- Docker.
+- Docker Compose.
+
+TESTING:
+
+- pytest.
+- pytest-django.
+- Factory Boy.
+- Coverage.py.
+- Playwright for browser-based end-to-end testing.
+
+Select compatible stable versions and lock dependencies.
+
+Do not blindly install the newest package versions without compatibility verification.
+
+---
+
+3. INITIAL ENVIRONMENT INSPECTION
+
+Before writing code:
+
+1. Inspect the current workspace.
+2. Determine whether an existing project is present.
+3. Inspect Python and PostgreSQL availability.
+4. Inspect available Node.js tooling.
+5. Identify existing environment variables and configuration.
+6. Inspect installed development tools and reusable integrations.
+7. Check whether Docker is available.
+8. Identify available SMS, WhatsApp and payment integration credentials without printing or exposing their values.
+9. Review existing project documentation.
+10. Produce a proposed implementation plan.
+
+Do not overwrite existing user files or repositories.
+
+Do not expose secrets in terminal output, logs or generated reports.
+
+Create a PROJECT_STATUS.md document describing the environment, identified dependencies, implementation stages and outstanding requirements.
+
+If a required external credential is unavailable, implement a secure integration adapter with an explicit configuration status. Never fabricate a successful connection.
+
+---
+
+4. PROJECT STRUCTURE
+
+Use the following proposed Django structure:
+
+nht_sacco/
+│
+├── config/
+│   ├── settings/
+│   │   ├── base.py
+│   │   ├── development.py
+│   │   ├── production.py
+│   │   └── testing.py
+│   ├── urls.py
+│   ├── asgi.py
+│   └── wsgi.py
+│
+├── apps/
+│   ├── accounts/
+│   ├── members/
+│   ├── membership/
+│   ├── vehicles/
+│   ├── drivers/
+│   ├── routes/
+│   ├── compliance/
+│   ├── documents/
+│   ├── renewals/
+│   ├── billing/
+│   ├── payments/
+│   ├── accounting/
+│   ├── notifications/
+│   ├── maintenance/
+│   ├── incidents/
+│   ├── governance/
+│   ├── reports/
+│   ├── audit/
+│   └── integrations/
+│
+├── templates/
+│   ├── base/
+│   ├── admin/
+│   ├── members/
+│   ├── finance/
+│   ├── compliance/
+│   └── reports/
+│
+├── static/
+├── media/
+├── tests/
+├── scripts/
+├── docs/
+├── requirements/
+├── docker/
+│
+├── manage.py
+├── Dockerfile
+├── docker-compose.yml
+├── .env.example
+├── .gitignore
+├── README.md
+└── SECURITY.md
+
+You may improve this structure when justified, but preserve clear modular boundaries.
+
+Use a custom Django user model from the initial migration.
+
+Do not defer the custom user model until after other applications have been created.
+
+---
+
+5. USER INTERFACES
+
+Build two principal portals.
+
+5.1 SACCO Management Portal
+
+Provide a professional administrative interface for:
+
+- Super administrators.
+- SACCO chairman.
+- SACCO secretary.
+- Treasurer.
+- Accountants.
+- Compliance officers.
+- Renewal officers.
+- Field officers.
+- Auditors.
+
+The management portal must have a responsive sidebar, navigation menu, dashboard widgets, searchable tables, filters, pagination, notifications and contextual actions.
+
+5.2 Member Self-Service Portal
+
+Every approved member must have a secure personal account.
+
+Members must be able to:
+
+- View their membership information.
+- Update permitted personal information.
+- View registered vehicles.
+- Register additional vehicles.
+- Upload required documents.
+- Monitor document expiry dates.
+- Request document renewals.
+- View invoices.
+- Pay invoices.
+- Download payment receipts.
+- Access account statements.
+- View transaction histories.
+- Receive notifications.
+- Submit complaints.
+- Track complaints and renewal applications.
+- Download digital membership cards.
+
+Members must never be able to access another member's personal, vehicle or financial records by manipulating URLs, API parameters or object identifiers.
+
+Implement object-level authorisation throughout the application.
+
+---
+
+6. UI/UX AND BRAND IDENTITY
+
+Use the Northern Highways Transporters brand identity.
+
+PRIMARY COLOURS:
+
+- Navy: #10315C
+- Blue: #1B4A8A
+- Orange: #FF8A00
+- White: #FFFFFF
+
+Use a clean, modern transport-management dashboard design.
+
+Design requirements:
+
+- Responsive desktop, tablet and mobile interfaces.
+- Consistent typography.
+- Accessible colour contrast.
+- Clear navigation.
+- Reusable components.
+- Consistent form validation.
+- Searchable data tables.
+- Pagination.
+- Confirmation dialogs for sensitive actions.
+- Loading states.
+- Empty states.
+- Error states.
+- Success notifications.
+- Accessible form labels.
+- Mobile-friendly tables.
+
+Use Bootstrap 5 components and existing libraries rather than building common UI elements from scratch.
+
+Do not compromise accessibility for decorative design.
+
+---
+
+7. FUNCTIONAL MODULES
+
+Develop and integrate the following modules.
+
+MODULE A: AUTHENTICATION AND USER MANAGEMENT
+
+Implement:
+
+- Secure login.
+- Logout.
+- Password reset.
+- Account activation.
+- Account suspension.
+- Password change.
+- Session management.
+- Role assignment.
+- Permission management.
+- Login history.
+- Optional multi-factor authentication.
+
+Evaluate established packages such as django-axes for login abuse protection and django-otp for MFA.
+
+Use Django's authentication framework and secure password hashing.
+
+Do not implement custom password hashing.
+
+Use secure session cookies, CSRF protection and appropriate session expiry.
+
+Support administrative account provisioning through controlled workflows.
+
+MODULE B: MEMBERSHIP MANAGEMENT
+
+Implement:
+
+- Member registration.
+- Membership applications.
+- Membership approval.
+- Unique membership numbers.
+- Member profiles.
+- Identification information.
+- Contact details.
+- Next-of-kin information.
+- Membership categories.
+- Membership fees.
+- Membership status.
+- Membership history.
+- Digital membership cards.
+- Multiple vehicles per member.
+
+Implement historical membership records.
+
+Prevent duplicate membership registration using appropriate validation and database constraints.
+
+Restrict access to national identification information.
+
+MODULE C: VEHICLE MANAGEMENT
+
+Implement vehicle registration and management.
+
+Capture:
+
+- Registration number.
+- Chassis number.
+- Engine number.
+- Make.
+- Model.
+- Year of manufacture.
+- Vehicle category.
+- Vehicle type.
+- Fuel type.
+- Carrying capacity.
+- Vehicle photographs.
+- Owner.
+- Assigned drivers.
+- Approved routes.
+- Registration status.
+
+Support:
+
+- Multiple vehicles per member.
+- Ownership transfers.
+- Vehicle suspension.
+- Vehicle reinstatement.
+- Vehicle history.
+- Vehicle search.
+- Vehicle QR identification.
+
+Maintain historical ownership relationships.
+
+MODULE D: DOCUMENT MANAGEMENT
+
+Support document categories including:
+
+- Vehicle inspection certificates.
+- Applicable KeNHA permits and road service licences.
+- Motor vehicle insurance.
+- NTSA-related documentation.
+- County permits.
+- Driver licences.
+- SACCO membership documents.
+- Other approved documentation.
+
+Each document must contain:
+
+- Document type.
+- Reference number.
+- Associated member, vehicle or driver.
+- Issue date.
+- Expiry date.
+- Uploaded file.
+- Uploading user.
+- Verification status.
+- Verification history.
+
+Implement document versioning.
+
+Do not overwrite old approved documents.
+
+Use private document storage.
+
+Documents must not be accessible through predictable public URLs.
+
+Use authorised download endpoints or short-lived signed URLs.
+
+MODULE E: COMPLIANCE MONITORING
+
+Build an automated compliance monitoring engine.
+
+Default reminder schedule:
+
+- 30 days before expiry.
+- 14 days before expiry.
+- 7 days before expiry.
+- 3 days before expiry.
+- On expiry.
+- After expiry.
+
+Allow authorised administrators to configure reminder intervals by document type.
+
+Implement:
+
+- Daily expiry checks.
+- Expired-document identification.
+- Upcoming-expiry identification.
+- Compliance dashboards.
+- Compliance history.
+- Notification tracking.
+- Compliance reports.
+
+The compliance engine must use document-specific expiry dates.
+
+Do not assume every regulatory document has the same validity period.
+
+Do not claim direct access to NTSA or KeNHA systems unless an authorised integration is available.
+
+MODULE F: BILLING AND INVOICING
+
+Build a proper billing system.
+
+Support:
+
+- Membership fees.
+- Vehicle registration fees.
+- Monthly subscriptions.
+- Annual subscriptions.
+- Document renewal processing fees.
+- Administrative charges.
+- Approved contributions.
+- Special levies.
+- Other configurable services.
+
+Implement:
+
+- Service catalogue.
+- Configurable service prices.
+- Effective pricing dates.
+- Invoice generation.
+- Invoice line items.
+- Unique invoice numbers.
+- Due dates.
+- Partial payments.
+- Outstanding balances.
+- Credit notes.
+- Invoice cancellation workflows.
+- PDF invoices.
+- Member account statements.
+
+Keep statutory government charges separate from SACCO service charges.
+
+Use Decimal arithmetic and PostgreSQL NUMERIC fields.
+
+Never use floating-point arithmetic for money.
+
+MODULE G: PAYMENT MANAGEMENT
+
+Implement M-Pesa integration using the official Safaricom Daraja API.
+
+Support, subject to account configuration:
+
+- STK Push.
+- PayBill.
+- Till.
+- C2B payment callbacks.
+- Transaction verification.
+- Payment reconciliation.
+
+Also support:
+
+- Bank transfers.
+- Manually recorded payments.
+- Cash payments where authorised.
+- Other approved channels.
+
+Payment processing requirements:
+
+1. Generate a unique internal payment reference.
+2. Initiate payment.
+3. Receive the provider response.
+4. Validate callback authenticity and transaction details.
+5. Prevent duplicate processing.
+6. Record payment status.
+7. Allocate the payment to the correct invoice.
+8. Update invoice balances transactionally.
+9. Generate a receipt.
+10. Record the event in the audit log.
+
+Implement idempotency keys and database transactions.
+
+Never trust the amount or payment status supplied by an unauthenticated browser request.
+
+Never mark an invoice paid merely because an STK Push request was initiated.
+
+Implement payment reversals and refunds through controlled workflows.
+
+Do not store M-Pesa PINs, bank credentials or unnecessary payment secrets.
+
+MODULE H: RENEWAL MANAGEMENT
+
+Implement the complete renewal workflow.
+
+Member submits request.
+Renewal officer reviews request.
+Invoice is generated.
+Member makes payment.
+Payment is verified.
+Renewal is processed.
+Updated document is uploaded.
+Compliance verification is performed.
+Renewal is approved.
+New expiry date is recorded.
+Member receives notification.
+
+Maintain the complete history.
+
+Support rejection, resubmission and cancellation.
+
+MODULE I: DRIVER MANAGEMENT
+
+Implement:
+
+- Driver registration.
+- Identification information.
+- Contact details.
+- Driving licence information.
+- Licence expiry monitoring.
+- Driver assignments.
+- Driver history.
+- Emergency contacts.
+- Driver status.
+
+A driver may have different historical vehicle assignments.
+
+MODULE J: ROUTE MANAGEMENT
+
+Implement:
+
+- Route registration.
+- Route origin.
+- Route destination.
+- Intermediate stops.
+- Vehicle assignment.
+- Route authorisation.
+- Route status.
+- Assignment history.
+- Route-based reporting.
+
+MODULE K: ACCOUNTING
+
+Implement a proper double-entry accounting foundation.
+
+Support:
+
+- Chart of accounts.
+- Journal entries.
+- Journal lines.
+- General ledger.
+- Cashbook.
+- Bank accounts.
+- Accounts receivable.
+- Revenue records.
+- Expense records.
+- Expense approvals.
+- Payment reconciliation.
+- Financial periods.
+- Trial balance.
+- Income and expenditure reports.
+- Balance sheet reporting.
+
+Financial requirements:
+
+- Every posted journal entry must balance.
+- Debit total must equal credit total.
+- Posted transactions must not be silently edited or deleted.
+- Corrections must use reversal or adjustment entries.
+- Enforce financial period restrictions.
+- Maintain transaction references.
+- Separate duties for payment recording and approval.
+
+Do not build a superficial accounting interface that does not implement actual ledger integrity.
+
+MODULE L: MAINTENANCE MANAGEMENT
+
+Implement:
+
+- Vehicle service history.
+- Maintenance schedules.
+- Repair requests.
+- Maintenance providers.
+- Maintenance expenses.
+- Spare parts records.
+- Vehicle downtime.
+- Preventive maintenance notifications.
+
+MODULE M: INCIDENT AND COMPLAINT MANAGEMENT
+
+Implement:
+
+- Incident submission.
+- Complaint submission.
+- Incident categories.
+- Priority levels.
+- Supporting attachments.
+- Assigned officers.
+- Investigation notes.
+- Status tracking.
+- Resolution records.
+- Closure dates.
+
+Restrict sensitive complaint information.
+
+MODULE N: QR VERIFICATION
+
+Generate a unique QR code for each registered vehicle.
+
+The QR code should reference an unguessable verification token.
+
+The verification page should expose only:
+
+- Vehicle registration number.
+- SACCO membership status.
+- Vehicle status.
+- Compliance status.
+- Verification timestamp.
+
+Do not expose member national ID numbers, phone numbers, financial information or uploaded documents.
+
+Allow administrators to revoke or regenerate QR tokens.
+
+MODULE O: NOTIFICATIONS
+
+Implement notification channels through provider adapters.
+
+SMS:
+
+- Africa's Talking integration.
+
+WhatsApp:
+
+- Official Meta WhatsApp Business Cloud API.
+
+Email:
+
+- SMTP or another configured transactional email provider.
+
+In-app:
+
+- Internal notification centre.
+
+Implement:
+
+- Notification templates.
+- Delivery logs.
+- Retry handling.
+- Failure reporting.
+- Member communication preferences.
+- Delivery status tracking.
+- Notification history.
+
+Do not hardcode provider credentials.
+
+Provide integration health checks.
+
+Use background jobs for dispatch.
+
+Respect WhatsApp opt-in and template requirements and applicable messaging rules.
+
+MODULE P: GOVERNANCE
+
+Implement:
+
+- Committee records.
+- Meeting schedules.
+- Meeting agendas.
+- Meeting minutes.
+- Resolutions.
+- Assigned actions.
+- Approval workflows.
+- Policy documents.
+
+MODULE Q: REPORTING AND ANALYTICS
+
+Create a central management dashboard.
+
+Display:
+
+- Total members.
+- Active members.
+- Registered vehicles.
+- Vehicle categories.
+- Compliant vehicles.
+- Expiring documents.
+- Expired documents.
+- Outstanding invoices.
+- Revenue collected.
+- Monthly income.
+- Expenditure.
+- Pending renewals.
+- Payment channel statistics.
+- Vehicle distribution by route.
+- Membership growth.
+
+Support filtering by date, vehicle category, route and membership status.
+
+Implement PDF and Excel exports.
+
+Ensure exported reports respect the requesting user's permissions.
+
+---
+
+8. DATABASE ARCHITECTURE
+
+Use PostgreSQL.
+
+Design a normalised relational database.
+
+Use UUID primary keys for major entities.
+
+Use foreign keys and database constraints.
+
+Use unique constraints where necessary.
+
+Use Decimal/NUMERIC fields for financial records.
+
+Use appropriate indexes for frequently searched fields.
+
+Recommended database entities include:
+
+IDENTITY:
+
+- users
+- roles
+- permissions
+- user_roles
+- role_permissions
+
+MEMBERSHIP:
+
+- members
+- membership_categories
+- membership_applications
+- member_documents
+- member_contacts
+- membership_history
+
+FLEET:
+
+- vehicles
+- vehicle_categories
+- vehicle_ownership
+- vehicle_photos
+- vehicle_status_history
+- vehicle_qr_codes
+
+COMPLIANCE:
+
+- document_types
+- vehicle_documents
+- document_files
+- document_verifications
+- inspection_records
+- compliance_alerts
+
+DRIVERS AND ROUTES:
+
+- drivers
+- driver_documents
+- driver_assignments
+- routes
+- route_stops
+- vehicle_routes
+
+RENEWALS:
+
+- renewal_requests
+- renewal_request_files
+- renewal_approvals
+- renewal_history
+
+FINANCE:
+
+- service_categories
+- service_prices
+- invoices
+- invoice_items
+- payments
+- payment_allocations
+- payment_callbacks
+- receipts
+- credit_notes
+- refunds
+- accounts
+- journal_entries
+- journal_lines
+- expenses
+- expense_approvals
+- financial_periods
+- bank_accounts
+- bank_transactions
+
+COMMUNICATIONS:
+
+- notification_templates
+- notifications
+- notification_recipients
+- notification_logs
+- communication_preferences
+
+OPERATIONS:
+
+- maintenance_records
+- maintenance_schedules
+- incidents
+- incident_updates
+
+GOVERNANCE:
+
+- committee_members
+- meetings
+- meeting_minutes
+- resolutions
+- resolution_actions
+
+SECURITY:
+
+- audit_logs
+- login_history
+- integration_settings
+- system_settings
+
+Add additional tables where justified.
+
+Avoid storing the same business information redundantly.
+
+Use Django migrations and preserve migration history.
+
+Implement database-level integrity constraints.
+
+Do not create an unnecessarily generic entity model when dedicated relational models are more appropriate.
+
+---
+
+9. SECURITY REQUIREMENTS — CRITICAL
+
+Security is a mandatory architectural requirement.
+
+The application will process personal identification details, contact information, financial records, vehicle ownership information and regulatory documents.
+
+Treat this information as sensitive.
+
+9.1 Authentication
+
+Use Django's established authentication system.
+
+Requirements:
+
+- Secure password hashing.
+- Strong password policy.
+- Login rate limiting.
+- Account lockout or progressive throttling.
+- Secure password reset.
+- Session expiry.
+- Session invalidation after password changes.
+- Optional MFA.
+- Secure cookies.
+- Protection against session fixation.
+
+Never store passwords in plaintext.
+
+Never log passwords, authentication tokens or session cookies.
+
+9.2 Authorisation
+
+Implement granular RBAC and object-level permissions.
+
+Check authorisation on the backend for every sensitive request.
+
+Do not rely on hiding frontend buttons.
+
+Prevent insecure direct object references.
+
+Test that members cannot access another member's:
+
+- Personal information.
+- Vehicles.
+- Documents.
+- Invoices.
+- Payments.
+- Statements.
+- Complaints.
+
+Require additional permissions for financial adjustments, approvals, exports and administrative actions.
+
+9.3 Data encryption
+
+Use HTTPS/TLS for all production connections.
+
+Encrypt sensitive stored information where appropriate.
+
+Protect:
+
+- National identification numbers.
+- Sensitive personal information.
+- Integration credentials.
+- Private documents.
+- Backup archives.
+
+Use managed secrets or environment-based secret injection.
+
+Do not commit ".env" files.
+
+Do not expose secret values in generated source code.
+
+Consider field-level encryption for especially sensitive identity information, with secure key management and a documented rotation strategy.
+
+9.4 Application security
+
+Protect against:
+
+- SQL injection.
+- Cross-site scripting.
+- Cross-site request forgery.
+- Broken access control.
+- Insecure direct object references.
+- Server-side request forgery.
+- File upload attacks.
+- Path traversal.
+- Session hijacking.
+- Clickjacking.
+- Brute-force attacks.
+- Mass assignment.
+- Unsafe deserialisation.
+- API abuse.
+- Sensitive data exposure.
+
+Use Django ORM safely.
+
+Validate uploaded files by actual content, not filename extension alone.
+
+Set upload size limits.
+
+Reject executable files.
+
+Use private storage.
+
+Apply appropriate security headers and Content Security Policy.
+
+9.5 Audit logging
+
+Maintain comprehensive audit trails for:
+
+- Login attempts.
+- User creation.
+- Role changes.
+- Member record changes.
+- Vehicle ownership changes.
+- Document uploads.
+- Document approvals.
+- Invoice creation.
+- Invoice adjustments.
+- Payment recording.
+- Payment reversals.
+- Expense approvals.
+- Data exports.
+- Administrative configuration changes.
+
+Each audit entry should capture:
+
+- Actor.
+- Action.
+- Entity.
+- Timestamp.
+- Relevant record identifier.
+- Outcome.
+- Appropriate change metadata.
+
+Avoid recording secrets or unnecessary personal information in logs.
+
+Audit records should be protected from modification by ordinary administrators.
+
+9.6 Privacy and data protection
+
+Implement controls consistent with Kenya's Data Protection Act, 2019 and applicable regulations.
+
+Provide:
+
+- Privacy notices.
+- Purpose limitation.
+- Data minimisation.
+- Configurable retention policies.
+- Secure deletion workflows.
+- Member data access procedures.
+- Data correction procedures.
+- Access logging.
+- Breach response procedures.
+- Controlled data exports.
+
+Do not assume consent is the only lawful basis for every processing activity. Support appropriate lawful-basis documentation.
+
+Assess whether the SACCO requires registration with the Office of the Data Protection Commissioner and whether a data protection impact assessment is necessary.
+
+9.7 Backups and disaster recovery
+
+Implement:
+
+- Automated PostgreSQL backups.
+- Encrypted backup storage.
+- Backup retention policies.
+- Off-server backup copies.
+- Document storage backups.
+- Restoration testing.
+- Disaster recovery documentation.
+
+Never consider a backup successful merely because a backup command completed.
+
+Test actual restoration.
+
+---
+
+10. RECOMMENDED EXISTING PACKAGES AND LIBRARIES
+
+Evaluate and reuse established packages.
+
+Do not install every package automatically. Verify compatibility and maintenance before adoption.
+
+Requirement| Recommended package
+Core framework| Django
+REST API| djangorestframework
+API documentation| drf-spectacular
+Authentication| Django authentication framework
+MFA| django-otp
+Login abuse protection| django-axes
+Background tasks| Celery
+Task scheduler| django-celery-beat
+Cache and broker| Redis
+Environment configuration| django-environ
+Filtering| django-filter
+CORS| django-cors-headers, if needed
+PDF generation| ReportLab
+Excel generation| openpyxl
+QR codes| Segno or qrcode
+Image validation| Pillow
+Test framework| pytest and pytest-django
+Test factories| Factory Boy
+Coverage| Coverage.py
+Browser testing| Playwright
+PostgreSQL driver| psycopg
+Error monitoring| Sentry SDK, if configured
+Static file handling| WhiteNoise or Nginx
+HTML interactions| HTMX
+UI framework| Bootstrap 5
+Icons| Bootstrap Icons or Lucide
+
+Use official Safaricom Daraja documentation and established HTTP libraries for M-Pesa.
+
+Use official Meta WhatsApp Business Cloud API documentation.
+
+Use Africa's Talking official documentation for SMS.
+
+Do not use unofficial WhatsApp automation libraries, browser scraping or personal WhatsApp account automation.
+
+---
+
+11. PAYMENT AND FINANCIAL INTEGRITY
+
+This section is especially important.
+
+Implement a transaction-safe financial architecture.
+
+Every payment must have:
+
+- Internal transaction UUID.
+- Payment provider.
+- Provider transaction reference.
+- Member.
+- Amount.
+- Currency.
+- Payment status.
+- Transaction timestamp.
+- Reconciliation status.
+
+Enforce uniqueness for provider transaction references.
+
+Use database transactions for invoice settlement.
+
+Use idempotency to ensure repeated callbacks cannot create duplicate payments.
+
+Implement a reconciliation interface for finance personnel.
+
+Manual payment recording must require:
+
+- Payment method.
+- Amount.
+- Reference number where available.
+- Supporting evidence where required.
+- Recording officer.
+- Verification officer.
+- Timestamp.
+
+A payment must not be considered verified merely because a member uploads a screenshot.
+
+Implement maker-checker approval for sensitive financial operations.
+
+---
+
+12. BACKGROUND TASKS AND AUTOMATION
+
+Use Celery and Redis.
+
+Implement scheduled tasks for:
+
+- Daily compliance checks.
+- Document expiry reminders.
+- Overdue invoice reminders.
+- Renewal status notifications.
+- Payment reconciliation.
+- Monthly statements.
+- Financial summaries.
+- Database backup monitoring.
+- Notification delivery retries.
+
+Tasks must be idempotent and safely retryable.
+
+Failed jobs must be logged and visible to authorised administrators.
+
+Do not silently discard failed financial or notification tasks.
+
+Implement a task monitoring dashboard or use an established monitoring solution.
+
+---
+
+13. TESTING AND QUALITY ASSURANCE
+
+Testing is mandatory.
+
+Create unit tests, integration tests, API tests, security tests and end-to-end tests.
+
+At minimum, test:
+
+Authentication tests
+
+- Login.
+- Logout.
+- Password reset.
+- MFA, if enabled.
+- Login throttling.
+- Session expiry.
+
+Authorisation tests
+
+- Member isolation.
+- Administrator permissions.
+- Accountant permissions.
+- Compliance officer permissions.
+- Auditor read-only access.
+- Object-level API access.
+
+Membership tests
+
+- Registration.
+- Duplicate prevention.
+- Approval.
+- Suspension.
+- Multiple vehicle ownership.
+
+Compliance tests
+
+- Expiry calculations.
+- Reminder scheduling.
+- Duplicate notification prevention.
+- Document verification.
+- Historical versions.
+
+Financial tests
+
+- Invoice calculations.
+- Partial payments.
+- Multiple invoice allocation.
+- Duplicate payment callback protection.
+- Refunds.
+- Journal balancing.
+- Reconciliation.
+- Concurrent payment processing.
+
+Integration tests
+
+- M-Pesa sandbox.
+- SMS sandbox or test mode.
+- WhatsApp test environment.
+- Email delivery.
+- PDF generation.
+- Excel exports.
+
+Browser tests
+
+- Member registration.
+- Login.
+- Vehicle registration.
+- Document upload.
+- Renewal application.
+- Invoice payment.
+- Receipt download.
+- Administrator workflows.
+
+Never use real financial transactions in automated tests.
+
+Use mock providers and official sandbox environments.
+
+Produce a test report.
+
+Do not claim a feature is tested when only its frontend has been tested.
+
+---
+
+14. DEPLOYMENT ARCHITECTURE
+
+Prepare the application for Ubuntu VPS deployment.
+
+Recommended deployment components:
+
+- Ubuntu LTS.
+- Nginx.
+- Gunicorn.
+- Django.
+- PostgreSQL.
+- Redis.
+- Celery worker.
+- Celery Beat.
+- HTTPS using Let's Encrypt or an equivalent certificate authority.
+- Docker Compose where appropriate.
+
+Provide:
+
+- Dockerfile.
+- docker-compose.yml.
+- Production environment example.
+- Nginx configuration.
+- Gunicorn configuration.
+- Database migration instructions.
+- Static file collection.
+- Backup scripts.
+- Restoration scripts.
+- Health-check endpoints.
+- Deployment instructions.
+- Rollback instructions.
+
+Run Django deployment checks.
+
+Production must not use DEBUG=True.
+
+Use a dedicated non-root application user.
+
+Do not expose PostgreSQL or Redis publicly.
+
+Restrict network access.
+
+Use separate development, testing and production configurations.
+
+Never deploy with sample credentials or debug secrets.
+
+---
+
+15. DOCUMENTATION REQUIREMENTS
+
+Generate the following documents:
+
+1. README.md
+2. PROJECT_STATUS.md
+3. SYSTEM_ARCHITECTURE.md
+4. DATABASE_SCHEMA.md
+5. API_DOCUMENTATION.md
+6. USER_ROLES_AND_PERMISSIONS.md
+7. SECURITY.md
+8. PRIVACY_AND_DATA_RETENTION.md
+9. PAYMENT_INTEGRATION.md
+10. NOTIFICATION_INTEGRATION.md
+11. DEPLOYMENT_GUIDE.md
+12. BACKUP_AND_DISASTER_RECOVERY.md
+13. TESTING_REPORT.md
+14. TROUBLESHOOTING.md
+15. CHANGELOG.md
+
+Document all environment variables in ".env.example".
+
+Do not include actual credentials.
+
+---
+
+16. DEVELOPMENT EXECUTION STRATEGY
+
+Do not attempt to generate the entire application in one uncontrolled code-generation operation.
+
+Work in defined implementation stages.
+
+STAGE 1: PROJECT FOUNDATION
+
+- Inspect environment.
+- Create project structure.
+- Configure Django.
+- Configure PostgreSQL.
+- Create custom user model.
+- Configure authentication.
+- Implement RBAC.
+- Configure logging.
+- Configure testing.
+
+Deliverable: A functioning secure application foundation.
+
+STAGE 2: MEMBERSHIP AND FLEET
+
+- Membership management.
+- Membership approval.
+- Vehicle registration.
+- Vehicle ownership.
+- Driver management.
+- Route management.
+
+Deliverable: Fully connected membership and fleet modules.
+
+STAGE 3: COMPLIANCE AND DOCUMENTS
+
+- Private document storage.
+- Document uploads.
+- Document verification.
+- Expiry engine.
+- Automated compliance alerts.
+- QR verification.
+
+Deliverable: Working compliance management.
+
+STAGE 4: BILLING AND PAYMENTS
+
+- Service catalogue.
+- Billing.
+- Invoicing.
+- Payment processing.
+- M-Pesa sandbox integration.
+- Manual payments.
+- Receipts.
+- Reconciliation.
+
+Deliverable: Functional financial transaction workflows.
+
+STAGE 5: ACCOUNTING AND RENEWALS
+
+- Renewal requests.
+- Renewal approvals.
+- Accounting ledger.
+- Expenses.
+- Financial reports.
+- Audit trails.
+
+Deliverable: Operational finance and renewal management.
+
+STAGE 6: COMMUNICATION AND MEMBER PORTAL
+
+- SMS integration.
+- WhatsApp integration.
+- Email notifications.
+- Member self-service.
+- Member statements.
+- Announcements.
+
+Deliverable: Fully functional member portal and communications.
+
+STAGE 7: OPERATIONS AND GOVERNANCE
+
+- Maintenance.
+- Incident reporting.
+- Committee management.
+- Meeting records.
+- Resolutions.
+- Executive reporting.
+
+Deliverable: Complete SACCO operational management.
+
+STAGE 8: SECURITY HARDENING
+
+- Dependency vulnerability scanning.
+- Static analysis.
+- Dynamic security testing.
+- Access control testing.
+- File upload testing.
+- Payment security testing.
+- Backup restoration testing.
+- Production configuration review.
+
+Deliverable: Security verification report and remediation log.
+
+STAGE 9: PRODUCTION READINESS
+
+- Final regression testing.
+- Deployment configuration.
+- Database migration verification.
+- Backup configuration.
+- Health checks.
+- Documentation.
+- User acceptance testing.
+
+Deliverable: Production-ready release candidate.
+
+---
+
+17. DEVELOPMENT QUALITY GATES
+
+At the end of each stage:
+
+1. Run automated tests.
+2. Run Django system checks.
+3. Review database migrations.
+4. Run static analysis.
+5. Review dependency vulnerabilities.
+6. Check application logs.
+7. Verify permissions.
+8. Review frontend functionality.
+9. Update documentation.
+10. Record outstanding issues.
+
+Do not proceed past a stage with unresolved critical defects.
+
+Do not conceal failed tests or downgrade security warnings to make a stage appear successful.
+
+Maintain a development checklist.
+
+---
+
+18. DEFINITION OF DONE
+
+The project is not complete merely because the application starts successfully.
+
+The system will be considered ready for production review only when:
+
+- All core modules are implemented.
+- Database migrations are stable.
+- User authentication works.
+- Role-based access is enforced.
+- Members can only access authorised records.
+- Vehicle registration works.
+- Document uploads are secure.
+- Expiry monitoring works.
+- SMS and WhatsApp integrations are configured and tested.
+- Invoices are generated correctly.
+- M-Pesa sandbox transactions work.
+- Manual payments are auditable.
+- Financial postings balance.
+- Renewal workflows work.
+- Reports produce accurate results.
+- Security testing has been performed.
+- Automated tests pass.
+- Backups can be restored.
+- Deployment documentation is complete.
+- No unresolved critical or high-severity security issues remain.
+
+Production release requires authorised human review of the security report, financial controls and external integrations.
+
+---
+
+19. IMPORTANT DEVELOPMENT RESTRICTIONS
+
+Never:
+
+- Hardcode passwords or API credentials.
+- Use DEBUG=True in production.
+- Expose sensitive member records.
+- Trust frontend-only permissions.
+- Store uploaded documents in publicly accessible directories.
+- Mark payments successful without verification.
+- Delete posted financial transactions.
+- Expose national ID information through QR codes.
+- Invent external API capabilities.
+- Use unofficial WhatsApp automation.
+- Disable security controls to resolve development errors.
+- Ignore failed database migrations.
+- Install unmaintained packages without justification.
+- Use fake production statistics.
+- Commit secrets to Git.
+- Perform destructive production database operations without explicit approval.
+
+Do not execute destructive commands, drop databases, overwrite existing projects or modify production infrastructure without explicit authorisation.
+
+---
+
+20. FINAL INSTRUCTIONS TO ANTIGRAVITY
+
+Begin by inspecting the environment and producing the implementation plan.
+
+Then build the application stage by stage.
+
+Prioritise database integrity, security, financial accuracy and functional completeness.
+
+Use existing libraries, maintained plugins and official APIs wherever possible.
+
+Write clean, maintainable and documented code.
+
+Maintain a working project throughout development.
+
+After every implementation stage, report:
+
+1. What was implemented.
+2. Files and modules created or modified.
+3. Database migrations performed.
+4. Dependencies introduced.
+5. Tests executed.
+6. Test results.
+7. Security checks performed.
+8. Outstanding issues.
+9. Next implementation stage.
+
+Do not simply describe what you would build. Implement it.
+
+When credentials, external permissions or business decisions are missing, build the appropriate adapter or configuration interface, clearly document the dependency and request the required information rather than inventing a value.
+
+Your ultimate objective is to deliver a secure, fully functional and production-ready Northern Highways Transporters SACCO Management System that can reliably support real SACCO membership, fleet, compliance and financial operations.
+
+PROJECT PRIORITY: SECURITY FIRST. DATA INTEGRITY SECOND. FUNCTIONAL COMPLETENESS THIRD. PERFORMANCE AND USER EXPERIENCE THROUGHOUT.

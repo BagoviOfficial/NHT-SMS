@@ -1,0 +1,73 @@
+{% extends "portal/base_portal.html" %}
+
+{% block title %}Submit Support Ticket{% endblock %}
+
+{% block portal_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{% url 'portal:complaints' %}" class="small text-decoration-none mb-1 d-inline-block">
+            <i class="bi bi-arrow-left me-1"></i> Back to Tickets
+        </a>
+        <h4 class="fw-bold mb-0 text-nht-navy">Submit Inquiry or Grievance</h4>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+        <form method="post" action="{% url 'portal:complaint_submit' %}">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small text-muted">Category / Ticket Type <span class="text-danger">*</span></label>
+                    <select name="incident_type" class="form-select" required>
+                        {% for val, label in incident_types %}
+                            <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small text-muted">Severity Level <span class="text-danger">*</span></label>
+                    <select name="severity" class="form-select" required>
+                        {% for val, label in severities %}
+                            <option value="{{ val }}" {% if val == 'MEDIUM' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small text-muted">Associated Vehicle (Optional)</label>
+                    <select name="vehicle_id" class="form-select">
+                        <option value="">-- None / General Matter --</option>
+                        {% for v in vehicles %}
+                            <option value="{{ v.id }}">{{ v.registration_number }} &bull; {{ v.make }} {{ v.model }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small text-muted">Location / Stage of Occurrence (Optional)</label>
+                    <input type="text" name="location" class="form-control" placeholder="e.g. Isiolo Main Terminus, Marsabit Stage, A2 Highway">
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label fw-semibold small text-muted">Ticket Subject / Title <span class="text-danger">*</span></label>
+                    <input type="text" name="title" class="form-control" placeholder="Brief summary of your inquiry or grievance" required>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label fw-semibold small text-muted">Detailed Description <span class="text-danger">*</span></label>
+                    <textarea name="description" class="form-control" rows="4" placeholder="Provide complete details including dates, involved personnel, or billing references..." required></textarea>
+                </div>
+
+                <div class="col-12 mt-4 text-end">
+                    <a href="{% url 'portal:complaints' %}" class="btn btn-outline-secondary me-2">Cancel</a>
+                    <button type="submit" class="btn btn-nht-primary px-4">
+                        <i class="bi bi-send me-1"></i> Submit Ticket
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

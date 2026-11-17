@@ -1,0 +1,97 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Official Fleet Compliance Certificate | NHT-SMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{% static 'css/nht_brand.css' %}">
+</head>
+<body class="bg-light d-flex align-items-center py-5 min-vh-100">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8 col-sm-10">
+                <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+                    <!-- Branded Header -->
+                    <div class="p-4 text-center text-white" style="background-color: var(--nht-navy);">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-white rounded-circle p-3 mb-3 shadow" style="width: 70px; height: 70px;">
+                            <i class="bi bi-shield-check text-success fs-1"></i>
+                        </div>
+                        <h4 class="fw-bold mb-1">Northern Highways Transporters</h4>
+                        <p class="small text-white-50 mb-0">Official PSV Fleet Verification & Regulatory Status</p>
+                    </div>
+
+                    <!-- Body Status -->
+                    <div class="card-body p-4 text-center">
+                        <div class="display-6 fw-bold mb-1" style="color: var(--nht-navy); letter-spacing: 1.5px;">
+                            {{ vehicle.registration_number }}
+                        </div>
+                        <p class="text-muted small mb-4">{{ vehicle.make }} {{ vehicle.model }} &bull; {{ vehicle.get_category_display }}</p>
+
+                        <!-- Compliance Status Badge -->
+                        <div class="mb-4">
+                            {% if is_fully_compliant %}
+                                <div class="alert alert-success d-inline-flex align-items-center px-4 py-3 rounded-pill shadow-sm mb-0">
+                                    <i class="bi bi-check-circle-fill fs-3 me-3 text-success"></i>
+                                    <div class="text-start">
+                                        <div class="fw-bold text-uppercase fs-6">Fully Compliant</div>
+                                        <div class="small">All required NTSA, KeNHA & PSV permits are valid</div>
+                                    </div>
+                                </div>
+                            {% elif compliance.status == 'EXPIRING_SOON' %}
+                                <div class="alert alert-warning d-inline-flex align-items-center px-4 py-3 rounded-pill shadow-sm mb-0">
+                                    <i class="bi bi-exclamation-triangle-fill fs-3 me-3 text-warning"></i>
+                                    <div class="text-start">
+                                        <div class="fw-bold text-uppercase fs-6">Expiring Soon</div>
+                                        <div class="small">1 or more documents due for scheduled renewal</div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-danger d-inline-flex align-items-center px-4 py-3 rounded-pill shadow-sm mb-0">
+                                    <i class="bi bi-x-octagon-fill fs-3 me-3 text-danger"></i>
+                                    <div class="text-start">
+                                        <div class="fw-bold text-uppercase fs-6">Non-Compliant</div>
+                                        <div class="small">Regulatory permits expired or verification pending</div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Verification Attributes Table -->
+                        <div class="table-responsive text-start border rounded-3 p-3 mb-4 bg-white">
+                            <div class="row py-2 border-bottom">
+                                <div class="col-5 text-muted small fw-semibold">SACCO Membership:</div>
+                                <div class="col-7 small fw-bold text-success">
+                                    <i class="bi bi-patch-check-fill me-1"></i> Valid Active Member
+                                </div>
+                            </div>
+                            <div class="row py-2 border-bottom">
+                                <div class="col-5 text-muted small fw-semibold">Vehicle Service:</div>
+                                <div class="col-7 small fw-semibold">{{ vehicle.get_status_display }}</div>
+                            </div>
+                            <div class="row py-2 border-bottom">
+                                <div class="col-5 text-muted small fw-semibold">Passenger Capacity:</div>
+                                <div class="col-7 small">{{ vehicle.carrying_capacity }} Passengers</div>
+                            </div>
+                            <div class="row py-2">
+                                <div class="col-5 text-muted small fw-semibold">Verification Time:</div>
+                                <div class="col-7 small text-muted font-monospace">{{ verification_timestamp|date:"d M Y, H:i:s" }} EAT</div>
+                            </div>
+                        </div>
+
+                        <div class="text-muted small">
+                            <i class="bi bi-lock-fill me-1"></i> Digitally verified via NHT-SMS Cryptographic Token.
+                            <br>
+                            <span class="text-secondary" style="font-size: 0.75rem;">
+                                In accordance with the Kenya Data Protection Act 2019, personal owner identity details are restricted.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

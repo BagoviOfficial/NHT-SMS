@@ -1,0 +1,57 @@
+{% extends "portal/base_portal.html" %}
+
+{% block title %}My Payment Receipts{% endblock %}
+
+{% block portal_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1 text-nht-navy">Payment Receipts</h4>
+        <p class="text-muted small mb-0">Official verified receipts for all settled SACCO transactions.</p>
+    </div>
+    <a href="{% url 'portal:statement' %}" class="btn btn-outline-primary">
+        <i class="bi bi-file-earmark-spreadsheet me-1"></i> View Statement
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light small">
+                <tr>
+                    <th>Receipt #</th>
+                    <th>Date Issued</th>
+                    <th>Payment Ref</th>
+                    <th>Invoice #</th>
+                    <th>Payment Method</th>
+                    <th class="text-end">Amount Cleared</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in receipts %}
+                    <tr>
+                        <td class="fw-bold text-nht-navy">{{ r.receipt_number }}</td>
+                        <td>{{ r.issued_at|date:"Y-m-d H:i" }}</td>
+                        <td><code>{{ r.payment.provider_transaction_id|default:r.payment.payment_reference }}</code></td>
+                        <td>{{ r.payment.invoice.invoice_number }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ r.payment.get_payment_method_display }}</span></td>
+                        <td class="text-end fw-bold text-success">KES {{ r.amount_paid|floatformat:2 }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'payments:receipt_view' r.id %}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-printer me-1"></i> Print / PDF
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-receipt fs-1 d-block mb-3 text-muted"></i>
+                            No payment receipts recorded yet.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

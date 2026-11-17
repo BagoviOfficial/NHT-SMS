@@ -1,0 +1,100 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Official Payment Receipt - {{ receipt.receipt_number }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+        <div class="d-flex justify-content-between align-items-center mb-3 d-print-none">
+            <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back
+            </a>
+            <button onclick="window.print()" class="btn btn-nht-navy btn-sm">
+                <i class="bi bi-printer-fill me-1"></i> Print / Save as PDF
+            </button>
+        </div>
+
+        <div class="card shadow-sm border-0 p-4 p-md-5 bg-white rounded-3">
+            <!-- Receipt Header -->
+            <div class="border-bottom pb-4 mb-4">
+                <div class="row align-items-center">
+                    <div class="col-sm-8">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-truck-front-fill fs-2 text-warning me-2"></i>
+                            <h4 class="fw-bold mb-0" style="color: var(--nht-navy);">Northern Highways Transporters</h4>
+                        </div>
+                        <p class="text-muted small mb-0">SACCO Society Limited &bull; ERP Financial Secretariat</p>
+                        <p class="text-muted small mb-0">P.O. Box 450-60300, Isiolo, Kenya &bull; info@nhttransporters.co.ke</p>
+                    </div>
+                    <div class="col-sm-4 text-sm-end mt-3 mt-sm-0">
+                        <div class="badge bg-success-subtle text-success fs-6 px-3 py-2 border border-success">
+                            <i class="bi bi-patch-check-fill me-1"></i> OFFICIAL RECEIPT
+                        </div>
+                        <div class="small fw-bold text-muted mt-2">No: {{ receipt.receipt_number }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Receipt Details Grid -->
+            <div class="row mb-4">
+                <div class="col-sm-6 mb-3 mb-sm-0">
+                    <span class="text-muted small text-uppercase fw-semibold">Received From:</span>
+                    <div class="fw-bold fs-6">{{ receipt.payment.member.full_name }}</div>
+                    <div class="small text-muted">Member No: <span class="fw-semibold">{{ receipt.payment.member.membership_number }}</span></div>
+                    <div class="small text-muted">Phone: {{ receipt.payment.member.phone_number }}</div>
+                </div>
+                <div class="col-sm-6 text-sm-end">
+                    <span class="text-muted small text-uppercase fw-semibold">Payment Details:</span>
+                    <div class="small"><span class="text-muted">Date:</span> {{ receipt.issued_at|date:"d M Y, H:i" }} EAT</div>
+                    <div class="small"><span class="text-muted">Method:</span> <span class="badge bg-secondary">{{ receipt.payment.get_method_display }}</span></div>
+                    <div class="small"><span class="text-muted">Transaction Ref:</span> <span class="font-monospace fw-bold">{{ receipt.payment.provider_transaction_id|default:receipt.payment.payment_reference }}</span></div>
+                </div>
+            </div>
+
+            <!-- Payment Summary Table -->
+            <div class="table-responsive mb-4">
+                <table class="table table-bordered mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Description</th>
+                            <th>Invoice Reference</th>
+                            <th class="text-end">Amount Cleared</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Settlement of SACCO Services & Fleet Dues</td>
+                            <td class="font-monospace">{{ receipt.payment.invoice.invoice_number }}</td>
+                            <td class="text-end fw-bold">KES {{ receipt.payment.amount }}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="2" class="text-end text-uppercase">Total Cleared:</th>
+                            <th class="text-end fs-5 text-success">KES {{ receipt.payment.amount }}</th>
+                        </tr>
+                        <tr>
+                            <td colspan="2" class="text-end small text-muted">Invoice Outstanding Balance Due:</td>
+                            <td class="text-end font-monospace small fw-bold">KES {{ receipt.payment.invoice.balance_due }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- Footer Seal -->
+            <div class="border-top pt-3 d-flex justify-content-between align-items-center">
+                <div class="text-muted small">
+                    <i class="bi bi-shield-lock-fill text-success me-1"></i> System-generated verifiable electronic receipt.
+                    <br>
+                    <span style="font-size: 0.75rem;">Payment Reference: {{ receipt.payment.payment_reference }}</span>
+                </div>
+                <div class="text-end">
+                    <div class="fw-bold small text-muted">Authorized Financial Signature</div>
+                    <div class="text-muted" style="font-family: cursive; font-size: 1.1rem; color: var(--nht-navy);">Fatuma Mohamed</div>
+                    <div class="small text-muted" style="font-size: 0.75rem;">SACCO Treasury Office</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

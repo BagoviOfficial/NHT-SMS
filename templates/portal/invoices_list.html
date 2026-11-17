@@ -1,0 +1,78 @@
+{% extends "portal/base_portal.html" %}
+
+{% block title %}My Invoices & Billing{% endblock %}
+
+{% block portal_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1 text-nht-navy">Invoices & Billing History</h4>
+        <p class="text-muted small mb-0">Track all SACCO dues, regulatory fee billings, and payment settlements.</p>
+    </div>
+    <div>
+        <a href="{% url 'portal:statement' %}" class="btn btn-outline-primary me-2">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Full Statement
+        </a>
+        <a href="{% url 'portal:receipts' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-receipt me-1"></i> Receipts
+        </a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light small">
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Issue Date</th>
+                    <th>Due Date</th>
+                    <th>Vehicle</th>
+                    <th>Total Billed</th>
+                    <th>Paid</th>
+                    <th>Balance Due</th>
+                    <th>Status</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in invoices %}
+                    <tr>
+                        <td class="fw-bold text-nht-navy">{{ inv.invoice_number }}</td>
+                        <td>{{ inv.issue_date }}</td>
+                        <td>{{ inv.due_date }}</td>
+                        <td>{{ inv.vehicle.registration_number|default:"General / SACCO" }}</td>
+                        <td class="fw-semibold">KES {{ inv.total_amount|floatformat:2 }}</td>
+                        <td class="text-success">KES {{ inv.amount_paid|floatformat:2 }}</td>
+                        <td class="fw-bold {% if inv.balance_due > 0 %}text-danger{% else %}text-muted{% endif %}">
+                            KES {{ inv.balance_due|floatformat:2 }}
+                        </td>
+                        <td>
+                            {% if inv.status == 'PAID' %}
+                                <span class="badge bg-success">Paid in Full</span>
+                            {% elif inv.status == 'PARTIALLY_PAID' %}
+                                <span class="badge bg-info text-dark">Partially Paid</span>
+                            {% elif inv.status == 'CANCELLED' %}
+                                <span class="badge bg-secondary">Cancelled</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Pending Payment</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'portal:invoice_detail' inv.id %}" class="btn btn-sm btn-nht-primary">
+                                Details & Pay
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            <i class="bi bi-receipt-cutoff fs-1 d-block mb-3 text-muted"></i>
+                            No invoices issued to your account yet.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

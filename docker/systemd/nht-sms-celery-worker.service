@@ -1,0 +1,29 @@
+[Unit]
+Description=Celery Worker Daemon for NHT-SMS
+After=network.target postgresql.service redis-server.service
+
+[Service]
+Type=forking
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/nht-sms
+EnvironmentFile=/var/www/nht-sms/.env.production
+ExecStart=/var/www/nht-sms/venv/bin/celery multi start worker1 \
+          -A nht_sacco.config \
+          --pidfile=/run/nht-sms/%n.pid \
+          --logfile=/var/log/nht-sms/%n%I.log \
+          --loglevel=INFO \
+          --concurrency=4
+ExecStop=/var/www/nht-sms/venv/bin/celery multi stopwait worker1 \
+         --pidfile=/run/nht-sms/%n.pid
+ExecReload=/var/www/nht-sms/venv/bin/celery multi restart worker1 \
+           -A nht_sacco.config \
+           --pidfile=/run/nht-sms/%n.pid \
+           --logfile=/var/log/nht-sms/%n%I.log \
+           --loglevel=INFO \
+           --concurrency=4
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

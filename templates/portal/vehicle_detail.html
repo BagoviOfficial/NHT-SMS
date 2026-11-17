@@ -1,0 +1,130 @@
+{% extends "portal/base_portal.html" %}
+
+{% block title %}Vehicle {{ vehicle.registration_number }}{% endblock %}
+
+{% block portal_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{% url 'portal:vehicles' %}" class="small text-decoration-none mb-1 d-inline-block">
+            <i class="bi bi-arrow-left me-1"></i> Back to Fleet
+        </a>
+        <h4 class="fw-bold mb-0 text-nht-navy">{{ vehicle.registration_number }} Details</h4>
+    </div>
+    <div>
+        <a href="{% url 'portal:vehicle_card' vehicle.id %}" target="_blank" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-qr-code me-1"></i> Digital Card
+        </a>
+        <a href="{% url 'portal:renewal_apply' %}?vehicle_id={{ vehicle.id }}" class="btn btn-nht-primary">
+            <i class="bi bi-arrow-repeat me-1"></i> Renew Permits
+        </a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h6 class="fw-bold mb-0 text-nht-navy">Vehicle Specifications</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless small mb-0">
+                    <tr><th class="text-muted" style="width: 40%;">Registration:</th><td class="fw-bold">{{ vehicle.registration_number }}</td></tr>
+                    <tr><th class="text-muted">Make & Model:</th><td>{{ vehicle.make }} {{ vehicle.model }} ({{ vehicle.year_of_manufacture }})</td></tr>
+                    <tr><th class="text-muted">Category:</th><td>{{ vehicle.get_category_display }}</td></tr>
+                    <tr><th class="text-muted">Capacity:</th><td>{{ vehicle.carrying_capacity }} Passengers</td></tr>
+                    <tr><th class="text-muted">Chassis Number:</th><td><code>{{ vehicle.chassis_number }}</code></td></tr>
+                    <tr><th class="text-muted">Engine Number:</th><td><code>{{ vehicle.engine_number }}</code></td></tr>
+                    <tr><th class="text-muted">Fuel Type:</th><td>{{ vehicle.get_fuel_type_display }}</td></tr>
+                    <tr><th class="text-muted">Operational Status:</th><td><span class="badge bg-primary">{{ vehicle.get_status_display }}</span></td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h6 class="fw-bold mb-0 text-nht-navy">Compliance Engine Assessment</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center p-3 mb-3 rounded bg-light">
+                    {% if compliance.status == 'FULLY_COMPLIANT' %}
+                        <i class="bi bi-shield-check text-success display-5 d-block mb-2"></i>
+                        <h5 class="fw-bold text-success mb-1">Fully Compliant</h5>
+                        <p class="small text-muted mb-0">All mandatory regulatory permits and inspections are active.</p>
+                    {% elif compliance.status == 'EXPIRING_SOON' %}
+                        <i class="bi bi-exclamation-triangle text-warning display-5 d-block mb-2"></i>
+                        <h5 class="fw-bold text-warning mb-1">Permits Expiring Soon</h5>
+                        <p class="small text-muted mb-0">One or more mandatory regulatory certificates require renewal.</p>
+                    {% else %}
+                        <i class="bi bi-shield-slash text-danger display-5 d-block mb-2"></i>
+                        <h5 class="fw-bold text-danger mb-1">Non-Compliant / Sanctioned</h5>
+                        <p class="small text-muted mb-0">Vehicle possesses expired or missing mandatory documents.</p>
+                    {% endif %}
+                </div>
+
+                <div class="small">
+                    <strong>Mandatory Document Types:</strong>
+                    <ul class="list-unstyled mt-2">
+                        {% for dt in compliance.required_types %}
+                            <li class="mb-1"><i class="bi bi-check2 text-primary me-2"></i>{{ dt.name }} ({{ dt.issuing_authority }})</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3">
+        <h6 class="fw-bold mb-0 text-nht-navy">Uploaded Documents & Vault Records</h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light">
+                <tr>
+                    <th>Document Type</th>
+                    <th>Certificate / Ref #</th>
+                    <th>Issue Date</th>
+                    <th>Expiry Date</th>
+                    <th>Days Remaining</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in documents %}
+                    <tr>
+                        <td class="fw-semibold">{{ doc.document_type.name }}</td>
+                        <td>{{ doc.document_number|default:"N/A" }}</td>
+                        <td>{{ doc.issue_date }}</td>
+                        <td>{{ doc.expiry_date|default:"Permanent / N/A" }}</td>
+                        <td>
+                            {% if doc.expiry_date %}
+                                {% if doc.is_expired %}
+                                    <span class="text-danger fw-semibold">Expired</span>
+                                {% else %}
+                                    <span class="text-dark">{{ doc.days_until_expiry }} days</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">&mdash;</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if doc.is_verified %}
+                                <span class="badge bg-success">Verified</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Pending Verification</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">No documents uploaded for this vehicle.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

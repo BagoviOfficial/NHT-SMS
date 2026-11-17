@@ -1,0 +1,194 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Executive Analytics & Reporting{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-lg-4">
+    <!-- Header Section -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <div>
+            <h2 class="h3 fw-bold text-navy mb-1">
+                <i class="bi bi-graph-up-arrow text-primary me-2"></i>Executive Reporting & Operations Dashboard
+            </h2>
+            <p class="text-muted mb-0 small">Real-time SACCO performance metrics, fleet compliance status, and governance indicators.</p>
+        </div>
+        <div class="mt-2 mt-md-0 d-flex gap-2">
+            <a href="{% url 'reports:export_compliance_pdf' %}" class="btn btn-outline-danger btn-sm d-flex align-items-center shadow-sm">
+                <i class="bi bi-file-earmark-pdf me-1"></i> Export Compliance PDF
+            </a>
+            <a href="{% url 'reports:export_financial_excel' %}" class="btn btn-outline-success btn-sm d-flex align-items-center shadow-sm">
+                <i class="bi bi-file-earmark-excel me-1"></i> Export Financial Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- Top KPI Highlights -->
+    <div class="row g-3 mb-4">
+        <!-- Membership Card -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 bg-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-semibold">Active Members</span>
+                        <div class="bg-primary text-white rounded p-2 lh-1"><i class="bi bi-people-fill"></i></div>
+                    </div>
+                    <h3 class="fw-bold mb-1">{{ kpis.active_members }} <span class="fs-6 text-muted fw-normal">/ {{ kpis.total_members }}</span></h3>
+                    <div class="small text-muted">
+                        <span class="text-success fw-medium"><i class="bi bi-check-circle-fill"></i> {{ kpis.pending_members }} pending verification</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fleet Compliance Card -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 bg-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-semibold">Fleet Compliance</span>
+                        <div class="bg-success text-white rounded p-2 lh-1"><i class="bi bi-shield-check"></i></div>
+                    </div>
+                    <h3 class="fw-bold mb-1">{{ kpis.compliance_rate }}%</h3>
+                    <div class="small">
+                        <span class="text-success fw-medium">{{ kpis.compliant_vehicles }} Compliant</span> | 
+                        <span class="text-danger fw-medium">{{ kpis.delinquent_vehicles }} Delinquent</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Revenue Card -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 bg-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-semibold">Collected Revenue</span>
+                        <div class="bg-info text-white rounded p-2 lh-1"><i class="bi bi-cash-stack"></i></div>
+                    </div>
+                    <h3 class="fw-bold mb-1">KES {{ kpis.total_collected|floatformat:2 }}</h3>
+                    <div class="small text-muted">
+                        Billed: KES {{ kpis.total_invoiced|floatformat:2 }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Net Liquid Position -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 bg-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-semibold">Net Cash Position</span>
+                        <div class="bg-warning text-dark rounded p-2 lh-1"><i class="bi bi-bank"></i></div>
+                    </div>
+                    <h3 class="fw-bold mb-1">KES {{ kpis.net_cash|floatformat:2 }}</h3>
+                    <div class="small text-muted">
+                        Expenses: KES {{ kpis.total_expenses|floatformat:2 }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secondary Operational Panels -->
+    <div class="row g-4 mb-4">
+        <!-- Fleet Maintenance Overview -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3 border-0">
+                    <h5 class="fw-bold text-navy mb-0">
+                        <i class="bi bi-tools text-warning me-2"></i>Fleet Maintenance & Downtime KPIs
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center mb-3 g-2">
+                        <div class="col-4 border-end">
+                            <span class="text-muted small">Total Downtime</span>
+                            <h4 class="fw-bold text-danger mt-1">{{ maintenance.fleet_total_downtime_hours }} hrs</h4>
+                        </div>
+                        <div class="col-4 border-end">
+                            <span class="text-muted small">Completed Orders</span>
+                            <h4 class="fw-bold text-success mt-1">{{ maintenance.completed_count }}</h4>
+                        </div>
+                        <div class="col-4">
+                            <span class="text-muted small">Pending In Garage</span>
+                            <h4 class="fw-bold text-warning mt-1">{{ maintenance.pending_count }}</h4>
+                        </div>
+                    </div>
+                    <div class="alert alert-light border small text-muted mb-0">
+                        Total Maintenance Expenditure: <strong>KES {{ maintenance.fleet_total_cost|floatformat:2 }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Governance & Committee Oversight -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3 border-0">
+                    <h5 class="fw-bold text-navy mb-0">
+                        <i class="bi bi-building-check text-success me-2"></i>Governance & Committee Resolutions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center mb-3 g-2">
+                        <div class="col-3 border-end">
+                            <span class="text-muted small">Committees</span>
+                            <h4 class="fw-bold text-primary mt-1">{{ gov.active_committees }}</h4>
+                        </div>
+                        <div class="col-3 border-end">
+                            <span class="text-muted small">Meetings</span>
+                            <h4 class="fw-bold text-info mt-1">{{ gov.total_meetings }}</h4>
+                        </div>
+                        <div class="col-3 border-end">
+                            <span class="text-muted small">Resolutions</span>
+                            <h4 class="fw-bold text-success mt-1">{{ gov.passed_resolutions }}</h4>
+                        </div>
+                        <div class="col-3">
+                            <span class="text-muted small">Open Actions</span>
+                            <h4 class="fw-bold text-danger mt-1">{{ gov.pending_actions }}</h4>
+                        </div>
+                    </div>
+                    <div class="alert alert-light border small text-muted mb-0">
+                        Concluded Minutes Published: <strong>{{ gov.completed_meetings }}</strong> sessions confirmed.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Route Distribution Density Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3 border-0">
+            <h5 class="fw-bold text-navy mb-0">
+                <i class="bi bi-signpost-split text-primary me-2"></i>High-Density Transport Routes
+            </h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Route Code</th>
+                        <th>Route Name</th>
+                        <th class="text-center">Assigned Vehicles</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in kpis.route_distribution %}
+                    <tr>
+                        <td class="ps-3 fw-bold">{{ r.code }}</td>
+                        <td>{{ r.name }}</td>
+                        <td class="text-center"><span class="badge bg-primary px-3 py-2">{{ r.count }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center py-4 text-muted">No route assignment data available.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

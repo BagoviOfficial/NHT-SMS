@@ -1,0 +1,20 @@
+[Unit]
+Description=Celery Beat Periodic Scheduler for NHT-SMS
+After=network.target postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/nht-sms
+EnvironmentFile=/var/www/nht-sms/.env.production
+ExecStart=/var/www/nht-sms/venv/bin/celery \
+          -A nht_sacco.config beat \
+          --pidfile=/run/nht-sms/celerybeat.pid \
+          --logfile=/var/log/nht-sms/celerybeat.log \
+          --loglevel=INFO
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
