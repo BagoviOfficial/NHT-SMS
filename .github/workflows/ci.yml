@@ -14,9 +14,29 @@ jobs:
       matrix:
         python-version: ['3.11', '3.12']
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: nht_sms_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -27,14 +47,20 @@ jobs:
             requirements/base.txt
             requirements/development.txt
 
-      - name: Install Dependencies
+      - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements/development.txt
 
-      - name: Run Test Suite
+      - name: Run Pytest Suite
         env:
           DJANGO_SETTINGS_MODULE: nht_sacco.config.settings.testing
           SECRET_KEY: test-key-ci-environment-only
+          POSTGRES_DB: nht_sms_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+          PGPASSWORD: postgrespassword
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
         run: |
           pytest --tb=short
