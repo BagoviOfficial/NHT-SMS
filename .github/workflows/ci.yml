@@ -23,6 +23,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
+          cache-dependency-path: |
+            requirements/base.txt
+            requirements/development.txt
 
       - name: Install Dependencies
         run: |
