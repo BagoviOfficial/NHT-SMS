@@ -1,0 +1,639 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}System Configuration & Administration Centre{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h3 class="fw-bold mb-0" style="color: var(--nht-navy, #10315C);">
+            <i class="bi bi-sliders me-2 text-warning"></i>System Configuration & Administration Centre
+        </h3>
+        <p class="text-muted small mb-0">Dynamic database-backed operational registry, integration adapters, and security policies</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'integrations:settings_export' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-download me-1"></i> Export Config (JSON)
+        </a>
+        <button type="button" class="btn btn-nht-primary btn-sm" id="btnRunAllDiagnostics">
+            <i class="bi bi-heart-pulse-fill me-1"></i> Run Diagnostics Probe
+        </button>
+    </div>
+</div>
+
+<!-- Navigation Tabs -->
+<ul class="nav nav-tabs mb-4 border-bottom" id="settingsTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'INTEGRATIONS' %}active fw-bold{% endif %}" id="integrations-tab" data-bs-toggle="tab" data-bs-target="#integrations" type="button" role="tab">
+            <i class="bi bi-plug-fill me-1 text-primary"></i> External Integrations
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'BUSINESS' %}active fw-bold{% endif %}" id="business-tab" data-bs-toggle="tab" data-bs-target="#business" type="button" role="tab">
+            <i class="bi bi-briefcase-fill me-1 text-success"></i> Business Policies & Rules
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'APPLICATION' %}active fw-bold{% endif %}" id="application-tab" data-bs-toggle="tab" data-bs-target="#application" type="button" role="tab">
+            <i class="bi bi-palette-fill me-1 text-info"></i> Branding & Look
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'SECURITY' %}active fw-bold{% endif %}" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab">
+            <i class="bi bi-shield-lock-fill me-1 text-danger"></i> Security & Access
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'DIAGNOSTICS' %}active fw-bold{% endif %}" id="diagnostics-tab" data-bs-toggle="tab" data-bs-target="#diagnostics" type="button" role="tab">
+            <i class="bi bi-activity me-1 text-warning"></i> Health Diagnostics
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'HISTORY' %}active fw-bold{% endif %}" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
+            <i class="bi bi-clock-history me-1 text-secondary"></i> History & Rollback
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'BACKUP' %}active fw-bold{% endif %}" id="backup-tab" data-bs-toggle="tab" data-bs-target="#backup" type="button" role="tab">
+            <i class="bi bi-arrow-repeat me-1 text-dark"></i> Backup & Restore
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="settingsTabContent">
+
+    <!-- ====================================================================== -->
+    <!-- 1. INTEGRATIONS TAB -->
+    <!-- ====================================================================== -->
+    <div class="tab-pane fade {% if active_tab == 'INTEGRATIONS' %}show active{% endif %}" id="integrations" role="tabpanel">
+        
+        <!-- Live Provider Connectivity Probes Row -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="fw-bold mb-1"><i class="bi bi-phone text-success me-1"></i> M-Pesa Daraja</h6>
+                            <span class="badge bg-success-subtle text-success border border-success" id="badge-daraja">Ready</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-success btn-probe" data-provider="daraja">
+                            <i class="bi bi-play-fill"></i> Test
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="fw-bold mb-1"><i class="bi bi-chat-text text-primary me-1"></i> Africa's Talking SMS</h6>
+                            <span class="badge bg-primary-subtle text-primary border border-primary" id="badge-africastalking">Ready</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary btn-probe" data-provider="africastalking">
+                            <i class="bi bi-play-fill"></i> Test
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="fw-bold mb-1"><i class="bi bi-whatsapp text-success me-1"></i> Meta WhatsApp</h6>
+                            <span class="badge bg-success-subtle text-success border border-success" id="badge-whatsapp">Ready</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-success btn-probe" data-provider="whatsapp">
+                            <i class="bi bi-play-fill"></i> Test
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="fw-bold mb-1"><i class="bi bi-envelope text-info me-1"></i> SMTP Relay</h6>
+                            <span class="badge bg-info-subtle text-info border border-info" id="badge-smtp">Ready</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-info btn-probe" data-provider="smtp">
+                            <i class="bi bi-play-fill"></i> Test
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <form method="post" action="{% url 'integrations:settings_update' %}">
+            {% csrf_token %}
+            <input type="hidden" name="tab" value="INTEGRATIONS">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-navy"><i class="bi bi-key-fill text-warning me-2"></i>Gateway Credentials & Parameters</h5>
+                    <span class="text-muted small"><i class="bi bi-lock-fill text-danger me-1"></i>Secrets AES-256 encrypted at rest</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for item in configs_by_cat.INTEGRATIONS %}
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small mb-1">
+                                    {{ item.title }}
+                                    {% if item.is_secret %}<span class="badge bg-danger-subtle text-danger ms-1">Secret</span>{% endif %}
+                                    {% if item.is_system_locked %}<span class="badge bg-secondary-subtle text-secondary ms-1">System</span>{% endif %}
+                                </label>
+                                {% if item.data_type == 'CHOICE' and item.choices_json %}
+                                    <select class="form-select form-select-sm" name="{{ item.key }}" {% if is_auditor_only %}disabled{% endif %}>
+                                        {% for opt in item.choices_json %}
+                                            <option value="{{ opt }}" {% if item.display_val == opt %}selected{% endif %}>{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% elif item.data_type == 'BOOLEAN' %}
+                                    <select class="form-select form-select-sm" name="{{ item.key }}" {% if is_auditor_only %}disabled{% endif %}>
+                                        <option value="true" {% if item.display_val %}selected{% endif %}>Enabled / True</option>
+                                        <option value="false" {% if not item.display_val %}selected{% endif %}>Disabled / False</option>
+                                    </select>
+                                {% else %}
+                                    <div class="input-group input-group-sm">
+                                        <input type="{% if item.is_secret %}password{% else %}text{% endif %}" 
+                                               class="form-control" 
+                                               name="{{ item.key }}" 
+                                               value="{{ item.display_val }}"
+                                               placeholder="{{ item.default_value }}"
+                                               {% if is_auditor_only %}readonly{% endif %}>
+                                        {% if item.is_secret %}
+                                            <button class="btn btn-outline-secondary btn-toggle-secret" type="button" title="Toggle visibility">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text small text-muted">{{ item.description }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% if not is_auditor_only %}
+                <div class="card-footer bg-light py-3 d-flex justify-content-between align-items-center">
+                    <div class="input-group input-group-sm" style="max-width: 400px;">
+                        <span class="input-group-text"><i class="bi bi-pencil-square"></i></span>
+                        <input type="text" class="form-control" name="form_reason" placeholder="Reason for change (recorded in audit log)..." required>
+                    </div>
+                    <button type="submit" class="btn btn-nht-primary btn-sm">
+                        <i class="bi bi-check-circle-fill me-1"></i> Save Integration Settings
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- 2. BUSINESS TAB -->
+    <!-- ====================================================================== -->
+    <div class="tab-pane fade {% if active_tab == 'BUSINESS' %}show active{% endif %}" id="business" role="tabpanel">
+        <form method="post" action="{% url 'integrations:settings_update' %}">
+            {% csrf_token %}
+            <input type="hidden" name="tab" value="BUSINESS">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold text-navy"><i class="bi bi-building me-2 text-success"></i>SACCO Information & Operational Policies</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for item in configs_by_cat.BUSINESS %}
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small mb-1">{{ item.title }}</label>
+                                {% if item.data_type == 'CHOICE' and item.choices_json %}
+                                    <select class="form-select form-select-sm" name="{{ item.key }}" {% if is_auditor_only %}disabled{% endif %}>
+                                        {% for opt in item.choices_json %}
+                                            <option value="{{ opt }}" {% if item.display_val == opt %}selected{% endif %}>{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% elif item.data_type == 'BOOLEAN' %}
+                                    <select class="form-select form-select-sm" name="{{ item.key }}" {% if is_auditor_only %}disabled{% endif %}>
+                                        <option value="true" {% if item.display_val %}selected{% endif %}>Yes / Enabled</option>
+                                        <option value="false" {% if not item.display_val %}selected{% endif %}>No / Disabled</option>
+                                    </select>
+                                {% else %}
+                                    <input type="text" 
+                                           class="form-control form-control-sm" 
+                                           name="{{ item.key }}" 
+                                           value="{{ item.display_val }}"
+                                           placeholder="{{ item.default_value }}"
+                                           {% if is_auditor_only %}readonly{% endif %}>
+                                {% endif %}
+                                <div class="form-text small text-muted">{{ item.description }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% if not is_auditor_only %}
+                <div class="card-footer bg-light py-3 d-flex justify-content-between align-items-center">
+                    <div class="input-group input-group-sm" style="max-width: 400px;">
+                        <span class="input-group-text"><i class="bi bi-pencil-square"></i></span>
+                        <input type="text" class="form-control" name="form_reason" placeholder="Reason for business update..." required>
+                    </div>
+                    <button type="submit" class="btn btn-nht-primary btn-sm">
+                        <i class="bi bi-check-circle-fill me-1"></i> Save Business Settings
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- 3. APPLICATION BRANDING TAB -->
+    <!-- ====================================================================== -->
+    <div class="tab-pane fade {% if active_tab == 'APPLICATION' %}show active{% endif %}" id="application" role="tabpanel">
+        <form method="post" action="{% url 'integrations:settings_update' %}">
+            {% csrf_token %}
+            <input type="hidden" name="tab" value="APPLICATION">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold text-navy"><i class="bi bi-brush me-2 text-info"></i>Application Customisation & Themes</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for item in configs_by_cat.APPLICATION %}
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small mb-1">{{ item.title }}</label>
+                                {% if item.data_type == 'CHOICE' and item.choices_json %}
+                                    <select class="form-select form-select-sm" name="{{ item.key }}" {% if is_auditor_only %}disabled{% endif %}>
+                                        {% for opt in item.choices_json %}
+                                            <option value="{{ opt }}" {% if item.display_val == opt %}selected{% endif %}>{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% elif item.data_type == 'BOOLEAN' %}
+                                    <select class="form-select form-select-sm" name="{{ item.key }}" {% if is_auditor_only %}disabled{% endif %}>
+                                        <option value="true" {% if item.display_val %}selected{% endif %}>Active / Enabled</option>
+                                        <option value="false" {% if not item.display_val %}selected{% endif %}>Inactive / Disabled</option>
+                                    </select>
+                                {% else %}
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" 
+                                               class="form-control" 
+                                               name="{{ item.key }}" 
+                                               value="{{ item.display_val }}"
+                                               placeholder="{{ item.default_value }}"
+                                               {% if is_auditor_only %}readonly{% endif %}>
+                                        {% if 'brand_' in item.key %}
+                                            <span class="input-group-text p-1">
+                                                <input type="color" value="{{ item.display_val }}" onchange="this.parentElement.previousElementSibling.value = this.value" style="width:24px;height:24px;padding:0;border:none;">
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text small text-muted">{{ item.description }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% if not is_auditor_only %}
+                <div class="card-footer bg-light py-3 d-flex justify-content-between align-items-center">
+                    <div class="input-group input-group-sm" style="max-width: 400px;">
+                        <span class="input-group-text"><i class="bi bi-pencil-square"></i></span>
+                        <input type="text" class="form-control" name="form_reason" placeholder="Reason for branding update..." required>
+                    </div>
+                    <button type="submit" class="btn btn-nht-primary btn-sm">
+                        <i class="bi bi-check-circle-fill me-1"></i> Save Customisation
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- 4. SECURITY & POLICIES TAB -->
+    <!-- ====================================================================== -->
+    <div class="tab-pane fade {% if active_tab == 'SECURITY' %}show active{% endif %}" id="security" role="tabpanel">
+        <form method="post" action="{% url 'integrations:settings_update' %}">
+            {% csrf_token %}
+            <input type="hidden" name="tab" value="SECURITY">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold text-navy"><i class="bi bi-shield-lock me-2 text-danger"></i>Authentication & Lockout Policies</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for item in configs_by_cat.SECURITY %}
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small mb-1">{{ item.title }}</label>
+                                {% if item.data_type == 'CHOICE' and item.choices_json %}
+                                    <select class="form-select form-select-sm" name="{{ item.key }}" {% if is_auditor_only %}disabled{% endif %}>
+                                        {% for opt in item.choices_json %}
+                                            <option value="{{ opt }}" {% if item.display_val == opt %}selected{% endif %}>{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% elif item.data_type == 'BOOLEAN' %}
+                                    <select class="form-select form-select-sm" name="{{ item.key }}" {% if is_auditor_only %}disabled{% endif %}>
+                                        <option value="true" {% if item.display_val %}selected{% endif %}>Enforced / True</option>
+                                        <option value="false" {% if not item.display_val %}selected{% endif %}>Optional / False</option>
+                                    </select>
+                                {% else %}
+                                    <input type="text" 
+                                           class="form-control form-control-sm" 
+                                           name="{{ item.key }}" 
+                                           value="{{ item.display_val }}"
+                                           placeholder="{{ item.default_value }}"
+                                           {% if is_auditor_only %}readonly{% endif %}>
+                                {% endif %}
+                                <div class="form-text small text-muted">{{ item.description }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% if not is_auditor_only %}
+                <div class="card-footer bg-light py-3 d-flex justify-content-between align-items-center">
+                    <div class="input-group input-group-sm" style="max-width: 400px;">
+                        <span class="input-group-text"><i class="bi bi-pencil-square"></i></span>
+                        <input type="text" class="form-control" name="form_reason" placeholder="Reason for security update..." required>
+                    </div>
+                    <button type="submit" class="btn btn-nht-primary btn-sm">
+                        <i class="bi bi-check-circle-fill me-1"></i> Save Security Policies
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- 5. HEALTH DIAGNOSTICS TAB -->
+    <!-- ====================================================================== -->
+    <div class="tab-pane fade {% if active_tab == 'DIAGNOSTICS' %}show active{% endif %}" id="diagnostics" role="tabpanel">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold text-navy"><i class="bi bi-activity text-warning me-2"></i>Infrastructure & Provider Status</h5>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btnRefreshHealth">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Probe Now
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light small">
+                            <tr>
+                                <th>Target Service</th>
+                                <th>Health Status</th>
+                                <th>Latency (ms)</th>
+                                <th>Diagnostic Details</th>
+                                <th>Last Inspected</th>
+                            </tr>
+                        </thead>
+                        <tbody id="healthTableBody">
+                            {% for log in health_logs %}
+                                <tr>
+                                    <td class="fw-bold">{{ log.service_name|upper }}</td>
+                                    <td>
+                                        {% if log.status == 'HEALTHY' %}
+                                            <span class="badge bg-success">● HEALTHY</span>
+                                        {% elif log.status == 'DEGRADED' %}
+                                            <span class="badge bg-warning text-dark">▲ DEGRADED</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">✖ {{ log.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ log.response_time_ms }} ms</td>
+                                    <td class="small text-muted">{{ log.details|default:log.error_message }}</td>
+                                    <td class="small">{{ log.tested_at|date:"Y-m-d H:i:s" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        No recent health diagnostics logged. Click "Probe Now" above to run an active inspection.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- 6. HISTORY & ROLLBACK TAB -->
+    <!-- ====================================================================== -->
+    <div class="tab-pane fade {% if active_tab == 'HISTORY' %}show active{% endif %}" id="history" role="tabpanel">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold text-navy"><i class="bi bi-clock-history text-secondary me-2"></i>Immutable Configuration Version Timeline</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle small mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Setting Key</th>
+                                <th>Version</th>
+                                <th>Prior Value</th>
+                                <th>Mutated Value</th>
+                                <th>Actor</th>
+                                <th>IP Address</th>
+                                <th>Reason</th>
+                                <th>Timestamp</th>
+                                {% if not is_auditor_only %}<th class="text-end">Action</th>{% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for h in history_logs %}
+                                <tr>
+                                    <td><code>{{ h.setting.key }}</code></td>
+                                    <td><span class="badge bg-secondary">v{{ h.version }}</span></td>
+                                    <td class="text-muted"><pre class="mb-0" style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ h.old_value }}</pre></td>
+                                    <td class="fw-bold"><pre class="mb-0" style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ h.new_value }}</pre></td>
+                                    <td>{{ h.changed_by_username }}</td>
+                                    <td>{{ h.ip_address|default:"--" }}</td>
+                                    <td>{{ h.reason }}</td>
+                                    <td>{{ h.timestamp|date:"Y-m-d H:i:s" }}</td>
+                                    {% if not is_auditor_only %}
+                                    <td class="text-end">
+                                        <form method="post" action="{% url 'integrations:settings_rollback' %}" onsubmit="return confirm('Rollback {{ h.setting.key }} to version {{ h.version }}?');">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="key" value="{{ h.setting.key }}">
+                                            <input type="hidden" name="target_version" value="{{ h.version }}">
+                                            <input type="hidden" name="reason" value="One-click rollback to version {{ h.version }}">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2">
+                                                <i class="bi bi-arrow-counterclockwise"></i> Rollback
+                                            </button>
+                                        </form>
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center py-4 text-muted">
+                                        No historical configuration changes recorded yet. Initial versions remain active.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- 7. BACKUP & RESTORE TAB -->
+    <!-- ====================================================================== -->
+    <div class="tab-pane fade {% if active_tab == 'BACKUP' %}show active{% endif %}" id="backup" role="tabpanel">
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="mb-0 fw-bold text-navy"><i class="bi bi-download me-2 text-primary"></i>Configuration Export</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small">
+                            Generates a cryptographically signed JSON archive of all operational, business, and application settings.
+                            Sensitive integration secrets are excluded by default for credential security.
+                        </p>
+                        <div class="alert alert-info small mb-3">
+                            <i class="bi bi-shield-check me-1"></i> Export archives include a SHA-256 integrity checksum for tampering verification.
+                        </div>
+                        <a href="{% url 'integrations:settings_export' %}" class="btn btn-nht-primary btn-sm">
+                            <i class="bi bi-file-earmark-arrow-down me-1"></i> Download JSON Archive
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="mb-0 fw-bold text-navy"><i class="bi bi-upload me-2 text-warning"></i>Configuration Restoration</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small">
+                            Upload and restore previously exported configuration settings.
+                            All items are validated against required schemas, bounds, and regex patterns before applying.
+                        </p>
+                        {% if not is_auditor_only %}
+                        <form method="post" action="{% url 'integrations:settings_import' %}" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Select Configuration File (.json)</label>
+                                <input type="file" class="form-control form-control-sm" name="config_file" accept=".json" required>
+                            </div>
+                            <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Restore configurations from file?');">
+                                <i class="bi bi-box-arrow-in-down me-1"></i> Validate & Import Settings
+                            </button>
+                        </form>
+                        {% else %}
+                        <div class="alert alert-secondary small">
+                            Restoration is restricted to Super Administrators.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle secret visibility
+    document.querySelectorAll('.btn-toggle-secret').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var input = this.previousElementSibling;
+            if (input.type === 'password') {
+                input.type = 'text';
+                this.innerHTML = '<i class="bi bi-eye-slash"></i>';
+            } else {
+                input.type = 'password';
+                this.innerHTML = '<i class="bi bi-eye"></i>';
+            }
+        });
+    });
+
+    // Provider Connectivity Test buttons
+    document.querySelectorAll('.btn-probe').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var provider = this.getAttribute('data-provider');
+            var badge = document.getElementById('badge-' + provider);
+            var originalText = this.innerHTML;
+            
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            if (badge) {
+                badge.className = 'badge bg-secondary';
+                badge.innerText = 'Pinging...';
+            }
+
+            var formData = new FormData();
+            formData.append('provider', provider);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            fetch("{% url 'integrations:settings_test_connection' %}", {
+                method: 'POST',
+                body: formData,
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                if (badge) {
+                    if (data.status === 'HEALTHY') {
+                        badge.className = 'badge bg-success';
+                        badge.innerText = 'OK (' + data.response_time_ms + 'ms)';
+                    } else if (data.status === 'DEGRADED') {
+                        badge.className = 'badge bg-warning text-dark';
+                        badge.innerText = 'DEGRADED (' + data.response_time_ms + 'ms)';
+                    } else {
+                        badge.className = 'badge bg-danger';
+                        badge.innerText = 'DOWN';
+                    }
+                }
+            })
+            .catch(function(err) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                if (badge) {
+                    badge.className = 'badge bg-danger';
+                    badge.innerText = 'Error';
+                }
+            });
+        });
+    });
+
+    // Run All Diagnostics Button
+    var btnRunAll = document.getElementById('btnRunAllDiagnostics');
+    var btnRefresh = document.getElementById('btnRefreshHealth');
+    var runAllHandler = function() {
+        var btn = this;
+        var originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Running Probes...';
+
+        var formData = new FormData();
+        formData.append('provider', 'all');
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch("{% url 'integrations:settings_test_connection' %}", {
+            method: 'POST',
+            body: formData,
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            window.location.href = "{% url 'integrations:settings_index' %}?tab=DIAGNOSTICS";
+        })
+        .catch(function(err) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            alert('Failed to complete diagnostic probes.');
+        });
+    };
+
+    if (btnRunAll) btnRunAll.addEventListener('click', runAllHandler);
+    if (btnRefresh) btnRefresh.addEventListener('click', runAllHandler);
+});
+</script>
+{% endblock %}
