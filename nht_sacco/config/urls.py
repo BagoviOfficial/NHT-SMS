@@ -65,6 +65,9 @@ urlpatterns = [
     # Executive Reporting & Analytics
     path('reports/', include('nht_sacco.apps.reports.urls', namespace='reports')),
 
+    # System Configuration & Administration Centre
+    path('settings/', include('nht_sacco.apps.integrations.urls', namespace='integrations')),
+
     # Root redirect to accounts login
     path('', RedirectView.as_view(pattern_name='accounts:login', permanent=False), name='root-home'),
 ]

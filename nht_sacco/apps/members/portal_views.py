@@ -306,25 +306,43 @@ def portal_invoice_pay_stk(request, invoice_id):
         )
         raise PermissionDenied("Access Denied: You do not own this invoice.")
 
-    phone = request.POST.get('phone_number', request.member.phone_number)
+    phone = request.POST.get('phone_number') or request.member.phone_number
+    if not phone:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
+            return JsonResponse({'error': 'Phone number is required for STK push.'}, status=400)
+        messages.error(request, "Phone number is required to prompt M-Pesa STK Push.")
+        return redirect('portal:invoice_detail', invoice_id=invoice.id)
+
     if invoice.is_fully_paid:
-        return JsonResponse({'error': 'Invoice is already settled in full.'}, status=400)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
+            return JsonResponse({'error': 'Invoice is already settled in full.'}, status=400)
+        messages.info(request, "This invoice is already settled in full.")
+        return redirect('portal:invoice_detail', invoice_id=invoice.id)
 
     try:
         daraja = DarajaClient()
         res = daraja.initiate_stk_push(
             phone_number=phone,
             amount=invoice.balance_due,
+            invoice=invoice,
             account_reference=invoice.invoice_number,
-            transaction_desc=f"NHT SACCO {invoice.invoice_number}"
+            transaction_desc=f"NHT {invoice.invoice_number[-8:]}"
         )
         if res.get('ResponseCode') == '0':
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
+                return JsonResponse({'success': True, 'data': res}, status=200)
             messages.success(request, f"M-Pesa STK Push prompted to {phone}. Enter your PIN to complete settlement.")
             return redirect('portal:invoice_detail', invoice_id=invoice.id)
         else:
-            messages.error(request, f"M-Pesa Error: {res.get('CustomerMessage', 'Failed to prompt phone.')}")
+            err_msg = res.get('CustomerMessage') or res.get('ResponseDescription') or 'Failed to prompt phone.'
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
+                return JsonResponse({'error': f"M-Pesa Error: {err_msg}"}, status=400)
+            messages.error(request, f"M-Pesa Error: {err_msg}")
             return redirect('portal:invoice_detail', invoice_id=invoice.id)
     except Exception as e:
+        logger.exception("STK push error on invoice %s", invoice.invoice_number)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
+            return JsonResponse({'error': f"STK Push error: {str(e)}"}, status=500)
         messages.error(request, f"STK Push error: {str(e)}")
         return redirect('portal:invoice_detail', invoice_id=invoice.id)
 

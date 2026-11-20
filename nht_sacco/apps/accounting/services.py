@@ -2,8 +2,11 @@ from decimal import Decimal
 from django.db import models, transaction
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
 from .models import Account, AccountType, FinancialPeriod, JournalEntry, JournalLine, Expense
 from nht_sacco.apps.audit.models import AuditLog, AuditAction, AuditOutcome
+from nht_sacco.apps.billing.models import Invoice, InvoiceStatus
+from nht_sacco.apps.payments.models import Payment, PaymentStatus, PaymentMethod, Receipt
 
 class AccountingService:
     @classmethod
@@ -89,17 +92,42 @@ class AccountingService:
 
     @classmethod
     @transaction.atomic
-    def post_payment_receipt(cls, payment, user):
+    def post_payment_receipt(cls, payment, user=None):
         """
         Posts double-entry journal for payment receipt:
-        Dr 1020 M-Pesa / 1030 Bank (Amount)
+        Dr 1020 M-Pesa / 1030 Bank / 1010 Cash (Amount)
         Cr 1100 Accounts Receivable (Amount)
+        Enforces idempotency: prevents creating duplicate journals for the same payment reference.
         """
-        cash_code = '1020' if payment.method == 'MPESA' else '1030'
-        cash_account = Account.objects.get(code=cash_code)
-        ar_account = Account.objects.get(code='1100')
+        # Idempotency check: if journal already exists for this payment reference, return it
+        existing_entry = JournalEntry.objects.filter(reference=payment.payment_reference).first()
+        if existing_entry:
+            return existing_entry
+
+        if payment.method == 'MPESA':
+            cash_code = '1020'
+            cash_name = 'M-Pesa Collections'
+        elif payment.method == 'BANK_TRANSFER':
+            cash_code = '1030'
+            cash_name = 'Bank Account'
+        else:
+            cash_code = '1010'
+            cash_name = 'Cash Office'
+
+        cash_account, _ = Account.objects.get_or_create(
+            code=cash_code,
+            defaults={'name': cash_name, 'type': AccountType.ASSET}
+        )
+        ar_account, _ = Account.objects.get_or_create(
+            code='1100',
+            defaults={'name': 'Accounts Receivable', 'type': AccountType.ASSET}
+        )
 
         period = cls.get_or_create_current_period(payment.confirmed_at.date() if payment.confirmed_at else None)
+
+        posting_user = user
+        if posting_user is not None and not getattr(posting_user, 'is_authenticated', True):
+            posting_user = None
 
         entry = JournalEntry.objects.create(
             entry_number=JournalEntry.generate_entry_number(),
@@ -107,7 +135,7 @@ class AccountingService:
             period=period,
             reference=payment.payment_reference,
             narration=f"Payment settlement for {payment.invoice.invoice_number} via {payment.get_method_display()}",
-            posted_by=user
+            posted_by=posting_user
         )
 
         # Dr Cash / M-Pesa
@@ -128,6 +156,116 @@ class AccountingService:
 
         entry.verify_balance()
         return entry
+
+    @classmethod
+    @transaction.atomic
+    def record_payment_settlement(
+        cls,
+        payment,
+        amount,
+        provider_transaction_id=None,
+        user=None,
+        raw_callback=None,
+        notes=''
+    ):
+        """
+        Coordinates the complete, centralized, transactional payment settlement workflow:
+        1. Select for update on Payment and Invoice (row-level locking).
+        2. Validate payment state transition (must be INITIATED or PENDING).
+        3. Validate amount and check provider reference idempotency.
+        4. Confirm Payment (status=SUCCESS, confirmed_at).
+        5. Allocate payment towards Invoice balance.
+        6. Issue official Receipt (preventing duplicates).
+        7. Post balanced Double-Entry General Ledger Journal Entry (preventing duplicates).
+        8. Record immutable AuditLog entry.
+        """
+        # 1. Acquire row-level locks
+        locked_payment = Payment.objects.select_for_update().get(pk=payment.pk)
+        locked_invoice = Invoice.objects.select_for_update().get(pk=locked_payment.invoice.pk)
+
+        # 2. Strict Idempotency & State Validation
+        if locked_payment.status == PaymentStatus.SUCCESS:
+            receipt = Receipt.objects.filter(payment=locked_payment).first()
+            journal = JournalEntry.objects.filter(reference=locked_payment.payment_reference).first()
+            return {
+                'success': True,
+                'status': 'ALREADY_PROCESSED',
+                'payment': locked_payment,
+                'receipt': receipt,
+                'journal_entry': journal,
+                'message': 'Payment already cleared and settled (Idempotent).'
+            }
+
+        if locked_payment.status not in (PaymentStatus.INITIATED, 'PENDING'):
+            raise ValidationError(
+                f"Invalid payment state transition: Cannot settle payment with status '{locked_payment.status}'."
+            )
+
+        amount_decimal = Decimal(str(amount))
+        if amount_decimal <= Decimal('0.00'):
+            raise ValidationError("Settlement amount must be strictly positive.")
+
+        # Check provider reference uniqueness across the system
+        if provider_transaction_id:
+            duplicate = Payment.objects.filter(provider_transaction_id=provider_transaction_id).exclude(pk=locked_payment.pk).first()
+            if duplicate:
+                raise ValidationError(f"Provider transaction reference '{provider_transaction_id}' was already processed.")
+
+        # 3. Update payment status to SUCCESS
+        locked_payment.status = PaymentStatus.SUCCESS
+        if provider_transaction_id:
+            locked_payment.provider_transaction_id = provider_transaction_id
+        locked_payment.amount = amount_decimal
+        locked_payment.confirmed_at = timezone.now()
+        if raw_callback:
+            locked_payment.raw_callback = raw_callback
+        locked_payment.save(update_fields=['status', 'provider_transaction_id', 'amount', 'confirmed_at', 'raw_callback'])
+
+        # 4. Allocate payment to invoice
+        locked_invoice.allocate_payment(amount_decimal)
+
+        # 5. Issue official Receipt (ensure no duplicate)
+        receipt = Receipt.objects.filter(payment=locked_payment).first()
+        if not receipt:
+            receipt = Receipt.objects.create(
+                receipt_number=Receipt.generate_receipt_number(),
+                payment=locked_payment,
+                issued_by=user if (user and getattr(user, 'is_authenticated', False)) else None
+            )
+
+        # 6. Post double-entry journal entry
+        journal_entry = cls.post_payment_receipt(locked_payment, user=user)
+
+        # 7. Immutable Audit Trail
+        actor_user = user if (user and getattr(user, 'is_authenticated', False)) else None
+        AuditLog.objects.create(
+            actor=actor_user,
+            actor_username=actor_user.username if actor_user else 'PAYMENT_GATEWAY',
+            action=AuditAction.PAYMENT,
+            entity_type='Invoice',
+            entity_id=locked_invoice.invoice_number,
+            outcome=AuditOutcome.SUCCESS,
+            change_details={
+                'provider_reference': provider_transaction_id or locked_payment.provider_transaction_id,
+                'payment_ref': locked_payment.payment_reference,
+                'amount': str(amount_decimal),
+                'receipt_no': receipt.receipt_number,
+                'journal_entry_no': journal_entry.entry_number if journal_entry else None,
+                'invoice_balance': str(locked_invoice.balance_due),
+                'notes': notes
+            }
+        )
+
+        return {
+            'success': True,
+            'status': 'SETTLED',
+            'payment': locked_payment,
+            'receipt': receipt,
+            'journal_entry': journal_entry,
+            'invoice': locked_invoice,
+            'invoice_balance': locked_invoice.balance_due,
+            'message': 'Payment successfully cleared and all accounting records committed.'
+        }
 
     @classmethod
     @transaction.atomic

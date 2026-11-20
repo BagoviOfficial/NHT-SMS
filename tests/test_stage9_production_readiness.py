@@ -6,8 +6,10 @@ Northern Highways Transporters SACCO Management System (NHT-SMS).
 import os
 import subprocess
 from pathlib import Path
+from decimal import Decimal
 import pytest
 from django.conf import settings
+from django.utils import timezone
 from django.test import Client
 from django.urls import reverse
 from nht_sacco.apps.compliance.tasks import task_daily_compliance_scan
@@ -61,6 +63,84 @@ class TestProductionSettingsHardening:
         assert prod_settings.SECURE_HSTS_PRELOAD is True
         assert prod_settings.X_FRAME_OPTIONS == 'DENY'
         assert prod_settings.SECURE_CONTENT_TYPE_NOSNIFF is True
+
+    def test_production_startup_validation_raises_on_missing_secrets(self):
+        """
+        Validates that validate_production_secrets() strictly detects missing or insecure secrets.
+        """
+        from django.core.exceptions import ImproperlyConfigured
+        from nht_sacco.config.settings.production import validate_production_secrets
+
+        # Calling without production secrets in test env must raise ImproperlyConfigured
+        with pytest.raises(ImproperlyConfigured) as exc_info:
+            validate_production_secrets()
+
+        err_text = str(exc_info.value)
+        assert "FATAL STARTUP CONFIGURATION ERRORS" in err_text
+
+    def test_production_startup_check_aborts_via_cli_when_secrets_missing(self):
+        """
+        Validates that manage.py check fails in production mode with missing secrets.
+        """
+        import sys
+        clean_env = os.environ.copy()
+        clean_env['DJANGO_SETTINGS_MODULE'] = 'nht_sacco.config.settings.production'
+        clean_env.pop('SKIP_PRODUCTION_SECRET_VALIDATION', None)
+
+        proc = subprocess.run(
+            [sys.executable, str(BASE_DIR / 'manage.py'), 'check', '--settings=nht_sacco.config.settings.production'],
+            cwd=str(BASE_DIR),
+            capture_output=True,
+            text=True,
+            env=clean_env
+        )
+        assert proc.returncode != 0
+        assert "FATAL STARTUP CONFIGURATION ERRORS" in proc.stderr or "ImproperlyConfigured" in proc.stderr
+
+    @pytest.mark.django_db
+    def test_production_stk_push_never_returns_simulation(self, monkeypatch):
+        """
+        Validates that DarajaClient never returns a simulated response when running in production mode.
+        """
+        from nht_sacco.apps.payments.daraja import DarajaClient
+        from nht_sacco.apps.billing.models import Invoice
+        from nht_sacco.apps.members.models import Member, MembershipCategory, MembershipStatus
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        user = User.objects.create_user(
+            username='prod_test_member',
+            email='prod_test@northernhighways.co.ke',
+            password='TestPassword123!'
+        )
+        member = Member.objects.create(
+            user=user,
+            membership_number='NHT-MBR-PROD-001',
+            first_name='Prod',
+            last_name='Tester',
+            national_id='99887766',
+            phone_number='+254712345678',
+            email='prod_test@northernhighways.co.ke',
+            category=MembershipCategory.INDIVIDUAL_OPERATOR,
+            status=MembershipStatus.ACTIVE
+        )
+        invoice = Invoice.objects.create(
+            invoice_number='NHT-INV-PROD-001',
+            member=member,
+            issue_date=timezone.now().date(),
+            due_date=timezone.now().date(),
+            total_amount=Decimal('1000.00')
+        )
+
+        daraja = DarajaClient()
+        monkeypatch.setattr(daraja, 'environment', 'production')
+        monkeypatch.setattr(daraja, 'consumer_key', 'live_key')
+        monkeypatch.setattr(daraja, 'consumer_secret', 'live_secret')
+
+        # Mocking an unreachable gateway endpoint to ensure it does not fake success
+        with pytest.raises(Exception):
+            daraja.initiate_stk_push('+254712345678', Decimal('1000.00'), invoice)
+
 
 
 class TestContainerAndDeploymentConfigurations:

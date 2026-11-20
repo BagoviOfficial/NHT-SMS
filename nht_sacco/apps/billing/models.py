@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from nht_sacco.apps.members.models import Member
 from nht_sacco.apps.vehicles.models import Vehicle
+from nht_sacco.apps.integrations.services import ConfigurationService
 
 class ServiceCategory(models.TextChoices):
     MEMBERSHIP = 'MEMBERSHIP', _('Membership Registration & Onboarding')
@@ -126,14 +127,22 @@ class Invoice(models.Model):
         return max(Decimal('0.00'), self.total_amount - self.amount_paid)
 
     @property
+    def is_fully_paid(self):
+        """
+        Returns True if the invoice has been settled in full or has zero balance remaining.
+        """
+        return self.status == InvoiceStatus.PAID or self.balance_due <= Decimal('0.00')
+
+    @property
     def is_overdue(self):
         return self.status != InvoiceStatus.PAID and self.due_date < timezone.now().date()
 
     @classmethod
     def generate_invoice_number(cls):
         year = timezone.now().year
-        count = cls.objects.filter(invoice_number__startswith=f"NHT-INV-{year}").count() + 1
-        return f"NHT-INV-{year}-{count:04d}"
+        prefix = ConfigurationService.get_str('business.invoice_prefix', 'NHT-INV')
+        count = cls.objects.filter(invoice_number__startswith=f"{prefix}-{year}").count() + 1
+        return f"{prefix}-{year}-{count:04d}"
 
     def recalculate_totals(self):
         """

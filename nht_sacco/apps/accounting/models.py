@@ -82,7 +82,9 @@ class JournalEntry(models.Model):
     posted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
-        related_name='posted_journals'
+        related_name='posted_journals',
+        null=True,
+        blank=True
     )
     is_posted = models.BooleanField(default=True)
     is_reversal = models.BooleanField(_('Is Reversal Entry'), default=False)

@@ -66,6 +66,16 @@ class User(AbstractUser):
         full_name = self.get_full_name()
         return f"{full_name} ({self.username}) - {self.get_role_display()}" if full_name else f"{self.username} - {self.get_role_display()}"
 
+    def save(self, *args, **kwargs):
+        # Defend against django_otp OTPMiddleware replacing model boolean field with a partial function
+        if callable(getattr(self, 'is_verified', None)):
+            if self.pk:
+                orig_val = type(self).objects.filter(pk=self.pk).values_list('is_verified', flat=True).first()
+                self.is_verified = bool(orig_val)
+            else:
+                self.is_verified = False
+        super().save(*args, **kwargs)
+
     @property
     def is_management_staff(self):
         return self.is_superuser or self.role in [

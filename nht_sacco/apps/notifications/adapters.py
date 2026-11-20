@@ -6,6 +6,7 @@ from typing import Dict, Any, Optional
 from django.conf import settings
 from django.core.mail import send_mail
 from .models import NotificationChannel, NotificationStatus
+from nht_sacco.apps.integrations.services import ConfigurationService
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +34,11 @@ class AfricasTalkingSMSAdapter(BaseNotificationAdapter):
     Supports live dispatch via REST API or sandbox/simulated dispatch.
     """
     def send(self, recipient: str, title: str, message: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        username = getattr(settings, 'AFRICASTALKING_USERNAME', 'sandbox')
-        api_key = getattr(settings, 'AFRICASTALKING_API_KEY', '')
-        sender_id = getattr(settings, 'AFRICASTALKING_SENDER_ID', 'NHT_SACCO')
-        is_simulation = getattr(settings, 'NOTIFICATION_SIMULATION_MODE', True) or not api_key
+        username = ConfigurationService.get_str('sms.username', default=getattr(settings, 'AFRICASTALKING_USERNAME', 'sandbox'))
+        api_key = ConfigurationService.get_secret('sms.api_key', fallback=getattr(settings, 'AFRICASTALKING_API_KEY', ''))
+        sender_id = ConfigurationService.get_str('sms.sender_id', default=getattr(settings, 'AFRICASTALKING_SENDER_ID', 'NHT_SACCO'))
+        sms_env = ConfigurationService.get_str('sms.environment', default=getattr(settings, 'AT_ENVIRONMENT', 'sandbox'))
+        is_simulation = getattr(settings, 'NOTIFICATION_SIMULATION_MODE', True) or not api_key or (sms_env == 'sandbox')
 
         # Standardize phone number format (e.g. +254...)
         phone = recipient.strip()
@@ -112,9 +114,9 @@ class MetaWhatsAppAdapter(BaseNotificationAdapter):
     Supports official template messages with placeholders and sandbox simulation.
     """
     def send(self, recipient: str, title: str, message: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        api_token = getattr(settings, 'WHATSAPP_API_TOKEN', '')
-        phone_number_id = getattr(settings, 'WHATSAPP_PHONE_NUMBER_ID', '')
-        is_simulation = getattr(settings, 'NOTIFICATION_SIMULATION_MODE', True) or not api_token
+        api_token = ConfigurationService.get_secret('whatsapp.api_token', fallback=getattr(settings, 'WHATSAPP_API_TOKEN', ''))
+        phone_number_id = ConfigurationService.get_str('whatsapp.phone_number_id', default=getattr(settings, 'WHATSAPP_PHONE_NUMBER_ID', ''))
+        is_simulation = getattr(settings, 'NOTIFICATION_SIMULATION_MODE', True) or not api_token or not phone_number_id
 
         # Clean recipient phone number
         phone = recipient.strip().replace('+', '').replace(' ', '')
@@ -175,7 +177,7 @@ class EmailNotificationAdapter(BaseNotificationAdapter):
     """
     def send(self, recipient: str, title: str, message: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         email = recipient.strip()
-        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'alerts@northernhighways.co.ke')
+        from_email = ConfigurationService.get_str('email.sender_email', default=getattr(settings, 'DEFAULT_FROM_EMAIL', 'alerts@northernhighways.co.ke'))
         mail_id = f"EMAIL_{uuid.uuid4().hex[:8].upper()}"
 
         try:

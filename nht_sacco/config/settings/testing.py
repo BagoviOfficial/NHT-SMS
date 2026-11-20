@@ -24,3 +24,9 @@ EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
 # Disable rate limiting during automated test suites
 AXES_ENABLED = False
+
+# Dedicated testing encryption key
+SETTINGS_ENCRYPTION_KEY = 'test-settings-encryption-key-for-nht-sms-automated-testing-32chars'
+SETTINGS_ENCRYPTION_KEY_FILE = None
+SETTINGS_ENCRYPTION_KEY_FALLBACKS = []
+OTP_TOTP_THROTTLE_FACTOR = 0

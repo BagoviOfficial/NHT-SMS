@@ -84,6 +84,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django_otp.middleware.OTPMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'nht_sacco.apps.accounts.middleware.SessionSecurityMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'axes.middleware.AxesMiddleware',
     'nht_sacco.apps.audit.middleware.AuditLogMiddleware',
@@ -171,6 +172,12 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 25,
 }
 
+# Session Security Settings
+SESSION_COOKIE_AGE = env.int('SESSION_COOKIE_AGE', 43200)  # 12 hours
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_IDLE_TIMEOUT_STAFF_SECONDS = env.int('SESSION_IDLE_TIMEOUT_STAFF_SECONDS', 1800)  # 30 minutes
+SESSION_IDLE_TIMEOUT_MEMBER_SECONDS = env.int('SESSION_IDLE_TIMEOUT_MEMBER_SECONDS', 43200) # 12 hours
+
 # Django Axes Security Configuration
 AXES_FAILURE_LIMIT = env.int('AXES_FAILURE_LIMIT', 5)
 AXES_COOLOFF_TIME = env.int('AXES_COOLOFF_TIME', 1)
@@ -255,4 +262,40 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': 2592000.0, # Run monthly
     },
 }
+
+# ==============================================================================
+# Safaricom Daraja M-Pesa Integration Settings
+# ==============================================================================
+MPESA_ENVIRONMENT = env('MPESA_ENVIRONMENT', default='sandbox')
+MPESA_CONSUMER_KEY = env('MPESA_CONSUMER_KEY', default='sandbox_key')
+MPESA_CONSUMER_SECRET = env('MPESA_CONSUMER_SECRET', default='sandbox_secret')
+MPESA_BUSINESS_SHORTCODE = env('MPESA_BUSINESS_SHORTCODE', default='174379')
+MPESA_PASSKEY = env('MPESA_PASSKEY', default='bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919')
+MPESA_CALLBACK_URL = env('MPESA_CALLBACK_URL', default='https://example.com/api/v1/payments/mpesa/callback/')
+MPESA_CALLBACK_TOKEN = env('MPESA_CALLBACK_TOKEN', default='nht-mpesa-token-secret')
+
+# ==============================================================================
+# Africa's Talking SMS Settings (Harmonized)
+# ==============================================================================
+AT_ENVIRONMENT = env('AT_ENVIRONMENT', default='sandbox')
+AFRICASTALKING_USERNAME = env('AT_USERNAME', default=env('AFRICASTALKING_USERNAME', default='sandbox'))
+AFRICASTALKING_API_KEY = env('AT_API_KEY', default=env('AFRICASTALKING_API_KEY', default=''))
+AFRICASTALKING_SENDER_ID = env('AT_SENDER_ID', default=env('AFRICASTALKING_SENDER_ID', default='NHT_SACCO'))
+
+# ==============================================================================
+# Meta WhatsApp Cloud API Integration Settings
+# ==============================================================================
+WHATSAPP_ENVIRONMENT = env('WHATSAPP_ENVIRONMENT', default='sandbox')
+WHATSAPP_API_TOKEN = env('WHATSAPP_API_TOKEN', default='')
+WHATSAPP_PHONE_NUMBER_ID = env('WHATSAPP_PHONE_NUMBER_ID', default='')
+WHATSAPP_BUSINESS_ACCOUNT_ID = env('WHATSAPP_BUSINESS_ACCOUNT_ID', default='')
+WHATSAPP_WEBHOOK_VERIFY_TOKEN = env('WHATSAPP_WEBHOOK_VERIFY_TOKEN', default='')
+NOTIFICATION_SIMULATION_MODE = env.bool('NOTIFICATION_SIMULATION_MODE', default=True)
+
+# Cryptographic Key Management Settings
+SETTINGS_ENCRYPTION_KEY = env('SETTINGS_ENCRYPTION_KEY', default=None)
+SETTINGS_ENCRYPTION_KEY_FILE = env('SETTINGS_ENCRYPTION_KEY_FILE', default=None)
+SETTINGS_ENCRYPTION_KEY_FALLBACKS = env.list('SETTINGS_ENCRYPTION_KEY_FALLBACKS', default=[])
+
+
 

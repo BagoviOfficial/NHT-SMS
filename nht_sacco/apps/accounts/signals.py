@@ -1,6 +1,7 @@
 from django.contrib.auth.signals import user_logged_in, user_logged_out, user_login_failed
 from django.dispatch import receiver
 from .models import LoginHistory
+from nht_sacco.apps.audit.models import AuditLog, AuditAction, AuditOutcome
 
 def get_client_ip(request):
     if not request:
@@ -21,6 +22,25 @@ def log_user_login(sender, request, user, **kwargs):
         user_agent=ua[:500],
         status=LoginHistory.Status.SUCCESS
     )
+
+    # Detect suspicious IP address variation for authenticated accounts
+    if user.last_login_ip and ip and user.last_login_ip != ip:
+        AuditLog.log_action(
+            actor=user,
+            action=AuditAction.SYSTEM,
+            entity_type='SECURITY_ALERT',
+            entity_id=user.username,
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Suspicious login detected: IP address changed from {user.last_login_ip} to {ip}",
+            ip_address=ip,
+            change_details={
+                'alert_type': 'SUSPICIOUS_IP_CHANGE',
+                'prior_ip': user.last_login_ip,
+                'current_ip': ip,
+                'user_agent': ua[:200]
+            }
+        )
+
     user.last_login_ip = ip
     user.save(update_fields=['last_login_ip'])
 

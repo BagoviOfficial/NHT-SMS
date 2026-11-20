@@ -17,6 +17,7 @@ from nht_sacco.apps.documents.validators import (
     MAX_FILE_SIZE_BYTES
 )
 from nht_sacco.apps.billing.models import Invoice, InvoiceStatus
+from nht_sacco.apps.payments.models import Payment, PaymentStatus
 from nht_sacco.apps.accounting.models import JournalEntry, JournalLine, Account, AccountType, FinancialPeriod
 from nht_sacco.apps.audit.models import AuditLog, AuditAction, AuditOutcome
 
@@ -181,6 +182,47 @@ class TestAntiIDORProtection:
         client.force_login(member_attacker)
         resp = client.post(reverse('portal:invoice_pay_stk', kwargs={'invoice_id': inv.id}))
         assert resp.status_code == 403
+
+    def test_member_can_initiate_payment_on_own_invoice(self, client, member_victim):
+        inv = Invoice.objects.create(
+            invoice_number="NHT-INV-2026-0890",
+            member=member_victim.member_profile,
+            issue_date=timezone.now().date(),
+            due_date=timezone.now().date(),
+            subtotal=Decimal("3500.00"),
+            total_amount=Decimal("3500.00"),
+            status=InvoiceStatus.ISSUED
+        )
+        client.force_login(member_victim)
+        resp = client.post(
+            reverse('portal:invoice_pay_stk', kwargs={'invoice_id': inv.id}),
+            {'phone_number': '+254711111222'}
+        )
+        # Should redirect back to detail with success message
+        assert resp.status_code == 302
+        assert resp.url == reverse('portal:invoice_detail', kwargs={'invoice_id': inv.id})
+
+    def test_member_cannot_initiate_payment_on_fully_paid_invoice(self, client, member_victim):
+        inv = Invoice.objects.create(
+            invoice_number="NHT-INV-2026-0891",
+            member=member_victim.member_profile,
+            issue_date=timezone.now().date(),
+            due_date=timezone.now().date(),
+            subtotal=Decimal("4000.00"),
+            total_amount=Decimal("4000.00"),
+            amount_paid=Decimal("4000.00"),
+            status=InvoiceStatus.PAID
+        )
+        assert inv.is_fully_paid
+        client.force_login(member_victim)
+        resp = client.post(
+            reverse('portal:invoice_pay_stk', kwargs={'invoice_id': inv.id}),
+            {'phone_number': '+254711111222'}
+        )
+        assert resp.status_code == 302
+        # Verify no payment was created
+        assert not inv.payments.filter(status=PaymentStatus.INITIATED).exists()
+
 
 
 @pytest.mark.django_db

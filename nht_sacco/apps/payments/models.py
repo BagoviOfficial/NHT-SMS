@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from nht_sacco.apps.members.models import Member
 from nht_sacco.apps.billing.models import Invoice
+from nht_sacco.apps.integrations.services import ConfigurationService
 
 class PaymentMethod(models.TextChoices):
     MPESA = 'MPESA', _('M-Pesa (Daraja STK / PayBill)')
@@ -134,8 +135,9 @@ class Receipt(models.Model):
     @classmethod
     def generate_receipt_number(cls):
         year = timezone.now().year
-        count = cls.objects.filter(receipt_number__startswith=f"NHT-REC-{year}").count() + 1
-        return f"NHT-REC-{year}-{count:04d}"
+        prefix = ConfigurationService.get_str('business.receipt_prefix', 'NHT-REC')
+        count = cls.objects.filter(receipt_number__startswith=f"{prefix}-{year}").count() + 1
+        return f"{prefix}-{year}-{count:04d}"
 
 
 class ManualPaymentVoucher(models.Model):
