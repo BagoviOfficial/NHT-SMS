@@ -151,3 +151,21 @@ NHT-SMS provides two primary authentication schemes:
 - **`GET /reports/dashboard/`**: Staff-only analytics (active fleet count, compliance %, monthly revenue, passenger load).
 - **`GET /reports/export/compliance-pdf/`**: Generates high-resolution branded PDF audit report (`fpdf2`).
 - **`GET /reports/export/financial-excel/`**: Generates multi-tab financial reconciliation workbook (`openpyxl`).
+
+---
+
+## 7. Dynamic System Configuration & Administration Endpoints
+
+The configuration framework exposes REST APIs for programmatic inspection, atomic modification, safe rollback, export/import, and active diagnostic testing:
+
+| Method | Endpoint | Clearances | Description |
+|---|---|---|---|
+| `GET` | `/settings/api/v1/configs/` | SuperAdmin, Auditor | Paginated list of all system configurations with secrets masked. |
+| `GET` | `/settings/api/v1/configs/{id}/` | SuperAdmin, Auditor | Retrieve single configuration parameter detail. |
+| `POST` | `/settings/api/v1/update/` | SuperAdmin | Atomically update configuration parameter; writes history and audit log. |
+| `POST` | `/settings/api/v1/rollback/` | SuperAdmin | Rollback setting to a specified previous version. |
+| `GET` | `/settings/api/v1/export/` | SuperAdmin, Auditor | Export non-secret JSON archive with SHA-256 checksum. |
+| `POST` | `/settings/api/v1/import/` | SuperAdmin | Validate and apply configuration JSON payload. |
+| `GET` | `/settings/api/v1/health/` | SuperAdmin, Auditor | Execute real-time diagnostic health check across all services. |
+| `POST` | `/settings/api/v1/test-provider/` | SuperAdmin, Auditor | Test connectivity probe for a specified external provider. |
+

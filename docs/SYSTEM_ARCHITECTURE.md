@@ -97,7 +97,7 @@ nht_sacco/
 │   ├── incidents/      # Accident & passenger grievance investigation workflows
 │   ├── governance/     # Committee rosters, board meetings, agendas, formal resolutions
 │   ├── reports/        # Executive dashboard analytics, PDF & Excel export generators
-│   └── integrations/   # Common external client abstractions and sandbox mocks
+│   └── integrations/   # Dynamic System Configuration, AES-256 Crypto, Health Diagnostics & Adapters
 ├── config/             # Django settings, WSGI, ASGI, Celery, and root URLs
 └── static/ & templates/# UI templates, Bootstrap 5, HTMX, and brand assets
 ```
