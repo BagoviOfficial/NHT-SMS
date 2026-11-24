@@ -3,7 +3,7 @@
 **System:** Northern Highways Transporters SACCO Management System (NHT-SMS)  
 **Security Standard:** OWASP Top 10 (2021) & OWASP Application Security Verification Standard (ASVS) v4.0 Level 2  
 **Target Environment:** Production Ubuntu VPS / Containerized Docker Multi-Container Stack  
-**Audit Status:** Stage 11 Complete & Verified (144 Automated Tests Passing Across 11 Stages)  
+**Audit Status:** Stages 11–15 Complete & Verified (150 Automated Tests Across 15 Stages)  
 **Reports:** [SECURITY_AUDIT_REPORT.md](file:///data/data/com.termux/files/home/NHT-SMS/docs/SECURITY_AUDIT_REPORT.md) & [SECURITY_REMEDIATION_REPORT.md](file:///data/data/com.termux/files/home/NHT-SMS/docs/SECURITY_REMEDIATION_REPORT.md)  
 
 ---
@@ -55,7 +55,11 @@ flowchart TD
    - Ordinary Members: **12-hour session lifetime** (`SESSION_IDLE_TIMEOUT_MEMBER_SECONDS = 43200`).
 3. **Active Session Invalidation on Credential Change:**
    - On password update or reset, `CustomPasswordChangeView` automatically purges all secondary active sessions belonging to the user from `django.contrib.sessions.models.Session`, ensuring lost or compromised devices are immediately disconnected.
-4. **Suspicious Login Detection:**
+4. **SPA CSRF Token Propagation (`CSRF_COOKIE_HTTPONLY = True`):**
+   - Because production keeps `CSRF_COOKIE_HTTPONLY = True`, `/app/` renders `<meta name="csrf-token">` and `/api/v1/auth/me/`, `/api/v1/auth/login/`, and `/api/v1/auth/logout/` return `csrf_token` so `static/spa/api.js` keeps `X-CSRFToken` synchronized across login/logout token rotations without weakening cookie flags.
+5. **Nginx Content Security Policy:**
+   - Nginx configs (`docker/nginx/nht_sacco.conf`, `docker/nginx/nht_sacco_vps.conf`) restrict external asset origins strictly to `https://cdn.jsdelivr.net`, `https://unpkg.com`, `https://fonts.googleapis.com`, and `https://fonts.gstatic.com`.
+6. **Suspicious Login Detection:**
    - `log_user_login` compares incoming IP against `user.last_login_ip` and emits high-priority `SECURITY_ALERT` entries to the immutable `AuditLog` on IP mismatch.
 
 ---

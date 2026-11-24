@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
 from fpdf import FPDF
+from fpdf.enums import XPos, YPos
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
@@ -43,7 +44,7 @@ class ExecutiveDashboardMetrics:
         )
 
         # 3. Documents
-        now_date = timezone.now().date()
+        now_date = timezone.localdate()
         in_30_days = now_date + timezone.timedelta(days=30)
         expiring_docs = Document.objects.filter(
             status=VerificationStatus.VERIFIED,
@@ -109,17 +110,17 @@ class ReportExportService:
         pdf.set_font('Helvetica', 'B', 15)
         pdf.set_text_color(255, 255, 255)
         pdf.set_xy(10, 6)
-        pdf.cell(190, 8, "NORTHERN HIGHWAYS TRANSPORTERS SACCO", ln=1, align='C')
+        pdf.cell(190, 8, "NORTHERN HIGHWAYS TRANSPORTERS SACCO", new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
         pdf.set_font('Helvetica', 'B', 10)
         pdf.set_text_color(255, 138, 0)  # Accent Gold #FF8A00
-        pdf.cell(190, 6, "FLEET COMPLIANCE AUDIT REPORT", ln=1, align='C')
+        pdf.cell(190, 6, "FLEET COMPLIANCE AUDIT REPORT", new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
 
         pdf.ln(12)
         pdf.set_text_color(30, 41, 59)
         pdf.set_font('Helvetica', '', 9)
-        gen_time = timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC")
-        pdf.cell(100, 6, f"Generated On: {gen_time}", ln=0)
-        pdf.cell(90, 6, f"Report Scope: All Active Registered Vehicles", ln=1, align='R')
+        gen_time = timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S EAT")
+        pdf.cell(100, 6, f"Generated On: {gen_time}", new_x=XPos.RIGHT, new_y=YPos.TOP)
+        pdf.cell(90, 6, f"Report Scope: All Active Registered Vehicles", new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='R')
         pdf.line(10, 42, 200, 42)
         pdf.ln(4)
 
@@ -131,7 +132,7 @@ class ReportExportService:
         pdf.cell(45, 7, "OWNER / MEMBER", border=1, fill=True)
         pdf.cell(45, 7, "APPROVED ROUTE", border=1, fill=True)
         pdf.cell(25, 7, "COMPLIANCE", border=1, fill=True, align='C')
-        pdf.cell(15, 7, "STATUS", border=1, fill=True, align='C', ln=1)
+        pdf.cell(15, 7, "STATUS", border=1, fill=True, align='C', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
         # Table Rows
         pdf.set_font('Helvetica', '', 8)
@@ -158,7 +159,7 @@ class ReportExportService:
             pdf.cell(25, 6, comp_label, border=1, align='C')
             
             pdf.set_text_color(30, 41, 59)
-            pdf.cell(15, 6, v.status[:6], border=1, align='C', ln=1)
+            pdf.cell(15, 6, v.status[:6], border=1, align='C', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
         # Footer
         pdf.set_y(-15)
@@ -205,7 +206,7 @@ class ReportExportService:
                 str(inv.issue_date),
                 str(inv.due_date),
                 float(inv.subtotal),
-                float(inv.total_statutory_fees),
+                float(inv.statutory_total),
                 float(inv.total_amount),
                 float(inv.amount_paid),
                 inv.get_status_display()

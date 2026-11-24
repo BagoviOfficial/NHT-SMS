@@ -168,4 +168,18 @@ The configuration framework exposes REST APIs for programmatic inspection, atomi
 | `POST` | `/settings/api/v1/import/` | SuperAdmin | Validate and apply configuration JSON payload. |
 | `GET` | `/settings/api/v1/health/` | SuperAdmin, Auditor | Execute real-time diagnostic health check across all services. |
 | `POST` | `/settings/api/v1/test-provider/` | SuperAdmin, Auditor | Test connectivity probe for a specified external provider. |
+| `GET`/`POST` | `/settings/api/v1/change-requests/` | SuperAdmin, Chairman, Auditor (RO) | List or create Maker-Checker `ConfigurationChangeRequest` items. |
+| `POST` | `/settings/api/v1/change-requests/{id}/approve/` | SuperAdmin, Chairman (Checker != Maker) | Approve and apply a pending configuration change request. |
+
+---
+
+## 8. Unified SPA & REST API v1 Endpoints (`/api/v1/` & `/app/`)
+
+- **SPA Shell:** `GET /app/` (CDN-based React 18 + Material UI v5 workspace with role-scoped navigation across all 11 personas).
+- **Auth & Session:** `GET /api/v1/auth/me/`, `POST /api/v1/auth/login/`, `POST /api/v1/auth/logout/`, `POST /api/v1/auth/password-change/`, `GET/POST /api/v1/auth/mfa/setup/`, `/api/v1/users/` (`SUPER_ADMIN` user provisioning & role allocation).
+- **Dashboards & Portals:** `GET /api/v1/dashboard/`, `GET /api/v1/driver/portal/`, `GET /api/v1/billing/statement/`.
+- **Fleet, Compliance & Renewals:** `/api/v1/members/`, `/api/v1/vehicles/`, `/api/v1/drivers/`, `/api/v1/driver-assignments/`, `/api/v1/routes/`, `/api/v1/route-assignments/`, `/api/v1/documents/`, `/api/v1/document-types/`, `/api/v1/compliance-alerts/`, `POST /api/v1/compliance/scan/`, `/api/v1/renewals/`.
+- **Billing, Payments & Accounting:** `/api/v1/service-items/`, `/api/v1/invoices/`, `/api/v1/payments/`, `/api/v1/receipts/`, `/api/v1/vouchers/`, `/api/v1/reconciliation-runs/`, `/api/v1/reconciliation-exceptions/`, `/api/v1/accounts/`, `/api/v1/financial-periods/`, `/api/v1/journals/`, `/api/v1/expenses/`, `GET /api/v1/accounting/reports/`.
+- **Operations, Governance, Notifications & Audit:** `/api/v1/maintenance-providers/`, `/api/v1/spare-parts/`, `/api/v1/maintenance/`, `/api/v1/incidents/`, `/api/v1/committees/`, `/api/v1/meetings/`, `/api/v1/resolutions/`, `/api/v1/notifications/`, `/api/v1/notifications/preferences/`, `/api/v1/announcements/`, `/api/v1/audit-logs/`, `GET /api/v1/reports/summary/`.
+
 

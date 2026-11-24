@@ -8,40 +8,40 @@
 
 ## 1. System Role Hierarchy & Definitions
 
-NHT-SMS enforces strict Role-Based Access Control (RBAC) spanning 8 discrete operational personas:
+NHT-SMS enforces strict Role-Based Access Control (RBAC) spanning 11 discrete operational and self-service personas (`UserRole` in `nht_sacco/apps/accounts/models.py`, enforced via `nht_sacco/apps/accounts/permissions.py`):
 
-| Role Identifier | Role Title | Functional Scope |
-|---|---|---|
-| `SYSTEM_ADMIN` | System Administrator | IT configuration, backups, user account provisioning, security parameter tuning. No day-to-day financial posting permissions. |
-| `SACCO_ADMIN` | SACCO Executive Director / Chairman | Governance, policy approval, executive dashboards, committee resolutions, final maker-checker authority on high-value expenses. |
-| `FINANCE_OFFICER` | Finance Manager / Treasurer | Invoicing, payment reconciliation, general ledger management, financial period closing, manual voucher approval. |
-| `REGISTRY_CLERK` | Registry / Accounts Clerk | Member onboarding, vehicle data entry, manual voucher entry (maker), document upload staging. |
-| `COMPLIANCE_OFFICER` | Safety & Compliance Manager | Regulatory document verification, fleet grounding/clearing, NTSA/KeNHA compliance auditing, incident investigations. |
-| `AUDITOR` | Internal / External Auditor | Read-only inspection of immutable audit logs, general ledger journals, bank reconciliations, and regulatory compliance reports. |
-| `MEMBER` | SACCO Member / Vehicle Owner | Self-service portal access (`/portal/`), fleet viewing, payment triggers, statement viewing, renewal submissions. |
-| `DRIVER` | Certified PSV Driver | Read-only view of assigned vehicle schedule and compliance badges. |
+| Role Identifier | Role Title | `is_staff` | Functional Scope |
+|---|---|---|---|
+| `SUPER_ADMIN` | Super Administrator | `True` | System configuration, backups, user provisioning, role allocation, security diagnostics. |
+| `CHAIRMAN` | SACCO Chairman | `True` | Governance, executive dashboards, committee resolutions, configuration & finance checker approvals. |
+| `SECRETARY` | SACCO Secretary | `True` | Member onboarding, vehicle/driver/route registry, meetings, incidents, announcements. |
+| `TREASURER` | SACCO Treasurer | `True` | Invoicing, payment reconciliation, general ledger, period close/reopen, voucher & expense approval. |
+| `ACCOUNTANT` | Accountant | `True` | Invoicing, general ledger journals, expenses, payment reconciliation, financial statements. |
+| `COMPLIANCE_OFFICER` | Compliance Officer | `True` | Regulatory document verification, compliance scans, alerts, renewal final completion, incidents. |
+| `RENEWAL_OFFICER` | Renewal Officer | `True` | Review renewal applications, generate renewal fee invoices, manage processing queue. |
+| `FIELD_OFFICER` | Field Officer | `True` | Field fleet & route registry, driver assignments, maintenance & incident reporting. |
+| `AUDITOR` | Auditor | `True` | Strict read-only inspection of audit logs, ledger/financial statements, compliance, and system settings. |
+| `MEMBER` | SACCO Member | `False` | Self-service portal (`/portal/` and `/app/#member-portal`): own fleet, invoices, STK Push, statements, renewals. |
+| `DRIVER` | PSV Driver | `False` | Self-service driver portal (`/app/#driver-portal`): own DL/PSV badge validity, assigned vehicles, routes, and compliance badges. |
 
 ---
 
 ## 2. Granular Permissions Matrix
 
-| Functional Capability | `SYS_ADMIN` | `SACCO_ADMIN` | `FINANCE` | `CLERK` | `COMPLIANCE` | `AUDITOR` | `MEMBER` | `DRIVER` |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Manage Users & MFA** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Inspect Immutable Audit Logs** | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| **Register / Edit Vehicles** | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Verify Regulatory Documents** | ❌ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| **Ground / Clear Vehicle Status** | ❌ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| **Issue Invoices & Debit Notes** | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Record Manual Bank Voucher (Maker)** | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Approve Manual Voucher (Checker)** | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Post General Ledger Journals** | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Reverse Posted Journals** | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Lock / Unlock Financial Periods** | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **View Executive Dashboards** | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ |
-| **Access Member Portal (`/portal/`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
-| **View Self-Owned Fleets & Invoices** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
-| **Submit Online Document Renewals** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Functional Capability | `SUPER_ADMIN` | `CHAIRMAN` | `SECRETARY` | `TREASURER` | `ACCOUNTANT` | `COMPLIANCE_OFFICER` | `RENEWAL_OFFICER` | `FIELD_OFFICER` | `AUDITOR` | `MEMBER` | `DRIVER` |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Manage Users & Role Allocation** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Approve Config Change Requests** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ (RO) | ❌ | ❌ |
+| **Inspect Immutable Audit Logs** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| **Register / Edit Fleet & Routes** | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| **Verify Regulatory Documents** | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Review & Invoice Renewals** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Issue Invoices & Reconciliation** | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ (RO) | ❌ | ❌ |
+| **Approve Manual Vouchers / Expenses** | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **GL Journals & Period Locking** | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ (RO) | ❌ | ❌ |
+| **Export Financial Excel Workbook** | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| **Member Portal (`/portal/`, `/app/#member-portal`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **Driver Portal (`/app/#driver-portal`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ---
 

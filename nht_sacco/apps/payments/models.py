@@ -191,3 +191,91 @@ class ManualPaymentVoucher(models.Model):
 
     def __str__(self):
         return f"Voucher {self.bank_slip_reference} - KES {self.amount} [{self.get_status_display()}]"
+
+
+class ReconciliationRun(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    run_reference = models.CharField(
+        _('Reconciliation Run Ref'),
+        max_length=50,
+        unique=True,
+        db_index=True,
+        help_text=_('Format: NHT-REC-RUN-YYYY-XXXX')
+    )
+    executed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reconciliation_runs'
+    )
+    period_start = models.DateField(null=True, blank=True)
+    period_end = models.DateField(null=True, blank=True)
+    total_payments_checked = models.PositiveIntegerField(default=0)
+    matched_count = models.PositiveIntegerField(default=0)
+    exception_count = models.PositiveIntegerField(default=0)
+    total_matched_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'))
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = 'payments_reconciliation_run'
+        verbose_name = _('Payment Reconciliation Run')
+        verbose_name_plural = _('Payment Reconciliation Runs')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.run_reference} ({self.matched_count} matched, {self.exception_count} exceptions)"
+
+    @classmethod
+    def generate_run_reference(cls):
+        year = timezone.localdate().year
+        prefix = f"NHT-RCN-{year}-"
+        count = cls.objects.filter(run_reference__startswith=prefix).count() + 1
+        while cls.objects.filter(run_reference=f"{prefix}{count:04d}").exists():
+            count += 1
+        return f"{prefix}{count:04d}"
+
+
+class ReconciliationException(models.Model):
+    class ExceptionType(models.TextChoices):
+        UNMATCHED_INITIATED = 'UNMATCHED_INITIATED', _('Stale Initiated Payment (No Callback)')
+        MISSING_RECEIPT = 'MISSING_RECEIPT', _('Confirmed Payment Missing Receipt')
+        MISSING_JOURNAL = 'MISSING_JOURNAL', _('Confirmed Payment Missing GL Journal')
+        DUPLICATE_PROVIDER_REF = 'DUPLICATE_PROVIDER_REF', _('Duplicate Provider Transaction Reference')
+        UNDERPAYMENT = 'UNDERPAYMENT', _('Partial / Underpayment Balance Remaining')
+        OVERPAYMENT = 'OVERPAYMENT', _('Overpayment Exceeding Invoice Total')
+        AMOUNT_MISMATCH = 'AMOUNT_MISMATCH', _('Invoice Paid Amount Mismatch')
+
+    class Status(models.TextChoices):
+        OPEN = 'OPEN', _('Open / Requires Review')
+        RESOLVED = 'RESOLVED', _('Resolved')
+        IGNORED = 'IGNORED', _('Acknowledged / Closed')
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    run = models.ForeignKey(ReconciliationRun, on_delete=models.CASCADE, related_name='exceptions')
+    payment = models.ForeignKey(Payment, on_delete=models.SET_NULL, null=True, blank=True, related_name='reconciliation_exceptions')
+    invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True, blank=True, related_name='reconciliation_exceptions')
+    exception_type = models.CharField(max_length=35, choices=ExceptionType.choices, db_index=True)
+    severity = models.CharField(max_length=15, default='MEDIUM')
+    description = models.TextField()
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN, db_index=True)
+    resolution_notes = models.TextField(blank=True)
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='resolved_reconciliation_exceptions'
+    )
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'payments_reconciliation_exception'
+        verbose_name = _('Reconciliation Exception')
+        verbose_name_plural = _('Reconciliation Exceptions')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.exception_type}] {self.description[:60]}"

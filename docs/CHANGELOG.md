@@ -6,6 +6,25 @@ The project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ---
 
+## [v1.4.0] — 2026-11-25 (Phase II — Stages 12–15: 11-Role RBAC, Reconciliation Engine, Unified REST API & Material UI SPA)
+
+### Added
+- **Unified REST API v1 (`nht_sacco/apps/api/` mounted at `/api/v1/`):** Full DRF coverage across all 18 Django domain apps (`auth/me`, `login`, `logout`, `users`, `dashboard`, `members`, `vehicles`, `drivers`, `driver/portal`, `routes`, `documents`, `compliance`, `renewals`, `billing`, `payments`, `vouchers`, `reconciliation-runs`, `reconciliation-exceptions`, `accounting`, `maintenance`, `incidents`, `governance`, `notifications`, `audit-logs`, `reports`).
+- **Zero-Build Material UI SPA (`/app/`):** Responsive React 18 + Material UI v5 (`@mui/material@5.16.7`) + `htm` + ApexCharts workspace (`templates/spa/index.html`, 14 ES modules under `static/spa/`) with persistent desktop/temporary mobile drawers, responsive card fallbacks, and role-scoped navigation across all 11 personas.
+- **11-Role RBAC & `DRIVER` Persona (`apps/accounts/models.py`, `permissions.py`, `apps/drivers/models.py`):** Added `UserRole.DRIVER` (`is_staff=False`), optional `Driver.user` `OneToOneField`, centralized DRF permission classes, and `seed_sacco_admin` / `seed_sacco_fleet` coverage for all 11 personas.
+- **Payment Reconciliation Engine (`apps/payments/models.py`, `reconciliation.py`):** Added `ReconciliationRun` and `ReconciliationException` (`UNMATCHED_INITIATED`, `MISSING_RECEIPT`, `MISSING_JOURNAL`, `DUPLICATE_PROVIDER_REF`, `AMOUNT_MISMATCH`, `UNDERPAYMENT`, `OVERPAYMENT`) with exception resolution and audit trail.
+- **Accounting Statements, Period Enforcement & Renewal Auto-Sync (`apps/accounting/services.py`):** Added `get_income_and_expenditure()`, `get_balance_sheet()`, `close_period()`, `reopen_period()`, closed-period posting guards, and automatic `RenewalRequest` `INVOICED` → `PAID` transitions on settlement.
+- **Configuration Change Request Maker-Checker (`apps/integrations/`):** Added DRF endpoints and approval/rejection workflows (`/settings/api/v1/change-requests/`) enforcing `reviewed_by != requested_by`.
+- **Stage 12–15 Test Suite (`tests/test_stage12_15_spa_and_workflows.py`):** Added regression, 11-role RBAC/anti-IDOR, financial integrity, reconciliation, and CSRF-enforced SPA auth tests (`150` total tests).
+- **Stage 12–15 Reports:** Added `FINANCIAL_INTEGRITY_REPORT.md`, `OPERATIONS_GUIDE.md`, `PERFORMANCE_AUDIT_REPORT.md`, `DISASTER_RECOVERY_PLAN.md`, `PRODUCTION_READINESS_REPORT.md`, and `USER_ACCEPTANCE_TEST_REPORT.md`.
+
+### Fixed
+- **Timezone & 30-Day Compliance Alerts:** Replaced `timezone.now().date()` with `timezone.localdate()` across `compliance`, `documents`, `billing`, `accounting`, `maintenance`, `renewals`, and `reports`; evaluated `reminder_thresholds` across all verified non-expired documents so 30-day alerts trigger properly.
+- **Portal & Report Defects:** Fixed `portal_invoice_detail` (`line_items`), `invoice_detail.html`, `receipts_list.html`, `portal_renewal_apply` sequential numbering, `ReportExportService.generate_financial_excel()` (`statutory_total`), `fpdf2` `XPos`/`YPos` deprecations, broken admin links, and removed hardcoded demo credentials from `templates/accounts/login.html`.
+- **Least-Privilege Bypasses & Production SPA Compatibility:** Removed `is_staff` bypasses on financial Excel exports and restricted renewal reviews and document downloads to authorized roles; added `<meta name="csrf-token">` + auth `csrf_token` propagation for `CSRF_COOKIE_HTTPONLY = True` compatibility and updated Nginx CSP headers for SPA CDN origins.
+
+---
+
 ## [v1.3.0] — 2026-11-20 (Phase II — Stage 11: Security Hardening & Independent Security Audit)
 
 ### Added

@@ -7,87 +7,202 @@
     <meta name="description" content="Northern Highways Transporters SACCO ERP & Fleet Compliance Management System">
     <title>{% block title %}{{ title|default:"Dashboard" }}{% endblock %} | {{ BRAND_SHORT }}</title>
     
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.ini" rel="stylesheet" onerror="this.onerror=null;this.href='https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css';">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5.3.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     
+    <!-- Bootstrap Icons & FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+
+    <!-- ApexCharts CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
     <!-- NHT Brand Stylesheet -->
     <link rel="stylesheet" href="{% static 'css/nht_brand.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
     <!-- Top Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-nht sticky-top">
-        <div class="container-fluid px-3">
-            <a class="navbar-brand d-flex align-items-center" href="{% if is_management %}{% url 'accounts:dashboard' %}{% elif user.member_profile %}{% url 'portal:dashboard' %}{% else %}{% url 'accounts:profile' %}{% endif %}">
-                <i class="bi bi-truck-front-fill me-2 text-warning"></i>
-                <span>{{ BRAND_NAME }}</span>
-                <span class="brand-badge ms-2">{% if user.member_profile %}MEMBER{% else %}ERP{% endif %}</span>
+    <nav class="navbar navbar-expand-xl navbar-dark navbar-nht sticky-top">
+        <div class="container-fluid px-3 px-lg-4">
+            <!-- Brand Identity -->
+            <a class="navbar-brand d-flex align-items-center" href="{% if is_management %}{% url 'accounts:dashboard' %}{% elif user.is_member or user.member_profile %}{% url 'portal:dashboard' %}{% else %}{% url 'accounts:profile' %}{% endif %}">
+                <i class="fa-solid fa-truck-moving text-warning me-2 fs-5"></i>
+                <span class="fw-bold tracking-tight">{{ BRAND_NAME }}</span>
+                <span class="brand-badge ms-2">{% if user.is_member or user.member_profile %}MEMBER PORTAL{% else %}ERP CORE{% endif %}</span>
             </a>
             
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nhtNav">
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nhtNav" aria-label="Toggle Navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             
             <div class="collapse navbar-collapse" id="nhtNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <!-- Role-Aware Modular Navigation Links -->
+                <ul class="navbar-nav me-auto mb-2 mb-xl-0 ms-xl-3 gap-1">
                     {% if user.is_authenticated %}
                         {% if is_management %}
+                            <!-- 1. Operations Overview -->
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'accounts:dashboard' %}"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a>
+                                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' and request.resolver_match.namespace == 'accounts' %}active{% endif %}" href="{% url 'accounts:dashboard' %}">
+                                    <i class="fa-solid fa-gauge-high me-1 text-warning"></i> Dashboard
+                                </a>
+                            </li>
+
+                            <!-- 2. Operations Menu (Secretary, Chairman, Field Officer, Super Admin) -->
+                            {% if is_secretary or is_chairman or is_field_officer or is_system_admin %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="navOps" role="button" data-bs-toggle="dropdown">
+                                    <i class="fa-solid fa-users-gear me-1"></i> Fleet & Operations
+                                </a>
+                                <ul class="dropdown-menu shadow">
+                                    <li><h6 class="dropdown-header text-uppercase small fw-bold">SACCO Registry</h6></li>
+                                    <li><a class="dropdown-item" href="/admin/members/member/"><i class="fa-solid fa-address-card text-primary me-2"></i> Member Operators</a></li>
+                                    <li><a class="dropdown-item" href="/admin/vehicles/vehicle/"><i class="fa-solid fa-bus text-success me-2"></i> Fleet Vehicles</a></li>
+                                    <li><a class="dropdown-item" href="/admin/drivers/driver/"><i class="fa-solid fa-id-badge text-info me-2"></i> PSV Drivers & Crew</a></li>
+                                    <li><a class="dropdown-item" href="/admin/routes/route/"><i class="fa-solid fa-route text-warning me-2"></i> Transit Routes & Stages</a></li>
+                                </ul>
+                            </li>
+                            {% endif %}
+
+                            <!-- 3. Financials Menu (Treasurer, Accountant, Super Admin) -->
+                            {% if is_finance or is_system_admin %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="navFinance" role="button" data-bs-toggle="dropdown">
+                                    <i class="fa-solid fa-coins me-1 text-success"></i> Treasury & Billing
+                                </a>
+                                <ul class="dropdown-menu shadow">
+                                    <li><h6 class="dropdown-header text-uppercase small fw-bold">Financial Controls</h6></li>
+                                    <li><a class="dropdown-item" href="/admin/billing/invoice/"><i class="fa-solid fa-file-invoice-dollar text-primary me-2"></i> Invoices & Billing</a></li>
+                                    <li><a class="dropdown-item" href="/admin/payments/payment/"><i class="fa-solid fa-mobile-screen-button text-success me-2"></i> M-Pesa & Settlements</a></li>
+                                    <li><a class="dropdown-item" href="/admin/accounting/account/"><i class="fa-solid fa-book-journal-whills text-info me-2"></i> General Ledger Accounts</a></li>
+                                    <li><a class="dropdown-item" href="/admin/accounting/expense/"><i class="fa-solid fa-receipt text-danger me-2"></i> Sacco Expense Claims</a></li>
+                                </ul>
+                            </li>
+                            {% endif %}
+
+                            <!-- 4. Regulatory Compliance & Document Vault (Compliance, Renewal, Super Admin) -->
+                            {% if is_compliance or is_renewal or is_system_admin %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="navCompliance" role="button" data-bs-toggle="dropdown">
+                                    <i class="fa-solid fa-shield-halved me-1 text-warning"></i> Compliance Vault
+                                </a>
+                                <ul class="dropdown-menu shadow">
+                                    <li><h6 class="dropdown-header text-uppercase small fw-bold">NTSA & Regulatory Verification</h6></li>
+                                    <li><a class="dropdown-item" href="/admin/compliance/compliancealert/"><i class="fa-solid fa-clipboard-check text-success me-2"></i> Compliance Alerts & Records</a></li>
+                                    <li><a class="dropdown-item" href="/admin/documents/document/"><i class="fa-solid fa-vault text-warning me-2"></i> Secure Document Storage</a></li>
+                                    <li><a class="dropdown-item" href="/admin/renewals/renewalrequest/"><i class="fa-solid fa-arrows-rotate text-info me-2"></i> Document Renewal Queue</a></li>
+                                    <li><a class="dropdown-item" href="/admin/maintenance/maintenancerecord/"><i class="fa-solid fa-wrench text-secondary me-2"></i> Maintenance & Inspections</a></li>
+                                </ul>
+                            </li>
+                            {% endif %}
+
+                            <!-- 5. Executive Reports & Audit Trail (Auditor, Chairman, Management) -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="navReports" role="button" data-bs-toggle="dropdown">
+                                    <i class="fa-solid fa-chart-pie me-1 text-info"></i> Analytics & Audit
+                                </a>
+                                <ul class="dropdown-menu shadow">
+                                    <li><h6 class="dropdown-header text-uppercase small fw-bold">Intelligence & Verification</h6></li>
+                                    <li><a class="dropdown-item" href="{% url 'reports:dashboard' %}"><i class="fa-solid fa-chart-line text-primary me-2"></i> Executive Analytics Dashboard</a></li>
+                                    <li><a class="dropdown-item" href="/admin/audit/auditlog/"><i class="fa-solid fa-fingerprint text-danger me-2"></i> Immutable Audit Trail</a></li>
+                                    <li><a class="dropdown-item" href="/admin/incidents/incident/"><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i> Governance Incidents</a></li>
+                                </ul>
+                            </li>
+
+                            <!-- 6. System Configuration (Super Admin) -->
+                            {% if is_system_admin %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'integrations:settings_index' %}">
+                                    <i class="fa-solid fa-sliders me-1"></i> System Settings
+                                </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'integrations:settings_index' %}"><i class="bi bi-sliders me-1"></i> System Settings</a>
+                                <a class="nav-link" href="/admin/">
+                                    <i class="fa-solid fa-screwdriver-wrench me-1"></i> Django Admin
+                                </a>
+                            </li>
+                            {% endif %}
+
+                        {% elif user.is_member or user.member_profile %}
+                            <!-- Member Portal Navigation Links -->
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'portal:dashboard' %}"><i class="fa-solid fa-house-chimney me-1 text-warning"></i> Portal Home</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/admin/"><i class="bi bi-gear-fill me-1"></i> System Admin</a>
-                            </li>
-                        {% elif user.member_profile %}
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'portal:dashboard' %}"><i class="bi bi-speedometer2 me-1"></i> Portal</a>
+                                <a class="nav-link" href="{% url 'portal:vehicles' %}"><i class="fa-solid fa-bus-simple me-1"></i> My Fleet</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'portal:vehicles' %}"><i class="bi bi-truck me-1"></i> My Vehicles</a>
+                                <a class="nav-link" href="{% url 'portal:invoices' %}"><i class="fa-solid fa-receipt me-1"></i> Bills & Receipts</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'portal:invoices' %}"><i class="bi bi-receipt me-1"></i> Invoices</a>
+                                <a class="nav-link" href="{% url 'portal:statement' %}"><i class="fa-solid fa-file-invoice me-1"></i> Financial Statement</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'portal:statement' %}"><i class="bi bi-journal-text me-1"></i> Statement</a>
+                                <a class="nav-link" href="{% url 'portal:renewals' %}"><i class="fa-solid fa-arrows-rotate me-1"></i> Renewals</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'portal:renewals' %}"><i class="bi bi-arrow-repeat me-1"></i> Renewals</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'portal:notifications' %}"><i class="bi bi-bell me-1"></i> Alerts</a>
+                                <a class="nav-link" href="{% url 'portal:notifications' %}"><i class="fa-solid fa-bell me-1"></i> Notices</a>
                             </li>
                         {% endif %}
                     {% endif %}
                 </ul>
                 
+                <!-- Right Side: User Profile & Security -->
                 <ul class="navbar-nav ms-auto align-items-center">
                     {% if user.is_authenticated %}
-                        <li class="nav-item dropdown me-3">
-                            <a class="nav-link dropdown-toggle d-flex align-items-center text-white" href="#" id="userDrop" role="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-person-circle fs-5 me-2"></i>
-                                <span>{{ user.get_full_name|default:user.username }}</span>
-                                <span class="badge bg-warning text-dark ms-2">{{ user.get_role_display }}</span>
+                        <li class="nav-item me-2">
+                            <a class="btn btn-sm btn-outline-warning fw-semibold" href="/app/">
+                                <i class="fa-solid fa-layer-group me-1"></i> Material SPA
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end shadow">
-                                <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="bi bi-person me-2"></i> My Profile</a></li>
-                                <li><a class="dropdown-item" href="{% url 'accounts:password_change' %}"><i class="bi bi-shield-lock me-2"></i> Change Password</a></li>
-                                <li><hr class="dropdown-divider"></li>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center py-1 px-2 rounded" href="#" id="userDrop" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <div class="user-avatar-circle me-2">
+                                    {{ user.first_name|default:user.username|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}
+                                </div>
+                                <div class="text-start d-none d-sm-block me-2">
+                                    <div class="fw-bold text-white small lh-1">{{ user.get_full_name|default:user.username }}</div>
+                                    <span class="badge bg-{{ user_role_badge }} text-white mt-1 font-monospace" style="font-size: 0.65rem;">
+                                        {{ user.get_role_display }}
+                                    </span>
+                                </div>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg" aria-labelledby="userDrop">
+                                <li class="px-3 py-2 border-bottom bg-light rounded-top">
+                                    <div class="fw-bold text-dark">{{ user.get_full_name|default:user.username }}</div>
+                                    <div class="small text-muted">{{ user.email }}</div>
+                                    <div class="mt-1">
+                                        <span class="badge bg-{{ user_role_badge }} text-white">{{ user.get_role_display }}</span>
+                                        {% if user.is_superuser %}
+                                            <span class="badge bg-danger">Root</span>
+                                        {% endif %}
+                                    </div>
+                                </li>
+                                <li><a class="dropdown-item py-2" href="{% url 'accounts:profile' %}"><i class="fa-solid fa-user-circle text-primary me-2"></i> Security Profile</a></li>
+                                <li><a class="dropdown-item py-2" href="{% url 'accounts:password_change' %}"><i class="fa-solid fa-key text-warning me-2"></i> Change Password</a></li>
+                                <li><a class="dropdown-item py-2" href="{% url 'accounts:totp_setup' %}"><i class="fa-solid fa-shield-virus text-success me-2"></i> Two-Factor Auth (TOTP)</a></li>
+                                <li><hr class="dropdown-divider my-1"></li>
                                 <li>
-                                    <form method="post" action="{% url 'accounts:logout' %}">
+                                    <form method="post" action="{% url 'accounts:logout' %}" class="m-0">
                                         {% csrf_token %}
-                                        <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i> Secure Logout</button>
+                                        <button type="submit" class="dropdown-item py-2 text-danger"><i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Secure Logout</button>
                                     </form>
                                 </li>
                             </ul>
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="btn btn-nht-primary btn-sm" href="{% url 'accounts:login' %}"><i class="bi bi-lock me-1"></i> Login</a>
+                            <a class="btn btn-nht-primary btn-sm px-3 shadow-sm" href="{% url 'accounts:login' %}">
+                                <i class="fa-solid fa-lock me-1"></i> Sign In to Portal
+                            </a>
                         </li>
                     {% endif %}
                 </ul>
@@ -95,16 +210,17 @@
         </div>
     </nav>
 
-    <!-- Main Content Area -->
-    <main class="py-4">
-        <div class="container-fluid px-4">
+    <!-- Main Content Container -->
+    <main class="py-4 flex-grow-1">
+        <div class="container-fluid px-3 px-lg-4">
             <!-- Flash Message Alerts -->
             {% if messages %}
-                <div class="row">
+                <div class="row mb-3">
                     <div class="col-12">
                         {% for message in messages %}
-                            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm" role="alert">
-                                {{ message }}
+                            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm border-0 d-flex align-items-center" role="alert">
+                                <i class="fa-solid fa-circle-info me-2 fs-5"></i>
+                                <div>{{ message }}</div>
                                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
                         {% endfor %}
@@ -118,8 +234,12 @@
 
     <!-- Footer -->
     <footer class="mt-auto py-3 bg-white border-top text-center text-muted small">
-        <div class="container">
-            <span>&copy; {% now "Y" %} Northern Highways Transporters SACCO. Standalone Enterprise ERP & Fleet Compliance.</span>
+        <div class="container-fluid px-4 d-flex flex-wrap justify-content-between align-items-center">
+            <span>&copy; {% now "Y" %} <strong>{{ BRAND_NAME }}</strong>. Enterprise Transit ERP & Fleet Compliance.</span>
+            <div class="text-muted d-none d-md-block">
+                <span class="badge bg-light text-secondary border me-2"><i class="fa-solid fa-shield-halved text-success me-1"></i> OWASP ASVS L2</span>
+                <span class="badge bg-light text-secondary border"><i class="fa-solid fa-database text-primary me-1"></i> PostgreSQL High Availability</span>
+            </div>
         </div>
     </footer>
 

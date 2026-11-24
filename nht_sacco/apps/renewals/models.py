@@ -101,9 +101,24 @@ class RenewalRequest(models.Model):
 
     @classmethod
     def generate_request_number(cls):
-        year = timezone.now().year
-        count = cls.objects.filter(request_number__startswith=f"NHT-RNW-{year}").count() + 1
-        return f"NHT-RNW-{year}-{count:04d}"
+        year = timezone.localdate().year
+        prefix = f"NHT-RNW-{year}-"
+        last_req = cls.objects.filter(request_number__startswith=prefix).order_by('-request_number').first()
+        if last_req:
+            try:
+                seq = int(last_req.request_number.split('-')[-1]) + 1
+            except (ValueError, IndexError):
+                seq = cls.objects.filter(request_number__startswith=prefix).count() + 1
+        else:
+            seq = 1
+        while cls.objects.filter(request_number=f"{prefix}{seq:04d}").exists():
+            seq += 1
+        return f"{prefix}{seq:04d}"
+
+    def save(self, *args, **kwargs):
+        if not self.request_number:
+            self.request_number = self.generate_request_number()
+        super().save(*args, **kwargs)
 
     def mark_reviewed(self, officer_user, invoice):
         self.assigned_officer = officer_user

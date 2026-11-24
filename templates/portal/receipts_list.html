@@ -35,9 +35,9 @@
                         <td><code>{{ r.payment.provider_transaction_id|default:r.payment.payment_reference }}</code></td>
                         <td>{{ r.payment.invoice.invoice_number }}</td>
                         <td><span class="badge bg-light text-dark border">{{ r.payment.get_payment_method_display }}</span></td>
-                        <td class="text-end fw-bold text-success">KES {{ r.amount_paid|floatformat:2 }}</td>
+                        <td class="text-end fw-bold text-success">KES {{ r.payment.amount|floatformat:2 }}</td>
                         <td class="text-end">
-                            <a href="{% url 'payments:receipt_view' r.id %}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <a href="{% url 'payments:receipt_detail' r.id %}" target="_blank" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-printer me-1"></i> Print / PDF
                             </a>
                         </td>

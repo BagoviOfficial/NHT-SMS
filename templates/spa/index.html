@@ -1,0 +1,53 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{{ sacco_name|default:"Northern Highways Transporters SACCO" }} | NHT-SMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined" rel="stylesheet">
+    <style>
+        html, body, #root {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background-color: #F4F7FA;
+            font-family: 'Plus Jakarta Sans', 'Roboto', sans-serif;
+        }
+        .nht-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    {{ sacco_name|json_script:"nht-sacco-name" }}
+    {{ primary_color|json_script:"nht-primary-color" }}
+    {{ secondary_color|json_script:"nht-secondary-color" }}
+    {{ currency|json_script:"nht-currency" }}
+
+    <script>
+        window.__NHT_BOOTSTRAP__ = {
+            sacco_name: JSON.parse(document.getElementById('nht-sacco-name').textContent),
+            primary_color: JSON.parse(document.getElementById('nht-primary-color').textContent),
+            secondary_color: JSON.parse(document.getElementById('nht-secondary-color').textContent),
+            currency: JSON.parse(document.getElementById('nht-currency').textContent)
+        };
+    </script>
+
+    <!-- CDN Dependencies: React 18, Material UI v5, HTM, ApexCharts -->
+    <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/@mui/material@5.16.7/umd/material-ui.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.1/dist/apexcharts.min.js"></script>
+
+    <!-- NHT-SMS Material UI SPA Application -->
+    <script type="module" src="{% static 'spa/app.js' %}"></script>
+</body>
+</html>

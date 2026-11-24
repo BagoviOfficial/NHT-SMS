@@ -13,6 +13,8 @@ from django.core.exceptions import ValidationError
 from .models import (
     SystemConfiguration,
     ConfigurationHistory,
+    ConfigurationChangeRequest,
+    ChangeRequestStatus,
     ConfigCategory,
     ConfigDataType,
 )
@@ -464,3 +466,125 @@ class ConfigurationService:
             'skipped': skipped_count,
             'timestamp': timezone.now().isoformat()
         }
+
+    @classmethod
+    @transaction.atomic
+    def request_configuration_change(
+        cls,
+        key: str,
+        proposed_value: Any,
+        user,
+        justification: str = '',
+    ) -> ConfigurationChangeRequest:
+        """
+        Creates a Maker-Checker ConfigurationChangeRequest for sensitive settings.
+        """
+        setting = SystemConfiguration.objects.filter(key=key).first()
+        if not setting:
+            raise ValidationError(f"Configuration key '{key}' does not exist in registry.")
+
+        serialized_new = cls.validate_value(setting, proposed_value)
+        from .dependencies import ConfigurationDependencyRegistry
+        impact = ConfigurationDependencyRegistry.assess_impact(key, proposed_value)
+
+        cr = ConfigurationChangeRequest.objects.create(
+            setting=setting,
+            proposed_value=serialized_new,
+            current_value=CryptoService.mask_secret(setting.raw_value) if setting.is_secret else setting.raw_value,
+            status=ChangeRequestStatus.PENDING,
+            risk_level=impact.get('risk_level', 'MEDIUM'),
+            impact_assessment=impact,
+            justification=justification or f"Change request for {setting.title}",
+            requested_by=user,
+        )
+        AuditLog.log_action(
+            actor=user,
+            action=AuditAction.CREATE,
+            entity_type='ConfigurationChangeRequest',
+            entity_id=str(cr.pk),
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Requested config change for '{key}' (Risk: {cr.risk_level})",
+        )
+        return cr
+
+    @classmethod
+    @transaction.atomic
+    def approve_configuration_change(
+        cls,
+        change_request: ConfigurationChangeRequest,
+        reviewer,
+        comments: str = '',
+        ip_address: Optional[str] = None,
+    ) -> ConfigurationChangeRequest:
+        """
+        Approves and applies a pending ConfigurationChangeRequest.
+        Enforces strict Maker-Checker separation (reviewer != requested_by).
+        """
+        if change_request.status != ChangeRequestStatus.PENDING:
+            raise ValidationError(f"Change request is already {change_request.status}.")
+        if change_request.requested_by_id == getattr(reviewer, 'id', None):
+            raise ValidationError("Maker-Checker violation: You cannot approve your own configuration change request.")
+
+        setting = change_request.setting
+        raw_val = change_request.proposed_value
+        if setting.is_secret:
+            raw_val = CryptoService.decrypt(raw_val)
+
+        cls.set(
+            key=setting.key,
+            value=raw_val,
+            user=reviewer,
+            reason=f"Approved CR-{str(change_request.pk)[:8]}: {comments or change_request.justification}",
+            ip_address=ip_address,
+            confirm_critical=True,
+            enforce_approval=False,
+        )
+
+        change_request.status = ChangeRequestStatus.APPROVED
+        change_request.reviewed_by = reviewer
+        change_request.review_comments = comments
+        change_request.reviewed_at = timezone.now()
+        change_request.applied_at = timezone.now()
+        change_request.save(
+            update_fields=['status', 'reviewed_by', 'review_comments', 'reviewed_at', 'applied_at']
+        )
+
+        AuditLog.log_action(
+            actor=reviewer,
+            action=AuditAction.APPROVE,
+            entity_type='ConfigurationChangeRequest',
+            entity_id=str(change_request.pk),
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Approved & applied change request for '{setting.key}'",
+            ip_address=ip_address,
+        )
+        return change_request
+
+    @classmethod
+    @transaction.atomic
+    def reject_configuration_change(
+        cls,
+        change_request: ConfigurationChangeRequest,
+        reviewer,
+        comments: str = '',
+    ) -> ConfigurationChangeRequest:
+        if change_request.status != ChangeRequestStatus.PENDING:
+            raise ValidationError(f"Change request is already {change_request.status}.")
+        if change_request.requested_by_id == getattr(reviewer, 'id', None):
+            raise ValidationError("Maker-Checker violation: You cannot reject your own configuration change request.")
+
+        change_request.status = ChangeRequestStatus.REJECTED
+        change_request.reviewed_by = reviewer
+        change_request.review_comments = comments
+        change_request.reviewed_at = timezone.now()
+        change_request.save(update_fields=['status', 'reviewed_by', 'review_comments', 'reviewed_at'])
+
+        AuditLog.log_action(
+            actor=reviewer,
+            action=AuditAction.REJECT,
+            entity_type='ConfigurationChangeRequest',
+            entity_id=str(change_request.pk),
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Rejected change request for '{change_request.setting.key}': {comments}",
+        )
+        return change_request

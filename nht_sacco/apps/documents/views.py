@@ -5,7 +5,17 @@ from django.http import FileResponse, Http404, HttpResponseForbidden
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404
 from .models import Document
+from nht_sacco.apps.accounts.models import UserRole
 from nht_sacco.apps.audit.models import AuditLog, AuditAction, AuditOutcome
+
+DOCUMENT_STAFF_ROLES = {
+    UserRole.SUPER_ADMIN,
+    UserRole.COMPLIANCE_OFFICER,
+    UserRole.RENEWAL_OFFICER,
+    UserRole.SECRETARY,
+    UserRole.CHAIRMAN,
+    UserRole.AUDITOR,
+}
 
 class DocumentDownloadView(LoginRequiredMixin, View):
     """
@@ -16,8 +26,8 @@ class DocumentDownloadView(LoginRequiredMixin, View):
         doc = get_object_or_404(Document, pk=pk)
         user = request.user
 
-        # Authorization Logic
-        is_staff_authorized = user.is_superuser or user.is_management_staff or user.is_compliance_staff
+        # Authorization Logic (least-privilege staff roles + object-owning member/driver)
+        is_staff_authorized = user.is_superuser or user.role in DOCUMENT_STAFF_ROLES
         is_owner_authorized = False
 
         if hasattr(user, 'member_profile'):
@@ -25,6 +35,10 @@ class DocumentDownloadView(LoginRequiredMixin, View):
             if doc.vehicle and doc.vehicle.current_owner == member:
                 is_owner_authorized = True
             elif doc.member and doc.member == member:
+                is_owner_authorized = True
+
+        if not is_owner_authorized and hasattr(user, 'driver_profile'):
+            if doc.driver and doc.driver == user.driver_profile:
                 is_owner_authorized = True
 
         if not (is_staff_authorized or is_owner_authorized):

@@ -135,7 +135,7 @@ class Invoice(models.Model):
 
     @property
     def is_overdue(self):
-        return self.status != InvoiceStatus.PAID and self.due_date < timezone.now().date()
+        return self.status != InvoiceStatus.PAID and self.due_date < timezone.localdate()
 
     @classmethod
     def generate_invoice_number(cls):

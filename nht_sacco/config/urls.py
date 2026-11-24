@@ -10,6 +10,7 @@ from django.http import JsonResponse
 from django.views.generic import RedirectView
 from nht_sacco.apps.vehicles.views import VehicleQRVerificationView
 from nht_sacco.apps.payments.views import MPesaCallbackView
+from nht_sacco.apps.api.views_auth import SpaIndexView
 
 def health_live(request):
     """Liveness probe: verifies application process is running."""
@@ -33,6 +34,10 @@ def health_ready(request):
         'database': db_status,
         'service': 'NHT-SMS',
     }, status=status_code)
+
+admin.site.site_header = "Northern Highways Transporters SACCO"
+admin.site.site_title = "NHT-SMS Admin"
+admin.site.index_title = "Enterprise Core Administration"
 
 urlpatterns = [
     # Health checks
@@ -67,6 +72,11 @@ urlpatterns = [
 
     # System Configuration & Administration Centre
     path('settings/', include('nht_sacco.apps.integrations.urls', namespace='integrations')),
+
+    # Unified REST API v1 & Modern Material UI SPA
+    path('api/v1/', include('nht_sacco.apps.api.urls', namespace='api')),
+    path('app/', SpaIndexView.as_view(), name='spa_index'),
+    path('app/<path:route>/', SpaIndexView.as_view(), name='spa_route'),
 
     # Root redirect to accounts login
     path('', RedirectView.as_view(pattern_name='accounts:login', permanent=False), name='root-home'),

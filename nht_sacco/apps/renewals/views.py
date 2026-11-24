@@ -18,7 +18,7 @@ class RenewalRequestReviewView(LoginRequiredMixin, View):
         renewal = get_object_or_404(RenewalRequest, pk=pk)
         user = request.user
 
-        if not (user.is_superuser or user.is_renewal_staff or user.is_management_staff):
+        if not (user.is_superuser or user.is_renewal_staff or user.is_chairman):
             return HttpResponseForbidden("Access Denied: Only SACCO Renewal Officers can process renewal workflows.")
 
         action = request.POST.get('action')
@@ -26,12 +26,13 @@ class RenewalRequestReviewView(LoginRequiredMixin, View):
 
         if action == 'APPROVE_INVOICE':
             # Create automated Invoice
+            today = timezone.localdate()
             invoice = Invoice.objects.create(
                 invoice_number=Invoice.generate_invoice_number(),
                 member=renewal.member,
                 vehicle=renewal.vehicle,
-                issue_date=timezone.now().date(),
-                due_date=timezone.now().date() + timezone.timedelta(days=7),
+                issue_date=today,
+                due_date=today + timezone.timedelta(days=7),
                 notes=f"Renewal fee for {renewal.document_type.name} on {renewal.vehicle.registration_number}"
             )
             # Find renewal fee service

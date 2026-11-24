@@ -90,6 +90,8 @@ All payments—whether from Daraja STK Push callbacks, C2B PayBill notifications
 3. **Receipt Issuance:** Automatically generates a sequential `NHT-REC-YYYY-XXXX` receipt linked 1-to-1 with the payment.
 4. **Duplicate Journal Prevention:** Verifies whether a journal entry already exists for `payment.payment_reference`. Multiple settlements of the same payment will return idempotently without duplicate journal lines.
 5. **Maker-Checker Segregation:** Manual bank vouchers require independent review by financial personnel before posting.
+6. **Automatic Renewal Transition:** When `record_payment_settlement()` marks an invoice `is_fully_paid`, any linked `RenewalRequest` in `INVOICED` status automatically transitions to `PAID`.
+7. **Payment Reconciliation Engine (`apps/payments/reconciliation.py`):** `PaymentReconciliationService.run_reconciliation()` audits payments against receipts, invoices, and General Ledger `JournalEntry` rows, recording `ReconciliationRun` summaries and `ReconciliationException` items (`UNMATCHED_INITIATED`, `MISSING_RECEIPT`, `MISSING_JOURNAL`, `DUPLICATE_PROVIDER_REF`, `AMOUNT_MISMATCH`, `UNDERPAYMENT`, `OVERPAYMENT`) with audited resolution workflows via `/api/v1/reconciliation-runs/` and `/api/v1/reconciliation-exceptions/`.
 
 ---
 

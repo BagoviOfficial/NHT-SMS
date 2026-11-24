@@ -16,7 +16,7 @@ def task_overdue_invoice_reminders():
     Identifies unpaid or partially paid invoices that are past due date
     and dispatches reminder notifications to members.
     """
-    today = timezone.now().date()
+    today = timezone.localdate()
     overdue_invoices = Invoice.objects.filter(
         status__in=[InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID],
         due_date__lt=today

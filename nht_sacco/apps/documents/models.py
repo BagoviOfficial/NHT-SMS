@@ -152,12 +152,12 @@ class Document(models.Model):
     @property
     def is_expired(self):
         from django.utils import timezone
-        return self.expiry_date < timezone.now().date()
+        return self.expiry_date < timezone.localdate()
 
     @property
     def days_to_expiry(self):
         from django.utils import timezone
-        return (self.expiry_date - timezone.now().date()).days
+        return (self.expiry_date - timezone.localdate()).days
 
 
 class DocumentVerification(models.Model):

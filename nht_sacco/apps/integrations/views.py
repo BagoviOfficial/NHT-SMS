@@ -8,11 +8,13 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 
 from rest_framework import views, viewsets, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import (
     SystemConfiguration,
     ConfigurationHistory,
+    ConfigurationChangeRequest,
     IntegrationHealthLog,
     ConfigCategory,
     ConfigDataType,
@@ -34,6 +36,9 @@ from .serializers import (
     IntegrationHealthLogSerializer,
     ConnectionTestSerializer,
     ConfigurationImpactAssessmentSerializer,
+    ConfigurationChangeRequestSerializer,
+    ConfigurationChangeRequestCreateSerializer,
+    ConfigurationChangeReviewSerializer,
 )
 
 
@@ -389,3 +394,75 @@ class ProviderTestAPIView(views.APIView):
             res = DiagnosticService.run_all_diagnostics(user=request.user)
 
         return Response(res, status=status.HTTP_200_OK)
+
+
+class ConfigurationChangeRequestViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Maker-Checker workflow API for high-risk ConfigurationChangeRequest records.
+    """
+    queryset = ConfigurationChangeRequest.objects.select_related(
+        'setting', 'requested_by', 'reviewed_by'
+    ).order_by('-requested_at')
+    serializer_class = ConfigurationChangeRequestSerializer
+    permission_classes = [IsAuditorOrSystemAdmin]
+    filterset_fields = ['status', 'risk_level']
+
+    def get_permissions(self):
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return [IsAuditorOrSystemAdmin()]
+        from rest_framework.permissions import IsAuthenticated
+        return [IsAuthenticated()]
+
+    def create(self, request, *args, **kwargs):
+        from nht_sacco.apps.accounts.models import UserRole
+        if not (request.user.is_superuser or getattr(request.user, 'role', None) in (UserRole.SUPER_ADMIN, UserRole.CHAIRMAN)):
+            return Response({'error': 'Only Super Admin or Chairman may submit configuration change requests.'}, status=status.HTTP_403_FORBIDDEN)
+        ser = ConfigurationChangeRequestCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        try:
+            cr = ConfigurationService.request_configuration_change(
+                key=ser.validated_data['key'],
+                proposed_value=ser.validated_data['proposed_value'],
+                user=request.user,
+                justification=ser.validated_data.get('justification', ''),
+            )
+            return Response(ConfigurationChangeRequestSerializer(cr).data, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        from nht_sacco.apps.accounts.models import UserRole
+        if not (request.user.is_superuser or getattr(request.user, 'role', None) in (UserRole.SUPER_ADMIN, UserRole.CHAIRMAN)):
+            return Response({'error': 'Checker clearance (Super Admin or Chairman) required.'}, status=status.HTTP_403_FORBIDDEN)
+        cr = self.get_object()
+        ser = ConfigurationChangeReviewSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        try:
+            updated = ConfigurationService.approve_configuration_change(
+                change_request=cr,
+                reviewer=request.user,
+                comments=ser.validated_data.get('comments', ''),
+                ip_address=request.META.get('REMOTE_ADDR'),
+            )
+            return Response(ConfigurationChangeRequestSerializer(updated).data, status=status.HTTP_200_OK)
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        from nht_sacco.apps.accounts.models import UserRole
+        if not (request.user.is_superuser or getattr(request.user, 'role', None) in (UserRole.SUPER_ADMIN, UserRole.CHAIRMAN)):
+            return Response({'error': 'Checker clearance (Super Admin or Chairman) required.'}, status=status.HTTP_403_FORBIDDEN)
+        cr = self.get_object()
+        ser = ConfigurationChangeReviewSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        try:
+            updated = ConfigurationService.reject_configuration_change(
+                change_request=cr,
+                reviewer=request.user,
+                comments=ser.validated_data.get('comments', ''),
+            )
+            return Response(ConfigurationChangeRequestSerializer(updated).data, status=status.HTTP_200_OK)
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

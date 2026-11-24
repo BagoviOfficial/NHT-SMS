@@ -11,7 +11,7 @@ class ComplianceService:
         Calculates the complete regulatory compliance profile for a vehicle.
         Checks all mandatory document types against active, verified documents.
         """
-        today = timezone.now().date()
+        today = timezone.localdate()
         mandatory_types = DocumentType.objects.filter(is_mandatory_for_vehicle=True)
 
         missing_mandatory = []
@@ -61,7 +61,7 @@ class ComplianceService:
         Automated compliance scan identifying expiring or expired regulatory documents.
         Generates ComplianceAlert entries based on reminder thresholds [30, 14, 7, 3, 0].
         """
-        today = timezone.now().date()
+        today = timezone.localdate()
         active_vehicles = Vehicle.objects.filter(status=VehicleStatus.ACTIVE)
         
         alerts_created = 0
@@ -93,8 +93,8 @@ class ComplianceService:
                     )
                     alerts_created += 1
 
-            # Check upcoming expiry thresholds
-            for doc in compliance['expiring_soon_docs']:
+            # Check upcoming expiry thresholds across all verified non-expired docs (including 30-day thresholds)
+            for doc in (compliance['expiring_soon_docs'] + compliance['valid_docs']):
                 days_left = (doc.expiry_date - today).days
                 thresholds = doc.document_type.reminder_thresholds or [30, 14, 7, 3, 0]
                 if days_left in thresholds:

@@ -13,7 +13,7 @@ class MaintenanceService:
         """
         record.status = MaintenanceStatus.COMPLETED
         record.verified_by = verified_by
-        record.completed_date = completed_date or timezone.now().date()
+        record.completed_date = completed_date or timezone.localdate()
         if downtime_hours is not None:
             record.downtime_hours = Decimal(str(downtime_hours))
         if notes:

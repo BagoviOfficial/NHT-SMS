@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import (
     SystemConfiguration,
     ConfigurationHistory,
+    ConfigurationChangeRequest,
     IntegrationHealthLog,
     ConfigCategory,
     ConfigDataType,
@@ -98,6 +99,53 @@ class ConfigurationHistorySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class ConfigurationChangeRequestSerializer(serializers.ModelSerializer):
+    setting_key = serializers.CharField(source='setting.key', read_only=True)
+    setting_title = serializers.CharField(source='setting.title', read_only=True)
+    requested_by_username = serializers.CharField(source='requested_by.username', read_only=True)
+    reviewed_by_username = serializers.CharField(source='reviewed_by.username', read_only=True, default='')
+    proposed_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ConfigurationChangeRequest
+        fields = [
+            'id',
+            'setting',
+            'setting_key',
+            'setting_title',
+            'current_value',
+            'proposed_display',
+            'status',
+            'risk_level',
+            'impact_assessment',
+            'justification',
+            'requested_by',
+            'requested_by_username',
+            'reviewed_by',
+            'reviewed_by_username',
+            'review_comments',
+            'requested_at',
+            'reviewed_at',
+            'applied_at',
+        ]
+        read_only_fields = fields
+
+    def get_proposed_display(self, obj):
+        if obj.setting.is_secret:
+            return CryptoService.mask_secret(obj.proposed_value)
+        return obj.proposed_value
+
+
+class ConfigurationChangeRequestCreateSerializer(serializers.Serializer):
+    key = serializers.CharField(max_length=100)
+    proposed_value = serializers.CharField(allow_blank=True)
+    justification = serializers.CharField(max_length=500, required=False, allow_blank=True, default='')
+
+
+class ConfigurationChangeReviewSerializer(serializers.Serializer):
+    comments = serializers.CharField(max_length=500, required=False, allow_blank=True, default='')
+
+
 class IntegrationHealthLogSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
 
@@ -114,3 +162,50 @@ class IntegrationHealthLogSerializer(serializers.ModelSerializer):
             'tested_at',
         ]
         read_only_fields = fields
+
+
+class ConfigurationChangeRequestSerializer(serializers.ModelSerializer):
+    setting_key = serializers.CharField(source='setting.key', read_only=True)
+    setting_title = serializers.CharField(source='setting.title', read_only=True)
+    requested_by_username = serializers.CharField(source='requested_by.username', read_only=True)
+    reviewed_by_username = serializers.CharField(source='reviewed_by.username', read_only=True, default='')
+    proposed_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ConfigurationChangeRequest
+        fields = [
+            'id',
+            'setting',
+            'setting_key',
+            'setting_title',
+            'current_value',
+            'proposed_display',
+            'status',
+            'risk_level',
+            'impact_assessment',
+            'justification',
+            'requested_by',
+            'requested_by_username',
+            'reviewed_by',
+            'reviewed_by_username',
+            'review_comments',
+            'requested_at',
+            'reviewed_at',
+            'applied_at',
+        ]
+        read_only_fields = fields
+
+    def get_proposed_display(self, obj):
+        if obj.setting.is_secret:
+            return CryptoService.mask_secret(obj.proposed_value)
+        return obj.proposed_value
+
+
+class ConfigurationChangeRequestCreateSerializer(serializers.Serializer):
+    key = serializers.CharField(max_length=100)
+    proposed_value = serializers.CharField(allow_blank=True)
+    justification = serializers.CharField(max_length=500, required=False, allow_blank=True, default='')
+
+
+class ConfigurationChangeReviewSerializer(serializers.Serializer):
+    comments = serializers.CharField(max_length=500, required=False, allow_blank=True, default='')

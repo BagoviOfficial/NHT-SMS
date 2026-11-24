@@ -274,7 +274,7 @@ def portal_invoice_detail(request, invoice_id):
         )
         raise PermissionDenied("Access Denied: You do not own this invoice.")
 
-    items = invoice.items.select_related('service_item').all()
+    items = invoice.line_items.select_related('service_item').all()
     payments = invoice.payments.filter(status=PaymentStatus.SUCCESS).order_by('-created_at')
 
     context = {
@@ -459,6 +459,7 @@ def portal_renewal_apply(request):
         current_doc = Document.objects.filter(vehicle=vehicle, document_type=doc_type).order_by('-expiry_date').first()
 
         req = RenewalRequest.objects.create(
+            request_number=RenewalRequest.generate_request_number(),
             member=member,
             vehicle=vehicle,
             document_type=doc_type,

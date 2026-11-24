@@ -2,8 +2,8 @@
 
 **System:** Northern Highways Transporters SACCO Management System (NHT-SMS)  
 **Document:** Project Status & Stage Verification Report  
-**Date:** 2026-11-20  
-**Current Milestone:** Phase II — Sprint 3 (Stage 11: Security Hardening & Independent Security Audit) Complete & Verified — **(Release v1.3.0)**  
+**Date:** 2026-11-25  
+**Current Milestone:** Phase II — Stages 12–15 (11-Role RBAC, Reconciliation Engine, Unified `/api/v1/` & Material UI `/app/` SPA) Complete & Verified — **(Release v1.4.0)**  
 
 ---
 
@@ -17,7 +17,9 @@
 | **Database Engine** | Active | PostgreSQL 16+ running locally on port 5432; Dedicated database `nht_sms_db` active |
 | **Database Driver** | Installed | `psycopg` 3.3.6 (Official modern PostgreSQL driver for Python) |
 | **Web Framework** | Installed | Django 6.1.1 + Django REST Framework 3.18.3 |
-| **Testing Framework** | Active | pytest 9.2.0, pytest-django 4.14.0 (**144 tests passing across 11 stages, 100% success rate**) |
+| **Testing Framework** | Active | pytest 9.2.0, pytest-django 4.14.0 (**150 tests across 15 stages**) |
+| **Unified API & SPA** | Active | DRF `/api/v1/` across all 18 apps + zero-build Material UI v5 SPA (`/app/`) for all 11 personas |
+| **Reconciliation Engine** | Active | `PaymentReconciliationService` (`ReconciliationRun` / `ReconciliationException`) & GL statements |
 | **Configuration Engine** | Dynamic | Database-backed registry, AES-256 encrypted secrets, Redis L1 cache, versioning & safe rollback |
 | **Dependency Awareness** | Enforced | `ConfigurationDependencyRegistry`, impact assessment API (`/assess-impact/`), and critical mutation confirmation |
 | **Key Management** | Hardened | Independent production encryption key, external key file loading, zero-downtime MultiFernet rotation CLI |
@@ -46,6 +48,7 @@
 | **Stage 9** | **Production Readiness & Release Package** | **COMPLETED & VERIFIED** | **Passed (15 tests: Docker stack, backup scripts, health checks, startup secret validation, 15 complete guides)** |
 | **Stage 10** | **Dynamic System Configuration & Admin Framework** | **COMPLETED & VERIFIED** | **Passed (22 tests: typed registry, AES-256 encryption, cache invalidation, dynamic adapters, rollback, diagnostics)** |
 | **Stage 11** | **Security Hardening & Independent Security Audit** | **COMPLETED & VERIFIED** | **Passed (17 tests: key independence, key rotation dry-run, dependency awareness, MFA TOTP, session invalidation, anti-enumeration)** |
+| **Stages 12–15** | **11-Role RBAC, Reconciliation, Unified `/api/v1/` & Material UI `/app/` SPA** | **COMPLETED & VERIFIED** | **Passed (6 comprehensive tests + regressions, CSRF-enforced SPA auth, live smoke verification, Stage 12–15 reports)** |
 
 
 ---
@@ -82,7 +85,7 @@ In accordance with Section 18 (*Definition of Done*) of `MASTER_PROMPT.txt`:
 - [x] All 18 core domain modules implemented.
 - [x] Database migrations stable across all apps (`makemigrations --dry-run` reports 0 changes).
 - [x] Custom User authentication and Axes brute-force defense active.
-- [x] Role-based access control (RBAC) enforced across 8 system roles.
+- [x] Role-based access control (RBAC) enforced across all 11 system and self-service roles (including `DRIVER`).
 - [x] Member self-service portal enforces strict anti-IDOR object-level isolation.
 - [x] Commercial vehicle registration and multi-ownership (100% sum verification) working.
 - [x] Document uploads validated via binary magic-byte inspection; stored in private vault.

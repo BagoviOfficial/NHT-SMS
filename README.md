@@ -1,6 +1,6 @@
 # Northern Highways Transporters SACCO Management System (NHT-SMS)
 
-[![Release](https://img.shields.io/badge/Release-v1.0.0--rc1-blue.svg)](https://github.com/northernhighways/nht-sms)
+[![Release](https://img.shields.io/badge/Release-v1.4.0-blue.svg)](https://github.com/northernhighways/nht-sms)
 [![Security Standard](https://img.shields.io/badge/Security-OWASP%20ASVS%20Level%202-green.svg)](docs/SECURITY.md)
 [![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.14-blue.svg)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/Django-6.1-green.svg)](https://www.djangoproject.com/)
@@ -72,6 +72,8 @@ flowchart TD
 | **Multi-Channel Dispatch** | Decoupled notification adapters for Africa's Talking (SMS), Meta WhatsApp Cloud API, SMTP Email, and In-App notification center with member preference controls. |
 | **Member Self-Service** | Responsive portal (`/portal/`) with strict anti-IDOR checks, running balance statements, online document renewal submissions, and vehicle card generation. |
 | **SACCO Governance** | Maintenance order tracking with downtime analytics, incident grievance investigations, committee meeting agendas, and formal resolution voting records. |
+| **Unified REST API & Material UI SPA** | Unified DRF `/api/v1/` across all 18 apps powering a responsive zero-build React 18 + Material UI v5 SPA (`/app/`) with role-scoped navigation across all 11 personas (including `MEMBER` and `DRIVER` portals). |
+| **Payment Reconciliation & Statements** | Automated `PaymentReconciliationService` comparing payments, receipts, invoices, and GL journals, plus live Income & Expenditure and Balance Sheet reports. |
 | **Executive Analytics** | Executive dashboard with real-time operational metrics, branded compliance PDF report exports (`fpdf2`), and multi-tab financial Excel reconciliation workbooks (`openpyxl`). |
 
 ---
@@ -86,7 +88,7 @@ flowchart TD
 - **WSGI / Web Server:** Gunicorn 22.0 + Nginx 1.27
 - **Security & MFA:** `django-axes` 9.0 (brute-force defense) + `django-otp` 1.7 (TOTP MFA)
 - **Document Generation:** `fpdf2` 2.8 (PDF generation) + `openpyxl` 3.1 (Excel exports) + `qrcode` 8.2 (QR tokens)
-- **Testing Suite:** `pytest` 9.2 + `pytest-django` 4.14 (100% test pass rate across 80+ tests)
+- **Testing Suite:** `pytest` 9.2 + `pytest-django` 4.14 (150 automated tests across 15 stages)
 
 ---
 
@@ -119,6 +121,7 @@ python manage.py migrate
 
 # 6. Seed baseline master data
 python manage.py seed_sacco_admin
+python manage.py seed_sacco_fleet
 python manage.py seed_document_types
 python manage.py seed_billing_services
 python manage.py seed_chart_of_accounts
@@ -128,7 +131,7 @@ python manage.py seed_notification_templates
 python manage.py runserver
 ```
 
-Navigate to `http://127.0.0.1:8000/` to access the SACCO portal.
+Navigate to `http://127.0.0.1:8000/app/` for the Material UI SPA or `http://127.0.0.1:8000/` for the classic portal login.
 
 ---
 

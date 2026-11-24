@@ -53,7 +53,7 @@
                         <tr>
                             <td>
                                 <strong>{{ item.service_item.name }}</strong>
-                                {% if item.notes %}<br><small class="text-muted">{{ item.notes }}</small>{% endif %}
+                                {% if item.description %}<br><small class="text-muted">{{ item.description }}</small>{% endif %}
                             </td>
                             <td>
                                 {% if item.service_item.is_statutory %}
@@ -64,7 +64,7 @@
                             </td>
                             <td class="text-end">{{ item.quantity }}</td>
                             <td class="text-end">KES {{ item.unit_price|floatformat:2 }}</td>
-                            <td class="text-end fw-bold">KES {{ item.line_total|floatformat:2 }}</td>
+                            <td class="text-end fw-bold">KES {{ item.total_price|floatformat:2 }}</td>
                         </tr>
                     {% empty %}
                         <tr><td colspan="5" class="text-center py-3 text-muted">No line items.</td></tr>
@@ -117,7 +117,7 @@
                             <td class="text-end fw-semibold text-success">KES {{ p.amount|floatformat:2 }}</td>
                             <td class="text-end">
                                 {% if p.receipt %}
-                                    <a href="{% url 'payments:receipt_view' p.receipt.id %}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                    <a href="{% url 'payments:receipt_detail' p.receipt.id %}" target="_blank" class="btn btn-sm btn-outline-secondary">
                                         <i class="bi bi-file-earmark-pdf"></i> Receipt
                                     </a>
                                 {% else %}

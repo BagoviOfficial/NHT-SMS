@@ -97,9 +97,10 @@ nht_sacco/
 │   ├── incidents/      # Accident & passenger grievance investigation workflows
 │   ├── governance/     # Committee rosters, board meetings, agendas, formal resolutions
 │   ├── reports/        # Executive dashboard analytics, PDF & Excel export generators
-│   └── integrations/   # Dynamic System Configuration, AES-256 Crypto, Health Diagnostics & Adapters
+│   ├── integrations/   # Dynamic System Configuration, AES-256 Crypto, Health Diagnostics & Adapters
+│   └── api/            # Unified DRF REST API v1 (/api/v1/) & Material UI SPA shell (/app/)
 ├── config/             # Django settings, WSGI, ASGI, Celery, and root URLs
-└── static/ & templates/# UI templates, Bootstrap 5, HTMX, and brand assets
+└── static/ & templates/# Bootstrap 5 templates + CDN React 18 / Material UI v5 SPA (static/spa/)
 ```
 
 ---

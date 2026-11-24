@@ -24,6 +24,7 @@ AUTHORIZED_STAFF_ROLES = [
 
 FINANCE_STAFF_ROLES = [
     UserRole.SUPER_ADMIN,
+    UserRole.CHAIRMAN,
     UserRole.TREASURER,
     UserRole.ACCOUNTANT,
     UserRole.AUDITOR,
@@ -33,7 +34,7 @@ FINANCE_STAFF_ROLES = [
 def staff_role_required(view_func):
     @login_required
     def wrapper(request, *args, **kwargs):
-        if not (request.user.is_staff or request.user.role in AUTHORIZED_STAFF_ROLES):
+        if not (request.user.is_superuser or request.user.role in AUTHORIZED_STAFF_ROLES):
             AuditLog.log_action(
                 actor=request.user,
                 action=AuditAction.VIEW,
@@ -85,7 +86,7 @@ def export_compliance_pdf(request):
 
 @login_required
 def export_financial_excel(request):
-    if not (request.user.is_staff or request.user.role in FINANCE_STAFF_ROLES):
+    if not (request.user.is_superuser or request.user.role in FINANCE_STAFF_ROLES):
         AuditLog.log_action(
             actor=request.user,
             action=AuditAction.EXPORT,

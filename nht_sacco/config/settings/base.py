@@ -69,6 +69,7 @@ LOCAL_APPS = [
     'nht_sacco.apps.governance',
     'nht_sacco.apps.reports',
     'nht_sacco.apps.integrations',
+    'nht_sacco.apps.api',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

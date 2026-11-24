@@ -14,6 +14,7 @@ class UserRole(models.TextChoices):
     FIELD_OFFICER = 'FIELD_OFFICER', _('Field Officer')
     AUDITOR = 'AUDITOR', _('Auditor')
     MEMBER = 'MEMBER', _('SACCO Member')
+    DRIVER = 'DRIVER', _('PSV Driver')
 
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -74,6 +75,26 @@ class User(AbstractUser):
                 self.is_verified = bool(orig_val)
             else:
                 self.is_verified = False
+
+        # Keep is_staff and is_superuser synchronized with role
+        if self.role == UserRole.SUPER_ADMIN:
+            self.is_staff = True
+            self.is_superuser = True
+        elif self.role in [
+            UserRole.CHAIRMAN,
+            UserRole.SECRETARY,
+            UserRole.TREASURER,
+            UserRole.ACCOUNTANT,
+            UserRole.COMPLIANCE_OFFICER,
+            UserRole.RENEWAL_OFFICER,
+            UserRole.FIELD_OFFICER,
+            UserRole.AUDITOR,
+        ]:
+            self.is_staff = True
+        elif self.role in (UserRole.MEMBER, UserRole.DRIVER):
+            if not self.is_superuser:
+                self.is_staff = False
+
         super().save(*args, **kwargs)
 
     @property
@@ -88,6 +109,27 @@ class User(AbstractUser):
             UserRole.RENEWAL_OFFICER,
             UserRole.FIELD_OFFICER,
             UserRole.AUDITOR,
+        ]
+
+    @property
+    def is_secretary(self):
+        return self.is_superuser or self.role in [
+            UserRole.SUPER_ADMIN,
+            UserRole.SECRETARY,
+        ]
+
+    @property
+    def is_chairman(self):
+        return self.is_superuser or self.role in [
+            UserRole.SUPER_ADMIN,
+            UserRole.CHAIRMAN,
+        ]
+
+    @property
+    def is_field_officer(self):
+        return self.is_superuser or self.role in [
+            UserRole.SUPER_ADMIN,
+            UserRole.FIELD_OFFICER,
         ]
 
     @property
@@ -122,6 +164,54 @@ class User(AbstractUser):
     @property
     def is_member(self):
         return self.role == UserRole.MEMBER
+
+    @property
+    def is_driver(self):
+        return self.role == UserRole.DRIVER
+
+    @property
+    def role_badge_color(self):
+        mapping = {
+            UserRole.SUPER_ADMIN: 'danger',
+            UserRole.CHAIRMAN: 'primary',
+            UserRole.SECRETARY: 'info',
+            UserRole.TREASURER: 'success',
+            UserRole.ACCOUNTANT: 'success',
+            UserRole.COMPLIANCE_OFFICER: 'warning',
+            UserRole.RENEWAL_OFFICER: 'warning',
+            UserRole.FIELD_OFFICER: 'secondary',
+            UserRole.AUDITOR: 'dark',
+            UserRole.MEMBER: 'primary',
+            UserRole.DRIVER: 'info',
+        }
+        return mapping.get(self.role, 'secondary')
+
+    @property
+    def role_icon(self):
+        mapping = {
+            UserRole.SUPER_ADMIN: 'shield-lock-fill',
+            UserRole.CHAIRMAN: 'award-fill',
+            UserRole.SECRETARY: 'card-checklist',
+            UserRole.TREASURER: 'cash-stack',
+            UserRole.ACCOUNTANT: 'calculator-fill',
+            UserRole.COMPLIANCE_OFFICER: 'shield-check',
+            UserRole.RENEWAL_OFFICER: 'arrow-repeat',
+            UserRole.FIELD_OFFICER: 'geo-alt-fill',
+            UserRole.AUDITOR: 'journal-check',
+            UserRole.MEMBER: 'person-badge',
+            UserRole.DRIVER: 'car-front-fill',
+        }
+        return mapping.get(self.role, 'person')
+
+    @property
+    def dashboard_url(self):
+        if self.is_member or hasattr(self, 'member_profile'):
+            return '/portal/'
+        if self.is_driver or hasattr(self, 'driver_profile'):
+            return '/app/#driver-portal'
+        if self.is_management_staff:
+            return '/accounts/dashboard/'
+        return '/accounts/profile/'
 
 
 class LoginHistory(models.Model):

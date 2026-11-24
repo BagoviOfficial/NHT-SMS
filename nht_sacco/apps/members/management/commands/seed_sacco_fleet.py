@@ -142,11 +142,28 @@ class Command(BaseCommand):
             }
         )
 
-        # Seed Drivers
+        # Seed Drivers & Driver Portal User
+        du1, du1_created = User.objects.get_or_create(
+            username='yusufjama',
+            defaults={
+                'email': 'yusuf.jama@example.com',
+                'role': UserRole.DRIVER,
+                'first_name': 'Yusuf',
+                'last_name': 'Jama',
+                'phone_number': '+254733333331',
+                'national_id': '30112233',
+                'is_verified': True,
+            }
+        )
+        if du1_created:
+            du1.set_password('Driver@NHT2026!')
+            du1.save()
+
         today = date.today()
         d1, _ = Driver.objects.get_or_create(
             national_id='30112233',
             defaults={
+                'user': du1,
                 'full_name': 'Yusuf Jama',
                 'phone_number': '+254733333331',
                 'driving_license_number': 'DL-NTSA-1001',
@@ -158,6 +175,9 @@ class Command(BaseCommand):
                 'status': DriverStatus.ACTIVE,
             }
         )
+        if not d1.user:
+            d1.user = du1
+            d1.save(update_fields=['user'])
         DriverAssignment.objects.get_or_create(
             driver=d1,
             vehicle=v1,

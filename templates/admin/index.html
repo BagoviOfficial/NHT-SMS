@@ -1,0 +1,292 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static log %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <style>
+        .admin-hero-strip {
+            background: linear-gradient(135deg, var(--nht-navy) 0%, var(--nht-blue) 100%);
+            color: #FFFFFF;
+            border-radius: 12px;
+            padding: 1.25rem 1.75rem;
+            margin-bottom: 1.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            box-shadow: var(--nht-shadow);
+        }
+        .admin-hero-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            margin: 0;
+            color: #FFFFFF;
+        }
+        .admin-hero-sub {
+            font-size: 0.82rem;
+            opacity: 0.85;
+            margin: 2px 0 0 0;
+        }
+        .admin-quick-pills {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .admin-quick-pill {
+            background: rgba(255, 255, 255, 0.15);
+            color: #FFFFFF !important;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-decoration: none !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s ease;
+        }
+        .admin-quick-pill:hover {
+            background: var(--nht-orange);
+            color: #FFFFFF !important;
+            transform: translateY(-1px);
+        }
+        .admin-app-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        @media (max-width: 576px) {
+            .admin-app-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .admin-module-card {
+            background: #FFFFFF;
+            border: 1px solid var(--nht-border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--nht-shadow-sm);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .admin-module-card:hover {
+            box-shadow: var(--nht-shadow);
+            transform: translateY(-2px);
+        }
+        .admin-module-header {
+            padding: 0.85rem 1.25rem;
+            background: #F8FAFC;
+            border-bottom: 1px solid var(--nht-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .admin-module-title {
+            font-size: 0.92rem;
+            font-weight: 800;
+            color: var(--nht-navy);
+            margin: 0;
+            text-decoration: none;
+        }
+        .admin-model-row {
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid #F1F5F9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.86rem;
+        }
+        .admin-model-row:last-child {
+            border-bottom: none;
+        }
+        .admin-model-row:hover {
+            background-color: #F8FAFC;
+        }
+        .admin-model-name {
+            font-weight: 600;
+            color: var(--nht-text-main);
+            text-decoration: none;
+        }
+        .admin-model-name:hover {
+            color: var(--nht-blue);
+        }
+        .admin-model-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .admin-btn-action {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-decoration: none !important;
+            transition: all 0.15s ease;
+        }
+        .admin-btn-add {
+            background: #ECFDF5;
+            color: #059669 !important;
+        }
+        .admin-btn-add:hover {
+            background: #059669;
+            color: #FFFFFF !important;
+        }
+        .admin-btn-view {
+            background: #EFF6FF;
+            color: #2563EB !important;
+        }
+        .admin-btn-view:hover {
+            background: #2563EB;
+            color: #FFFFFF !important;
+        }
+        #recent-actions-module {
+            background: #FFFFFF;
+            border: 1px solid var(--nht-border);
+            border-radius: 12px;
+            box-shadow: var(--nht-shadow-sm);
+            padding: 1.25rem;
+        }
+        #recent-actions-module h2 {
+            font-size: 0.92rem;
+            font-weight: 800;
+            color: var(--nht-navy);
+            margin-top: 0;
+            margin-bottom: 0.75rem;
+            border-bottom: 2px solid var(--nht-orange);
+            padding-bottom: 0.5rem;
+        }
+        #recent-actions-module ul.actionlist {
+            padding-left: 0;
+            list-style: none;
+            margin: 0;
+        }
+        #recent-actions-module li {
+            padding: 0.6rem 0;
+            border-bottom: 1px solid #F1F5F9;
+            font-size: 0.82rem;
+        }
+        #recent-actions-module li:last-child {
+            border-bottom: none;
+        }
+    </style>
+{% endblock %}
+
+{% block coltype %}colMS{% endblock %}
+
+{% block bodyclass %}{{ block.super }} dashboard{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <!-- Top Executive Quick Status Banner -->
+    <div class="admin-hero-strip">
+        <div>
+            <h2 class="admin-hero-title">
+                <i class="fa-solid fa-layer-group text-warning me-2"></i> Northern Highways Transporters Core ERP Administration
+            </h2>
+            <p class="admin-hero-sub">Direct model registry &bull; Maker-checker controls &bull; Immutable audit security</p>
+        </div>
+        <div class="admin-quick-pills">
+            <a href="{% url 'accounts:dashboard' %}" class="admin-quick-pill">
+                <i class="fa-solid fa-gauge-high"></i> Operations Dashboard
+            </a>
+            <a href="{% url 'reports:dashboard' %}" class="admin-quick-pill">
+                <i class="fa-solid fa-chart-line"></i> Analytics Dashboard
+            </a>
+            <a href="{% url 'integrations:settings_index' %}" class="admin-quick-pill">
+                <i class="fa-solid fa-sliders"></i> System Settings
+            </a>
+            <a href="/admin/audit/auditlog/" class="admin-quick-pill">
+                <i class="fa-solid fa-fingerprint"></i> Audit Trail
+            </a>
+        </div>
+    </div>
+
+    <!-- App Modules Grid -->
+    {% if app_list %}
+        <div class="admin-app-grid">
+            {% for app in app_list %}
+                <div class="admin-module-card">
+                    <div class="admin-module-header">
+                        <a href="{{ app.app_url }}" class="admin-module-title">
+                            <i class="fa-solid fa-folder-tree text-primary me-2"></i> {{ app.name }}
+                        </a>
+                        <span class="badge bg-light text-muted border font-monospace" style="font-size: 0.7rem;">{{ app.models|length }} models</span>
+                    </div>
+                    <div>
+                        {% for model in app.models %}
+                            <div class="admin-model-row">
+                                <div>
+                                    {% if model.admin_url %}
+                                        <a href="{{ model.admin_url }}" class="admin-model-name">{{ model.name }}</a>
+                                    {% else %}
+                                        <span class="text-muted">{{ model.name }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="admin-model-actions">
+                                    {% if model.add_url %}
+                                        <a href="{{ model.add_url }}" class="admin-btn-action admin-btn-add" title="Add {{ model.name }}">
+                                            <i class="fa-solid fa-plus"></i> Add
+                                        </a>
+                                    {% endif %}
+                                    {% if model.admin_url %}
+                                        {% if model.view_only %}
+                                            <a href="{{ model.admin_url }}" class="admin-btn-action admin-btn-view" title="View {{ model.name }}">
+                                                <i class="fa-solid fa-eye"></i> View
+                                            </a>
+                                        {% else %}
+                                            <a href="{{ model.admin_url }}" class="admin-btn-action admin-btn-view" title="Change {{ model.name }}">
+                                                <i class="fa-solid fa-table-list"></i> Manage
+                                            </a>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-muted">{% translate "You don’t have permission to view or edit anything." %}</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block sidebar %}
+<div id="content-related">
+    <div class="module" id="recent-actions-module">
+        <h2><i class="fa-solid fa-clock-rotate-left text-warning me-2"></i> Recent Actions</h2>
+        <h3>My Recent Activity</h3>
+        {% get_admin_log 10 as admin_log for_user user %}
+        {% if not admin_log %}
+            <p class="text-muted small">No recent admin actions logged.</p>
+        {% else %}
+            <ul class="actionlist">
+                {% for entry in admin_log %}
+                    <li class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}">
+                        {% if entry.is_deletion or not entry.get_admin_url %}
+                            <strong>{{ entry.object_repr }}</strong>
+                        {% else %}
+                            <a href="{{ entry.get_admin_url }}" class="fw-bold">{{ entry.object_repr }}</a>
+                        {% endif %}
+                        <div class="text-muted font-monospace" style="font-size: 0.72rem; margin-top: 2px;">
+                            {% if entry.content_type %}
+                                <span>{{ entry.content_type.name|capfirst }}</span>
+                            {% else %}
+                                <span>Unknown</span>
+                            {% endif %}
+                            &bull;
+                            {% if entry.is_addition %}<span class="text-success">Created</span>{% endif %}
+                            {% if entry.is_change %}<span class="text-primary">Modified</span>{% endif %}
+                            {% if entry.is_deletion %}<span class="text-danger">Deleted</span>{% endif %}
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

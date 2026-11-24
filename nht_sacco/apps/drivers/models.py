@@ -12,6 +12,14 @@ class DriverStatus(models.TextChoices):
 
 class Driver(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='driver_profile',
+        verbose_name=_('Linked User Account')
+    )
     full_name = models.CharField(_('Full Name'), max_length=150)
     national_id = models.CharField(_('National ID'), max_length=30, unique=True, db_index=True)
     phone_number = models.CharField(_('Phone Number'), max_length=20, unique=True)

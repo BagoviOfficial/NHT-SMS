@@ -1,0 +1,36 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:"NHT-SMS Admin" }}{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <!-- NHT Custom Professional Admin Theme -->
+    <link rel="stylesheet" href="{% static 'css/admin_theme.css' %}">
+{% endblock %}
+
+{% block branding %}
+<div id="site-name">
+    <a href="{% url 'admin:index' %}">
+        <i class="fa-solid fa-truck-moving" style="color: #FF8A00; margin-right: 8px;"></i>
+        <span>{{ site_header|default:"Northern Highways Transporters SACCO" }}</span>
+        <span class="admin-brand-badge">ERP CORE</span>
+    </a>
+</div>
+{% endblock %}
+
+{% block userlinks %}
+    <a href="{% url 'accounts:dashboard' %}" class="btn-admin-return">
+        <i class="fa-solid fa-gauge-high"></i> Operations Dashboard
+    </a>
+    <span class="admin-separator" style="color: rgba(255,255,255,0.4); margin: 0 4px;">|</span>
+    {{ block.super }}
+{% endblock %}

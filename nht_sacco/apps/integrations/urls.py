@@ -6,6 +6,7 @@ app_name = 'integrations'
 
 router = DefaultRouter()
 router.register(r'configs', views.ConfigurationViewSet, basename='config_item')
+router.register(r'change-requests', views.ConfigurationChangeRequestViewSet, basename='config_change_request')
 
 urlpatterns = [
     # Administration Web Portal

@@ -11,7 +11,15 @@ from nht_sacco.apps.payments.models import Payment, PaymentStatus, PaymentMethod
 class AccountingService:
     @classmethod
     def get_or_create_current_period(cls, date_val=None):
-        target_date = date_val or timezone.now().date()
+        target_date = date_val or timezone.localdate()
+        closed_period = FinancialPeriod.objects.filter(
+            start_date__lte=target_date,
+            end_date__gte=target_date,
+            is_closed=True
+        ).first()
+        if closed_period:
+            raise ValidationError(f"Cannot post to closed financial period '{closed_period.name}'.")
+
         period = FinancialPeriod.objects.filter(
             start_date__lte=target_date,
             end_date__gte=target_date,
@@ -35,6 +43,8 @@ class AccountingService:
                 name=name,
                 defaults={'start_date': start, 'end_date': end, 'is_closed': False}
             )
+            if period.is_closed:
+                raise ValidationError(f"Cannot post to closed financial period '{period.name}'.")
         return period
 
     @classmethod
@@ -131,7 +141,7 @@ class AccountingService:
 
         entry = JournalEntry.objects.create(
             entry_number=JournalEntry.generate_entry_number(),
-            date=payment.confirmed_at.date() if payment.confirmed_at else timezone.now().date(),
+            date=payment.confirmed_at.date() if payment.confirmed_at else timezone.localdate(),
             period=period,
             reference=payment.payment_reference,
             narration=f"Payment settlement for {payment.invoice.invoice_number} via {payment.get_method_display()}",
@@ -236,6 +246,15 @@ class AccountingService:
         # 6. Post double-entry journal entry
         journal_entry = cls.post_payment_receipt(locked_payment, user=user)
 
+        # 6b. Sync linked RenewalRequests when invoice is fully paid
+        if locked_invoice.is_fully_paid:
+            from nht_sacco.apps.renewals.models import RenewalRequest, RenewalStatus
+            for renewal in RenewalRequest.objects.filter(
+                invoice=locked_invoice,
+                status=RenewalStatus.INVOICED
+            ):
+                renewal.mark_paid()
+
         # 7. Immutable Audit Trail
         actor_user = user if (user and getattr(user, 'is_authenticated', False)) else None
         AuditLog.objects.create(
@@ -317,11 +336,11 @@ class AccountingService:
         Creates an immutable, balancing reversal journal entry.
         Inverts all debit and credit lines of the original entry.
         """
-        period = cls.get_or_create_current_period(timezone.now().date())
+        period = cls.get_or_create_current_period(timezone.localdate())
 
         reversal = JournalEntry.objects.create(
             entry_number=JournalEntry.generate_entry_number(),
-            date=timezone.now().date(),
+            date=timezone.localdate(),
             period=period,
             reference=f"REV-{original_entry.entry_number}",
             narration=f"Reversal of {original_entry.entry_number}: {reason}",
@@ -381,4 +400,163 @@ class AccountingService:
             'total_debits': total_dr,
             'total_credits': total_cr,
             'is_balanced': total_dr == total_cr,
+        }
+
+    @classmethod
+    @transaction.atomic
+    def post_manual_journal(cls, date_val, reference, narration, lines_data, user):
+        """
+        Posts a manual double-entry journal entry and verifies Debit == Credit equilibrium.
+        """
+        if not lines_data or len(lines_data) < 2:
+            raise ValidationError("A manual journal entry requires at least two lines (debit and credit).")
+
+        target_date = date_val or timezone.localdate()
+        period = cls.get_or_create_current_period(target_date)
+
+        total_dr = sum(Decimal(str(l.get('debit', '0.00'))) for l in lines_data)
+        total_cr = sum(Decimal(str(l.get('credit', '0.00'))) for l in lines_data)
+        if total_dr <= Decimal('0.00') or total_dr != total_cr:
+            raise ValidationError(
+                f"Journal entry must balance with positive totals (Debits={total_dr}, Credits={total_cr})."
+            )
+
+        entry = JournalEntry.objects.create(
+            entry_number=JournalEntry.generate_entry_number(),
+            date=target_date,
+            period=period,
+            reference=reference,
+            narration=narration,
+            posted_by=user,
+        )
+        for line in lines_data:
+            account = Account.objects.get(pk=line['account_id'])
+            JournalLine.objects.create(
+                journal_entry=entry,
+                account=account,
+                debit=Decimal(str(line.get('debit', '0.00'))),
+                credit=Decimal(str(line.get('credit', '0.00'))),
+            )
+        entry.verify_balance()
+
+        AuditLog.log_action(
+            actor=user,
+            action=AuditAction.CREATE,
+            entity_type='JournalEntry',
+            entity_id=entry.entry_number,
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Manual balanced journal posted ({reference}): Dr/Cr KES {total_dr}",
+        )
+        return entry
+
+    @classmethod
+    @transaction.atomic
+    def close_period(cls, period: FinancialPeriod, user):
+        if period.is_closed:
+            return period
+        period.is_closed = True
+        period.save(update_fields=['is_closed'])
+        AuditLog.log_action(
+            actor=user,
+            action=AuditAction.UPDATE,
+            entity_type='FinancialPeriod',
+            entity_id=period.name,
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Closed financial period {period.name}",
+        )
+        return period
+
+    @classmethod
+    @transaction.atomic
+    def reopen_period(cls, period: FinancialPeriod, user, reason=''):
+        if not period.is_closed:
+            return period
+        period.is_closed = False
+        period.save(update_fields=['is_closed'])
+        AuditLog.log_action(
+            actor=user,
+            action=AuditAction.UPDATE,
+            entity_type='FinancialPeriod',
+            entity_id=period.name,
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Reopened financial period {period.name}. Reason: {reason or 'Administrative correction'}",
+        )
+        return period
+
+    @classmethod
+    def get_income_and_expenditure(cls, start_date=None, end_date=None):
+        """
+        Computes Income & Expenditure statement directly from posted JournalLines.
+        """
+        line_filter = models.Q()
+        if start_date:
+            line_filter &= models.Q(journal_entry__date__gte=start_date)
+        if end_date:
+            line_filter &= models.Q(journal_entry__date__lte=end_date)
+
+        def _summarize(acc_type):
+            rows = []
+            total = Decimal('0.00')
+            for acc in Account.objects.filter(type=acc_type, is_active=True).order_by('code'):
+                qs = acc.journal_lines.filter(line_filter)
+                dr = qs.aggregate(s=models.Sum('debit'))['s'] or Decimal('0.00')
+                cr = qs.aggregate(s=models.Sum('credit'))['s'] or Decimal('0.00')
+                bal = (cr - dr) if acc_type == AccountType.REVENUE else (dr - cr)
+                total += bal
+                rows.append({'code': acc.code, 'name': acc.name, 'amount': bal})
+            return rows, total
+
+        revenue_rows, total_revenue = _summarize(AccountType.REVENUE)
+        expense_rows, total_expenses = _summarize(AccountType.EXPENSE)
+        net_surplus = total_revenue - total_expenses
+        return {
+            'start_date': start_date,
+            'end_date': end_date,
+            'revenues': revenue_rows,
+            'expenses': expense_rows,
+            'total_revenue': total_revenue,
+            'total_expenses': total_expenses,
+            'net_surplus': net_surplus,
+        }
+
+    @classmethod
+    def get_balance_sheet(cls, as_of_date=None):
+        """
+        Computes Balance Sheet directly from posted JournalLines up to `as_of_date`.
+        Includes current-period Net Surplus inside Equity so Assets == Liabilities + Equity.
+        """
+        date_filter = models.Q(journal_entry__date__lte=as_of_date) if as_of_date else models.Q()
+
+        def _summarize(acc_type):
+            rows = []
+            total = Decimal('0.00')
+            for acc in Account.objects.filter(type=acc_type, is_active=True).order_by('code'):
+                qs = acc.journal_lines.filter(date_filter)
+                dr = qs.aggregate(s=models.Sum('debit'))['s'] or Decimal('0.00')
+                cr = qs.aggregate(s=models.Sum('credit'))['s'] or Decimal('0.00')
+                bal = (dr - cr) if acc_type == AccountType.ASSET else (cr - dr)
+                total += bal
+                rows.append({'code': acc.code, 'name': acc.name, 'balance': bal})
+            return rows, total
+
+        assets, total_assets = _summarize(AccountType.ASSET)
+        liabilities, total_liabilities = _summarize(AccountType.LIABILITY)
+        equity, total_equity_accounts = _summarize(AccountType.EQUITY)
+
+        ie = cls.get_income_and_expenditure(end_date=as_of_date)
+        net_surplus = ie['net_surplus']
+        total_equity = total_equity_accounts + net_surplus
+        total_liabilities_and_equity = total_liabilities + total_equity
+
+        return {
+            'as_of_date': as_of_date or timezone.localdate(),
+            'assets': assets,
+            'liabilities': liabilities,
+            'equity': equity,
+            'net_surplus': net_surplus,
+            'total_assets': total_assets,
+            'total_liabilities': total_liabilities,
+            'total_equity': total_equity,
+            'total_liabilities_and_equity': total_liabilities_and_equity,
+            'is_balanced': total_assets == total_liabilities_and_equity,
         }
