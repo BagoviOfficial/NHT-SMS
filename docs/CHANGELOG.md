@@ -6,6 +6,21 @@ The project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ---
 
+## [v1.5.0] — 2026-11-25 (Unified Material UI v5 ERP, QR Compliance Cards, Central Branding & Concurrency Hardening)
+
+### Added
+- **Unified Material UI v5 Design System (`static/css/mui_unified.css`, `static/css/admin_theme.css`, `static/spa/`, `templates/`):** Replaced all legacy Bootstrap/Tailwind styling and `static/css/nht_brand.css` across public auth, Member Portal, Executive Reports, Settings Centre, Django `/admin/`, and the React 18 + MUI v5 SPA (`/app/`), including light/dark theme toggle.
+- **Dedicated Staff vs Member Separation & Super Admin Governance (`apps/api/views_auth.py`, `apps/accounts/admin.py`):** Added `/api/v1/staff/` (`StaffManagementViewSet`) strictly excluding `MEMBER`/`DRIVER` accounts, with account recovery (`initiate_recovery`), activity/audit history (`activity`), prevention of non-Super-Admin `SUPER_ADMIN` role elevation, and protection against deactivating/demoting/deleting the last active Super Admin.
+- **Vehicle Compliance Cards & Cryptographic QR Verification (`apps/vehicles/models.py`, `services.py`, `views.py`, `apps/api/views_fleet.py`):** Added `VehicleComplianceCard` with `secrets.token_urlsafe(32)` tokens stored as SHA-256 hashes (`token_hash`) + AES-256 encrypted reprint copy, `/api/v1/compliance-cards/` lifecycle actions (`issue`, `renew`, `suspend`, `reinstate`, `revoke`, `regenerate_qr`, `download_pdf`, `stats`), and zero-PII rate-limited public verification at `/verify/compliance/<token>/` (`VALID`, `EXPIRED`, `REVOKED`, `SUSPENDED`, `SUPERSEDED`, `INVALID`, `Cache-Control: no-store`).
+- **Central Company Profile & Versioned Document Branding (`apps/integrations/models.py`, `validators.py`, `branding.py`, `views.py`):** Added `CompanyProfile` and immutable `BrandingVersion` snapshots (`billing.0002`, `members.0002`, `payments.0003`, `integrations.0004`, `vehicles.0002`), strict multi-layer PNG/JPEG logo upload validation (extension, MIME, binary magic bytes, Pillow dimensions/pixel limits), and `DocumentBrandingService` embedding proportional logos in PDFs (`fpdf2`) and Excel workbooks (`openpyxl`) while preserving historical document branding unless formally reissued.
+- **Concurrency-Safe Atomic Sequencing (`apps/integrations/models.py`):** Added `NumberSequence.next_number()` with `select_for_update()` locking and legacy max-seed detection across `Member`, `Invoice`, `CreditNote`, `Payment`, `Receipt`, `ReconciliationRun`, `JournalEntry`, `Expense`, `RenewalRequest`, and `VehicleComplianceCard`.
+- **Stage 16 Enterprise Acceptance Test Suite (`tests/test_stage16_enterprise_erp_acceptance.py`):** Automated verification of UI unification, Staff/Member separation, Super Admin protection, anti-IDOR unlinked-user hardening, atomic `NumberSequence` allocation, QR compliance card lifecycle & zero-PII verification, and versioned logo/document branding.
+
+### Fixed
+- **Template & Report Query Fixes:** Wrapped JS `htm` template literals in `{% verbatim %}` inside `templates/vehicles/public_verification.html`, fixed `compliance_documents__document_type` prefetch in `apps/reports/services.py`, fixed `validate_company_logo` translation variable shadowing in `apps/integrations/validators.py`, enforced strict maker-checker on `ManualPaymentVoucherReviewView` even for superusers, preserved historical branding on `ReceiptDetailView`, and returned `qs.none()` for unlinked Member/Driver accounts in API ViewSets.
+
+---
+
 ## [v1.4.0] — 2026-11-25 (Phase II — Stages 12–15: 11-Role RBAC, Reconciliation Engine, Unified REST API & Material UI SPA)
 
 ### Added

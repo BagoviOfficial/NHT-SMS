@@ -5,31 +5,40 @@
 
 {% block extrahead %}
     {{ block.super }}
-    <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    
-    <!-- FontAwesome 6 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    
-    <!-- NHT Custom Professional Admin Theme -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined" rel="stylesheet">
+    <script crossorigin src="https://unpkg.com/@mui/material@5.16.7/umd/material-ui.production.min.js"></script>
     <link rel="stylesheet" href="{% static 'css/admin_theme.css' %}">
+    <style>
+        :root {
+            --nht-navy: {{ BRAND_NAVY|default:"#10315C" }};
+            --nht-orange: {{ BRAND_ORANGE|default:"#FF8A00" }};
+        }
+    </style>
 {% endblock %}
 
 {% block branding %}
 <div id="site-name">
-    <a href="{% url 'admin:index' %}">
-        <i class="fa-solid fa-truck-moving" style="color: #FF8A00; margin-right: 8px;"></i>
-        <span>{{ site_header|default:"Northern Highways Transporters SACCO" }}</span>
-        <span class="admin-brand-badge">ERP CORE</span>
+    <a href="{% url 'admin:index' %}" style="display:flex; align-items:center; gap:10px;">
+        {% if BRAND_LOGO_URL %}
+            <img src="{{ BRAND_LOGO_URL }}" alt="{{ BRAND_NAME }}" style="height: 32px; background: #fff; padding: 2px 6px; border-radius: 6px; object-fit: contain;">
+        {% else %}
+            <span class="material-icons-outlined" style="color: var(--nht-orange); font-size: 26px;">local_shipping</span>
+        {% endif %}
+        <span>{{ BRAND_NAME|default:site_header|default:"Northern Highways Transporters SACCO" }}</span>
+        <span class="admin-brand-badge">MUI ADMIN</span>
     </a>
 </div>
 {% endblock %}
 
 {% block userlinks %}
-    <a href="{% url 'accounts:dashboard' %}" class="btn-admin-return">
-        <i class="fa-solid fa-gauge-high"></i> Operations Dashboard
+    <a href="/app/" class="btn-admin-return">
+        <span class="material-icons-outlined" style="font-size: 16px;">apps</span> Material UI SPA
+    </a>
+    <a href="{% url 'accounts:dashboard' %}">
+        <span class="material-icons-outlined" style="font-size: 16px;">dashboard</span> Operations
     </a>
     <span class="admin-separator" style="color: rgba(255,255,255,0.4); margin: 0 4px;">|</span>
     {{ block.super }}

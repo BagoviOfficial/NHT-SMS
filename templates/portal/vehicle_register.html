@@ -3,80 +3,68 @@
 {% block title %}Register New Vehicle{% endblock %}
 
 {% block portal_content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <a href="{% url 'portal:vehicles' %}" class="small text-decoration-none mb-1 d-inline-block">
-            <i class="bi bi-arrow-left me-1"></i> Back to Fleet
-        </a>
-        <h4 class="fw-bold mb-0 text-nht-navy">Register New Fleet Vehicle</h4>
-    </div>
+<div>
+    <a href="{% url 'portal:vehicles' %}" class="mui-caption" style="font-weight: 700;">
+        <span class="material-icons-outlined" style="font-size: 14px;">arrow_back</span> Back to Fleet
+    </a>
+    <h2 class="mui-h5">Register New Fleet Vehicle</h2>
 </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-4">
-        <form method="post" action="{% url 'portal:vehicle_register' %}">
+<div class="mui-card">
+    <div class="mui-card-body">
+        <form method="post" action="{% url 'portal:vehicle_register' %}" class="mui-stack">
             {% csrf_token %}
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold small text-muted">Registration Plate Number <span class="text-danger">*</span></label>
-                    <input type="text" name="registration_number" class="form-control" placeholder="e.g. KDA 123A" required>
-                    <div class="form-text">Enter Kenyan registration plate (e.g. KDA 123A).</div>
+            <div class="mui-grid mui-grid-2">
+                <div class="mui-field">
+                    <label class="mui-label">Registration Plate Number *</label>
+                    <input type="text" name="registration_number" class="mui-input" placeholder="e.g. KDA 123A" required>
                 </div>
-
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold small text-muted">Vehicle Category <span class="text-danger">*</span></label>
-                    <select name="category" class="form-select" required>
+                <div class="mui-field">
+                    <label class="mui-label">Vehicle Category *</label>
+                    <select name="category" class="mui-select" required>
                         {% for val, label in categories %}
                             <option value="{{ val }}">{{ label }}</option>
                         {% endfor %}
                     </select>
                 </div>
-
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold small text-muted">Make <span class="text-danger">*</span></label>
-                    <input type="text" name="make" class="form-control" placeholder="e.g. Toyota, Isuzu" required>
+                <div class="mui-field">
+                    <label class="mui-label">Make *</label>
+                    <input type="text" name="make" class="mui-input" placeholder="e.g. Toyota, Isuzu" required>
                 </div>
-
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold small text-muted">Model <span class="text-danger">*</span></label>
-                    <input type="text" name="model" class="form-control" placeholder="e.g. HiAce, NQR" required>
+                <div class="mui-field">
+                    <label class="mui-label">Model *</label>
+                    <input type="text" name="model" class="mui-input" placeholder="e.g. HiAce, NQR" required>
                 </div>
-
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold small text-muted">Year of Manufacture <span class="text-danger">*</span></label>
-                    <input type="number" name="year_of_manufacture" class="form-control" value="2020" min="1990" max="2030" required>
+                <div class="mui-field">
+                    <label class="mui-label">Year of Manufacture *</label>
+                    <input type="number" name="year_of_manufacture" class="mui-input" value="2020" min="1990" max="2030" required>
                 </div>
-
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold small text-muted">Carrying Capacity (Seats) <span class="text-danger">*</span></label>
-                    <input type="number" name="carrying_capacity" class="form-control" value="14" min="1" max="100" required>
+                <div class="mui-field">
+                    <label class="mui-label">Carrying Capacity (Seats) *</label>
+                    <input type="number" name="carrying_capacity" class="mui-input" value="14" min="1" max="100" required>
                 </div>
-
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold small text-muted">Fuel Type <span class="text-danger">*</span></label>
-                    <select name="fuel_type" class="form-select" required>
+                <div class="mui-field">
+                    <label class="mui-label">Fuel Type *</label>
+                    <select name="fuel_type" class="mui-select" required>
                         {% for val, label in fuel_types %}
                             <option value="{{ val }}">{{ label }}</option>
                         {% endfor %}
                     </select>
                 </div>
-
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold small text-muted">Chassis Number (VIN) <span class="text-danger">*</span></label>
-                    <input type="text" name="chassis_number" class="form-control" placeholder="Enter 17-digit Chassis Number" required>
+                <div class="mui-field">
+                    <label class="mui-label">Chassis Number (VIN) *</label>
+                    <input type="text" name="chassis_number" class="mui-input" placeholder="Enter Chassis Number" required>
                 </div>
-
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold small text-muted">Engine Number <span class="text-danger">*</span></label>
-                    <input type="text" name="engine_number" class="form-control" placeholder="Enter Engine Serial Number" required>
+                <div class="mui-field">
+                    <label class="mui-label">Engine Number *</label>
+                    <input type="text" name="engine_number" class="mui-input" placeholder="Enter Engine Serial Number" required>
                 </div>
-
-                <div class="col-12 mt-4 text-end">
-                    <a href="{% url 'portal:vehicles' %}" class="btn btn-outline-secondary me-2">Cancel</a>
-                    <button type="submit" class="btn btn-nht-primary px-4">
-                        <i class="bi bi-check2-circle me-1"></i> Submit Vehicle for Onboarding
-                    </button>
-                </div>
+            </div>
+            <div class="mui-flex-between" style="margin-top: 8px;">
+                <a href="{% url 'portal:vehicles' %}" class="mui-btn mui-btn-outlined">Cancel</a>
+                <button type="submit" class="mui-btn mui-btn-secondary">
+                    <span class="material-icons-outlined">check_circle</span> Submit Vehicle for Onboarding
+                </button>
             </div>
         </form>
     </div>

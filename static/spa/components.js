@@ -8,6 +8,7 @@ export function MaterialIcon({ name, fontSize = 'small', color, sx = {} }) {
 
 const STATUS_COLOR_MAP = {
     ACTIVE: 'success',
+    VALID: 'success',
     PAID: 'success',
     SUCCESS: 'success',
     VERIFIED: 'success',
@@ -26,8 +27,11 @@ const STATUS_COLOR_MAP = {
     INVOICED: 'info',
     SUBMITTED: 'info',
     DOC_UPLOADED: 'info',
+    SUPERSEDED: 'info',
     DEGRADED: 'warning',
     SUSPENDED: 'error',
+    REVOKED: 'error',
+    INVALID: 'error',
     REJECTED: 'error',
     FAILED: 'error',
     DENIED: 'error',
@@ -35,6 +39,7 @@ const STATUS_COLOR_MAP = {
     NON_COMPLIANT: 'error',
     DOWN: 'error',
     OPEN: 'warning',
+    UNCONFIGURED: 'warning',
     CLOSED: 'default',
     CANCELLED: 'default',
 };

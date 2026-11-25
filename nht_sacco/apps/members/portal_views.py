@@ -177,13 +177,26 @@ def portal_vehicle_card(request, vehicle_id):
         raise PermissionDenied("Access Denied: You do not own this vehicle.")
 
     comp = ComplianceService.check_vehicle_compliance(vehicle)
-    verify_url = request.build_absolute_uri(f"/verify/vehicle/{vehicle.qr_token}/")
+    from nht_sacco.apps.vehicles.models import VehicleComplianceCard, ComplianceCardStatus
+    from nht_sacco.apps.vehicles.services import ComplianceCardService
+    from nht_sacco.apps.vehicles.qr import generate_qr_base64
+    active_card = VehicleComplianceCard.objects.filter(
+        vehicle=vehicle,
+        status=ComplianceCardStatus.VALID,
+    ).order_by('-created_at').first()
+    if active_card:
+        verify_url = ComplianceCardService.get_verify_url(active_card, request=request)
+    else:
+        verify_url = request.build_absolute_uri(f"/verify/vehicle/{vehicle.qr_token}/")
+    qr_data_uri = generate_qr_base64(verify_url) if verify_url else ''
 
     context = {
         'member': request.member,
         'vehicle': vehicle,
         'compliance': comp,
+        'active_card': active_card,
         'verify_url': verify_url,
+        'qr_data_uri': qr_data_uri,
     }
     return render(request, 'portal/vehicle_card.html', context)
 

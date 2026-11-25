@@ -1,6 +1,9 @@
+import hashlib
+import secrets
 import uuid
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from nht_sacco.apps.members.models import Member
 
@@ -131,3 +134,119 @@ class VehiclePhoto(models.Model):
         db_table = 'vehicles_photo'
         verbose_name = _('Vehicle Photo')
         verbose_name_plural = _('Vehicle Photos')
+
+
+class ComplianceCardStatus(models.TextChoices):
+    VALID = 'VALID', _('Valid & Active')
+    EXPIRED = 'EXPIRED', _('Expired')
+    REVOKED = 'REVOKED', _('Revoked')
+    SUSPENDED = 'SUSPENDED', _('Suspended')
+    SUPERSEDED = 'SUPERSEDED', _('Superseded')
+
+
+class VehicleComplianceCard(models.Model):
+    """
+    Issued digital & printable Vehicle Compliance Card with cryptographically
+    hashed QR verification token and immutable branding snapshot reference.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    vehicle = models.ForeignKey(
+        Vehicle,
+        on_delete=models.CASCADE,
+        related_name='compliance_cards',
+    )
+    certificate_number = models.CharField(
+        _('Certificate Number'),
+        max_length=50,
+        unique=True,
+        db_index=True,
+    )
+    fleet_number = models.CharField(_('Fleet / Reference Number'), max_length=50, blank=True)
+    owner_display_name = models.CharField(_('Registered Owner / Operator'), max_length=200, blank=True)
+    assigned_route_name = models.CharField(_('Assigned Route'), max_length=200, blank=True)
+    token_hash = models.CharField(
+        _('Verification Token SHA-256 Hash'),
+        max_length=64,
+        unique=True,
+        db_index=True,
+    )
+    token_hint = models.CharField(_('Non-Secret Token Prefix'), max_length=12, blank=True)
+    encrypted_token = models.TextField(
+        _('Encrypted Verification Token'),
+        blank=True,
+        help_text=_('AES-256 encrypted copy used strictly for authorized card re-printing'),
+    )
+    status = models.CharField(
+        _('Certificate Status'),
+        max_length=20,
+        choices=ComplianceCardStatus.choices,
+        default=ComplianceCardStatus.VALID,
+        db_index=True,
+    )
+    issue_date = models.DateField(_('Issue Date'), default=timezone.localdate)
+    expiry_date = models.DateField(_('Expiry Date'), db_index=True)
+    issued_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='issued_compliance_cards',
+    )
+    revoked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='revoked_compliance_cards',
+    )
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    revocation_reason = models.TextField(blank=True)
+    superseded_by = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='replaces_cards',
+    )
+    branding_version = models.ForeignKey(
+        'integrations.BrandingVersion',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='compliance_cards',
+        help_text=_('Immutable branding snapshot captured when this card was issued'),
+    )
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'vehicles_compliance_card'
+        verbose_name = _('Vehicle Compliance Card')
+        verbose_name_plural = _('Vehicle Compliance Cards')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['vehicle', 'status']),
+            models.Index(fields=['expiry_date', 'status']),
+        ]
+
+    def __str__(self):
+        return f"{self.certificate_number} - {self.vehicle.registration_number} [{self.status}]"
+
+    @staticmethod
+    def hash_token(raw_token: str) -> str:
+        return hashlib.sha256((raw_token or '').strip().encode('utf-8')).hexdigest()
+
+    @staticmethod
+    def generate_raw_token() -> str:
+        return secrets.token_urlsafe(32)
+
+    @classmethod
+    def generate_certificate_number(cls) -> str:
+        from nht_sacco.apps.integrations.models import NumberSequence
+        return NumberSequence.next_number(
+            prefix='NHT-CMP',
+            year=timezone.localdate().year,
+            model_cls=cls,
+            field_name='certificate_number',
+        )

@@ -1,7 +1,13 @@
+import hashlib
+import os
+import time
 import uuid
-from django.db import models
+from django.core.files.base import ContentFile
+from django.db import IntegrityError, OperationalError, connection, models, transaction
 from django.conf import settings
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from .validators import validate_company_logo
 
 
 class ConfigCategory(models.TextChoices):
@@ -332,4 +338,294 @@ class ConfigurationChangeRequest(models.Model):
 
     def __str__(self):
         return f"CR-{str(self.id)[:8]}: {self.setting.key} [{self.status}] by {self.requested_by.username}"
+
+
+class NumberSequence(models.Model):
+    """
+    Concurrency-safe atomic sequence generator for business identifiers
+    (membership numbers, invoices, receipts, payments, journals, compliance cards).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    prefix = models.CharField(_('Prefix'), max_length=50)
+    year = models.PositiveIntegerField(_('Year'), default=0)
+    last_number = models.PositiveIntegerField(_('Last Allocated Sequence'), default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'integrations_number_sequence'
+        verbose_name = _('Number Sequence')
+        verbose_name_plural = _('Number Sequences')
+        constraints = [
+            models.UniqueConstraint(fields=['prefix', 'year'], name='uniq_number_sequence_prefix_year'),
+        ]
+
+    def __str__(self):
+        return f"{self.prefix}-{self.year}: {self.last_number}"
+
+    @classmethod
+    def _seed_max_from_model(cls, prefix, target_year, model_cls, field_name):
+        if model_cls is None or not field_name:
+            return 0
+        stem = f"{prefix}-{target_year}-" if target_year else f"{prefix}-"
+        existing = model_cls.objects.filter(**{f"{field_name}__startswith": stem}).values_list(field_name, flat=True)
+        max_num = 0
+        for val in existing:
+            if not val:
+                continue
+            try:
+                suffix = int(str(val).rsplit('-', 1)[-1])
+                if suffix > max_num:
+                    max_num = suffix
+            except (ValueError, TypeError):
+                continue
+        return max_num
+
+    @classmethod
+    def next_number(cls, prefix, year=None, model_cls=None, field_name=None, width=4):
+        target_year = int(year) if year is not None else timezone.now().year
+        max_attempts = 10
+        for attempt in range(max_attempts):
+            try:
+                with transaction.atomic():
+                    seq = cls.objects.select_for_update().filter(prefix=prefix, year=target_year).first()
+                    if seq is None:
+                        seed_val = cls._seed_max_from_model(prefix, target_year, model_cls, field_name)
+                        try:
+                            with transaction.atomic():
+                                seq = cls.objects.create(
+                                    prefix=prefix,
+                                    year=target_year,
+                                    last_number=seed_val,
+                                )
+                        except IntegrityError:
+                            pass
+                        seq = cls.objects.select_for_update().get(prefix=prefix, year=target_year)
+                    seq.last_number += 1
+                    seq.save(update_fields=['last_number', 'updated_at'])
+                    if target_year:
+                        return f"{prefix}-{target_year}-{seq.last_number:0{width}d}"
+                    return f"{prefix}-{seq.last_number:0{width}d}"
+            except OperationalError:
+                if connection.vendor == 'sqlite' and attempt < max_attempts - 1:
+                    time.sleep(0.02 * (attempt + 1))
+                    continue
+                raise
+
+
+def branding_logo_upload_path(instance, filename):
+    _, ext = os.path.splitext(filename or '')
+    safe_ext = ext.lower() if ext.lower() in ('.png', '.jpg', '.jpeg') else '.png'
+    return f"branding/logos/{uuid.uuid4()}{safe_ext}"
+
+
+def branding_history_upload_path(instance, filename):
+    _, ext = os.path.splitext(filename or '')
+    safe_ext = ext.lower() if ext.lower() in ('.png', '.jpg', '.jpeg') else '.png'
+    return f"branding/history/v{instance.version_number}_{uuid.uuid4()}{safe_ext}"
+
+
+class CompanyProfile(models.Model):
+    """
+    Central Company Profile & Branding configuration managed exclusively by Super Admins.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    key = models.CharField(max_length=32, unique=True, default='default', editable=False)
+    legal_name = models.CharField(
+        _('Legal Name'),
+        max_length=200,
+        default='Northern Highways Transporters SACCO Limited',
+    )
+    trading_name = models.CharField(
+        _('Trading Name'),
+        max_length=200,
+        default='Northern Highways Transporters SACCO',
+    )
+    short_name = models.CharField(_('Short Code / Acronym'), max_length=40, default='NHT-SMS')
+    registration_number = models.CharField(_('SACCO Registration Number'), max_length=100, blank=True, default='CS/NHT/001')
+    tax_pin = models.CharField(_('KRA PIN / Tax ID'), max_length=50, blank=True, default='')
+    physical_address = models.CharField(
+        _('Physical Address'),
+        max_length=255,
+        blank=True,
+        default='Northern Highways Plaza, Isiolo Town, Kenya',
+    )
+    postal_address = models.CharField(_('Postal Address'), max_length=150, blank=True, default='P.O. Box 100 - 60300, Isiolo')
+    phone_numbers = models.CharField(_('Telephone Numbers'), max_length=150, blank=True, default='+254 700 000 000')
+    official_email = models.EmailField(_('Official Email'), blank=True, default='info@northernhighways.co.ke')
+    website = models.URLField(_('Website'), blank=True, default='https://nhtsms.bagovi.com')
+    public_base_url = models.URLField(
+        _('Public Verification Base URL'),
+        default='https://nhtsms.bagovi.com',
+        help_text=_('Base HTTPS URL embedded in QR compliance verification links'),
+    )
+    footer_text = models.CharField(
+        _('Official Document Footer'),
+        max_length=300,
+        blank=True,
+        default='Northern Highways Transporters SACCO Limited | Regulated PSV Cooperative',
+    )
+    primary_color = models.CharField(_('Primary Brand Color (Hex)'), max_length=16, default='#10315C')
+    secondary_color = models.CharField(_('Secondary Accent Color (Hex)'), max_length=16, default='#FF8A00')
+    logo = models.ImageField(
+        _('Official Company Logo'),
+        upload_to=branding_logo_upload_path,
+        validators=[validate_company_logo],
+        null=True,
+        blank=True,
+    )
+    monochrome_logo = models.ImageField(
+        _('Monochrome Logo (Optional)'),
+        upload_to=branding_logo_upload_path,
+        validators=[validate_company_logo],
+        null=True,
+        blank=True,
+    )
+    current_version = models.PositiveIntegerField(_('Active Branding Version'), default=1)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='company_profile_updates',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'integrations_company_profile'
+        verbose_name = _('Company Profile & Branding')
+        verbose_name_plural = _('Company Profiles & Branding')
+
+    def __str__(self):
+        return f"{self.trading_name} (Branding v{self.current_version})"
+
+    def to_snapshot_dict(self):
+        return {
+            'legal_name': self.legal_name,
+            'trading_name': self.trading_name,
+            'short_name': self.short_name,
+            'registration_number': self.registration_number,
+            'tax_pin': self.tax_pin,
+            'physical_address': self.physical_address,
+            'postal_address': self.postal_address,
+            'phone_numbers': self.phone_numbers,
+            'official_email': self.official_email,
+            'website': self.website,
+            'public_base_url': self.public_base_url,
+            'footer_text': self.footer_text,
+            'primary_color': self.primary_color,
+            'secondary_color': self.secondary_color,
+        }
+
+    @classmethod
+    def get_active(cls):
+        profile = cls.objects.filter(key='default').first()
+        if profile is None:
+            with transaction.atomic():
+                profile, created = cls.objects.get_or_create(key='default')
+                if created or not profile.versions.exists():
+                    profile.create_branding_version(notes='Initial default branding profile', bump_version=False)
+        elif not profile.versions.exists():
+            profile.create_branding_version(notes='Baseline branding snapshot', bump_version=False)
+        return profile
+
+    def get_latest_version(self):
+        latest = self.versions.order_by('-version_number').first()
+        if latest is None:
+            latest = self.create_branding_version(notes='Baseline branding snapshot', bump_version=False)
+        return latest
+
+    def create_branding_version(self, user=None, notes='', bump_version=True):
+        with transaction.atomic():
+            if bump_version:
+                last = self.versions.order_by('-version_number').first()
+                next_ver = (last.version_number + 1) if last else max(1, self.current_version)
+                self.current_version = next_ver
+                self.updated_by = user
+                self.save(update_fields=['current_version', 'updated_by', 'updated_at'])
+            else:
+                next_ver = self.current_version or 1
+
+            version_obj = BrandingVersion(
+                company_profile=self,
+                version_number=next_ver,
+                profile_snapshot=self.to_snapshot_dict(),
+                change_notes=notes,
+                created_by=user,
+            )
+
+            if self.logo and self.logo.name:
+                try:
+                    self.logo.open('rb')
+                    logo_bytes = self.logo.read()
+                    self.logo.close()
+                    version_obj.logo_sha256 = hashlib.sha256(logo_bytes).hexdigest()
+                    filename = os.path.basename(self.logo.name)
+                    version_obj.logo_archive.save(filename, ContentFile(logo_bytes), save=False)
+                except Exception:
+                    pass
+
+            if self.monochrome_logo and self.monochrome_logo.name:
+                try:
+                    self.monochrome_logo.open('rb')
+                    mono_bytes = self.monochrome_logo.read()
+                    self.monochrome_logo.close()
+                    mono_filename = os.path.basename(self.monochrome_logo.name)
+                    version_obj.monochrome_logo_archive.save(mono_filename, ContentFile(mono_bytes), save=False)
+                except Exception:
+                    pass
+
+            version_obj.save()
+            return version_obj
+
+
+class BrandingVersion(models.Model):
+    """
+    Immutable historical snapshot of CompanyProfile & logo assets.
+    Official documents reference a BrandingVersion so previously issued documents
+    retain their original branding even after the active logo or profile changes.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    company_profile = models.ForeignKey(
+        CompanyProfile,
+        on_delete=models.CASCADE,
+        related_name='versions',
+    )
+    version_number = models.PositiveIntegerField(_('Version Number'), db_index=True)
+    profile_snapshot = models.JSONField(_('Profile Metadata Snapshot'), default=dict)
+    logo_archive = models.FileField(
+        _('Archived Logo Copy'),
+        upload_to=branding_history_upload_path,
+        null=True,
+        blank=True,
+    )
+    monochrome_logo_archive = models.FileField(
+        _('Archived Monochrome Logo Copy'),
+        upload_to=branding_history_upload_path,
+        null=True,
+        blank=True,
+    )
+    logo_sha256 = models.CharField(_('Logo SHA-256'), max_length=64, blank=True)
+    change_notes = models.TextField(_('Change Notes'), blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_branding_versions',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'integrations_branding_version'
+        verbose_name = _('Branding Version Snapshot')
+        verbose_name_plural = _('Branding Version Snapshots')
+        ordering = ['-version_number']
+        constraints = [
+            models.UniqueConstraint(fields=['company_profile', 'version_number'], name='uniq_branding_profile_version'),
+        ]
+
+    def __str__(self):
+        name = (self.profile_snapshot or {}).get('trading_name', 'Company Branding')
+        return f"{name} - v{self.version_number}"
 

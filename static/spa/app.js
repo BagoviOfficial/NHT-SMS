@@ -1,10 +1,10 @@
 import { React, ReactDOM, MUI, html, apiFetch } from './api.js';
 import { createNhtTheme } from './theme.js';
 import { AppLayout } from './layout.js';
-import { LoginPage, UsersAdminPage } from './pages/auth.js';
+import { LoginPage, StaffManagementPage } from './pages/auth.js';
 import { DashboardPage } from './pages/dashboard.js';
 import { MembersPage, VehiclesPage, DriversPage, RoutesPage } from './pages/fleet.js';
-import { DocumentsPage, CompliancePage, RenewalsPage } from './pages/compliance.js';
+import { DocumentsPage, CompliancePage, ComplianceCardsPage, RenewalsPage } from './pages/compliance.js';
 import { InvoicesPage, PaymentsVouchersPage, ReconciliationPage } from './pages/finance.js';
 import { AccountingPage } from './pages/accounting.js';
 import { MaintenancePage, IncidentsPage, GovernancePage, NotificationsPage } from './pages/operations.js';
@@ -17,6 +17,7 @@ const ROUTE_MAP = {
     'driver-portal': DriverPortalPage,
     'members': MembersPage,
     'vehicles': VehiclesPage,
+    'compliance-cards': ComplianceCardsPage,
     'drivers': DriversPage,
     'routes': RoutesPage,
     'documents': DocumentsPage,
@@ -30,7 +31,8 @@ const ROUTE_MAP = {
     'incidents': IncidentsPage,
     'governance': GovernancePage,
     'notifications': NotificationsPage,
-    'users': UsersAdminPage,
+    'staff': StaffManagementPage,
+    'users': StaffManagementPage,
     'settings': SettingsCenterPage,
     'audit': AuditTrailPage,
     'reports': ReportsPage,
@@ -45,10 +47,19 @@ function App() {
     const [me, setMe] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
     const [route, setRoute] = React.useState('dashboard');
+    const [mode, setMode] = React.useState(() => localStorage.getItem('nht_theme_mode') || 'light');
     const [toast, setToast] = React.useState({ open: false, message: '', severity: 'info' });
 
     const notify = React.useCallback((message, severity = 'info') => {
         setToast({ open: true, message, severity });
+    }, []);
+
+    const toggleThemeMode = React.useCallback(() => {
+        setMode((prev) => {
+            const next = prev === 'light' ? 'dark' : 'light';
+            localStorage.setItem('nht_theme_mode', next);
+            return next;
+        });
     }, []);
 
     const syncMe = React.useCallback(async () => {
@@ -96,8 +107,8 @@ function App() {
     };
 
     const theme = React.useMemo(
-        () => createNhtTheme(me?.branding || window.__NHT_BOOTSTRAP__ || {}),
-        [me]
+        () => createNhtTheme(me?.branding || window.__NHT_BOOTSTRAP__ || {}, mode),
+        [me, mode]
     );
 
     let content = null;
@@ -130,9 +141,11 @@ function App() {
                 onNavigate=${navigate}
                 onLogout=${handleLogout}
                 notify=${notify}
+                themeMode=${mode}
+                onToggleTheme=${toggleThemeMode}
             >
                 ${isPermitted ? html`
-                    <${PageComponent} me=${me} notify=${notify} />
+                    <${PageComponent} me=${me} notify=${notify} onRefreshMe=${syncMe} onNavigate=${navigate} />
                 ` : html`
                     <${MUI.Alert} severity="error" sx=${{ mt: 2 }}>
                         Access Denied (403): Your role (<strong>${me.user?.role_display}</strong>) is not cleared for the <strong>${route}</strong> module.

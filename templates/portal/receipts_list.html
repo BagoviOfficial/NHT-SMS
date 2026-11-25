@@ -3,20 +3,20 @@
 {% block title %}My Payment Receipts{% endblock %}
 
 {% block portal_content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="mui-flex-between">
     <div>
-        <h4 class="fw-bold mb-1 text-nht-navy">Payment Receipts</h4>
-        <p class="text-muted small mb-0">Official verified receipts for all settled SACCO transactions.</p>
+        <h2 class="mui-h5">Payment Receipts</h2>
+        <p class="mui-subtitle">Official verified receipts for all settled SACCO transactions.</p>
     </div>
-    <a href="{% url 'portal:statement' %}" class="btn btn-outline-primary">
-        <i class="bi bi-file-earmark-spreadsheet me-1"></i> View Statement
+    <a href="{% url 'portal:statement' %}" class="mui-btn mui-btn-outlined">
+        <span class="material-icons-outlined">account_balance_wallet</span> View Statement
     </a>
 </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light small">
+<div class="mui-card">
+    <div class="mui-table-wrap">
+        <table class="mui-table">
+            <thead>
                 <tr>
                     <th>Receipt #</th>
                     <th>Date Issued</th>
@@ -30,25 +30,20 @@
             <tbody>
                 {% for r in receipts %}
                     <tr>
-                        <td class="fw-bold text-nht-navy">{{ r.receipt_number }}</td>
+                        <td class="nht-mono"><strong>{{ r.receipt_number }}</strong></td>
                         <td>{{ r.issued_at|date:"Y-m-d H:i" }}</td>
-                        <td><code>{{ r.payment.provider_transaction_id|default:r.payment.payment_reference }}</code></td>
-                        <td>{{ r.payment.invoice.invoice_number }}</td>
-                        <td><span class="badge bg-light text-dark border">{{ r.payment.get_payment_method_display }}</span></td>
-                        <td class="text-end fw-bold text-success">KES {{ r.payment.amount|floatformat:2 }}</td>
+                        <td class="nht-mono">{{ r.payment.provider_transaction_id|default:r.payment.payment_reference }}</td>
+                        <td class="nht-mono">{{ r.payment.invoice.invoice_number }}</td>
+                        <td><span class="mui-chip mui-chip-default">{{ r.payment.get_method_display }}</span></td>
+                        <td class="text-end" style="color: var(--mui-success); font-weight: 700;">{{ DEFAULT_CURRENCY }} {{ r.payment.amount|floatformat:2 }}</td>
                         <td class="text-end">
-                            <a href="{% url 'payments:receipt_detail' r.id %}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-printer me-1"></i> Print / PDF
+                            <a href="{% url 'payments:receipt_detail' r.id %}" target="_blank" class="mui-btn mui-btn-sm mui-btn-outlined">
+                                <span class="material-icons-outlined">print</span> Print / PDF
                             </a>
                         </td>
                     </tr>
                 {% empty %}
-                    <tr>
-                        <td colspan="7" class="text-center py-5 text-muted">
-                            <i class="bi bi-receipt fs-1 d-block mb-3 text-muted"></i>
-                            No payment receipts recorded yet.
-                        </td>
-                    </tr>
+                    <tr><td colspan="7" class="text-center mui-subtitle" style="padding: 36px;">No payment receipts recorded yet.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

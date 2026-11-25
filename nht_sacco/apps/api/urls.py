@@ -7,8 +7,10 @@ app_name = 'api'
 
 router = DefaultRouter()
 router.register(r'users', views_auth.UserManagementViewSet, basename='user')
+router.register(r'staff', views_auth.StaffManagementViewSet, basename='staff')
 router.register(r'members', views_fleet.MemberViewSet, basename='member')
 router.register(r'vehicles', views_fleet.VehicleViewSet, basename='vehicle')
+router.register(r'compliance-cards', views_fleet.VehicleComplianceCardViewSet, basename='compliance_card')
 router.register(r'drivers', views_fleet.DriverViewSet, basename='driver')
 router.register(r'driver-assignments', views_fleet.DriverAssignmentViewSet, basename='driver_assignment')
 router.register(r'routes', views_fleet.RouteViewSet, basename='route')

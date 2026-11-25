@@ -1,6 +1,7 @@
 from decimal import Decimal
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -18,6 +19,7 @@ from nht_sacco.apps.accounting.models import Account, Expense, FinancialPeriod, 
 from nht_sacco.apps.accounting.services import AccountingService
 from nht_sacco.apps.audit.models import AuditAction, AuditLog, AuditOutcome
 from nht_sacco.apps.billing.models import CreditNote, Invoice, InvoiceItem, InvoiceStatus, ServiceItem
+from nht_sacco.apps.integrations.branding import DocumentBrandingService
 from nht_sacco.apps.members.models import Member
 from nht_sacco.apps.payments.daraja import DarajaClient
 from nht_sacco.apps.payments.models import (
@@ -71,8 +73,10 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
-        if user.role == UserRole.MEMBER and hasattr(user, 'member_profile'):
-            return qs.filter(member=user.member_profile)
+        if user.role == UserRole.MEMBER:
+            if hasattr(user, 'member_profile'):
+                return qs.filter(member=user.member_profile)
+            return qs.none()
         return qs
 
     @transaction.atomic
@@ -185,6 +189,14 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         )
         return Response({'credit_number': cn.credit_number, 'invoice': InvoiceSerializer(invoice).data})
 
+    @action(detail=True, methods=['get'])
+    def download_pdf(self, request, pk=None):
+        invoice = self.get_object()
+        pdf_bytes = DocumentBrandingService.generate_invoice_pdf(invoice)
+        resp = HttpResponse(pdf_bytes, content_type='application/pdf')
+        resp['Content-Disposition'] = f'inline; filename="NHT_Invoice_{invoice.invoice_number}.pdf"'
+        return resp
+
 
 class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Payment.objects.select_related('invoice', 'member', 'receipt').order_by('-created_at')
@@ -195,8 +207,10 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        if self.request.user.role == UserRole.MEMBER and hasattr(self.request.user, 'member_profile'):
-            return qs.filter(member=self.request.user.member_profile)
+        if self.request.user.role == UserRole.MEMBER:
+            if hasattr(self.request.user, 'member_profile'):
+                return qs.filter(member=self.request.user.member_profile)
+            return qs.none()
         return qs
 
 
@@ -208,9 +222,19 @@ class ReceiptViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        if self.request.user.role == UserRole.MEMBER and hasattr(self.request.user, 'member_profile'):
-            return qs.filter(payment__member=self.request.user.member_profile)
+        if self.request.user.role == UserRole.MEMBER:
+            if hasattr(self.request.user, 'member_profile'):
+                return qs.filter(payment__member=self.request.user.member_profile)
+            return qs.none()
         return qs
+
+    @action(detail=True, methods=['get'])
+    def download_pdf(self, request, pk=None):
+        receipt = self.get_object()
+        pdf_bytes = DocumentBrandingService.generate_receipt_pdf(receipt)
+        resp = HttpResponse(pdf_bytes, content_type='application/pdf')
+        resp['Content-Disposition'] = f'inline; filename="NHT_Receipt_{receipt.receipt_number}.pdf"'
+        return resp
 
 
 class ManualPaymentVoucherViewSet(viewsets.ModelViewSet):

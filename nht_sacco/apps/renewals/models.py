@@ -101,19 +101,14 @@ class RenewalRequest(models.Model):
 
     @classmethod
     def generate_request_number(cls):
+        from nht_sacco.apps.integrations.models import NumberSequence
         year = timezone.localdate().year
-        prefix = f"NHT-RNW-{year}-"
-        last_req = cls.objects.filter(request_number__startswith=prefix).order_by('-request_number').first()
-        if last_req:
-            try:
-                seq = int(last_req.request_number.split('-')[-1]) + 1
-            except (ValueError, IndexError):
-                seq = cls.objects.filter(request_number__startswith=prefix).count() + 1
-        else:
-            seq = 1
-        while cls.objects.filter(request_number=f"{prefix}{seq:04d}").exists():
-            seq += 1
-        return f"{prefix}{seq:04d}"
+        return NumberSequence.next_number(
+            prefix='NHT-RNW',
+            year=year,
+            model_cls=cls,
+            field_name='request_number',
+        )
 
     def save(self, *args, **kwargs):
         if not self.request_number:

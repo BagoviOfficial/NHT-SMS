@@ -5,246 +5,121 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Northern Highways Transporters SACCO ERP & Fleet Compliance Management System">
-    <title>{% block title %}{{ title|default:"Dashboard" }}{% endblock %} | {{ BRAND_SHORT }}</title>
-    
-    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <title>{% block title %}{{ title|default:"Workspace" }}{% endblock %} | {{ BRAND_SHORT }}</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined" rel="stylesheet">
 
-    <!-- Bootstrap 5.3.3 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Bootstrap Icons & FontAwesome 6 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    
-    <!-- Animate.css -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/@mui/material@5.16.7/umd/material-ui.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.1/dist/apexcharts.min.js"></script>
 
-    <!-- ApexCharts CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-
-    <!-- NHT Brand Stylesheet -->
-    <link rel="stylesheet" href="{% static 'css/nht_brand.css' %}">
+    <link rel="stylesheet" href="{% static 'css/mui_unified.css' %}">
+    <style>
+        :root {
+            --mui-primary: {{ BRAND_NAVY|default:"#10315C" }};
+            --mui-secondary: {{ BRAND_ORANGE|default:"#FF8A00" }};
+        }
+    </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body class="d-flex flex-column min-vh-100">
-    <!-- Top Navigation Bar -->
-    <nav class="navbar navbar-expand-xl navbar-dark navbar-nht sticky-top">
-        <div class="container-fluid px-3 px-lg-4">
-            <!-- Brand Identity -->
-            <a class="navbar-brand d-flex align-items-center" href="{% if is_management %}{% url 'accounts:dashboard' %}{% elif user.is_member or user.member_profile %}{% url 'portal:dashboard' %}{% else %}{% url 'accounts:profile' %}{% endif %}">
-                <i class="fa-solid fa-truck-moving text-warning me-2 fs-5"></i>
-                <span class="fw-bold tracking-tight">{{ BRAND_NAME }}</span>
-                <span class="brand-badge ms-2">{% if user.is_member or user.member_profile %}MEMBER PORTAL{% else %}ERP CORE{% endif %}</span>
+<body class="mui-shell">
+    <header class="mui-appbar">
+        <div class="mui-toolbar">
+            <a class="mui-brand" href="/app/">
+                {% if BRAND_LOGO_URL %}
+                    <img src="{{ BRAND_LOGO_URL }}" alt="{{ BRAND_NAME }}" class="mui-brand-logo">
+                {% else %}
+                    <span class="mui-brand-avatar">
+                        <span class="material-icons-outlined">local_shipping</span>
+                    </span>
+                {% endif %}
+                <span>{{ BRAND_NAME }}</span>
+                <span class="mui-chip" style="background: var(--mui-secondary); color: #091E38;">
+                    {% if user.is_member or user.member_profile %}PORTAL{% else %}ERP{% endif %}
+                </span>
             </a>
-            
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nhtNav" aria-label="Toggle Navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="nhtNav">
-                <!-- Role-Aware Modular Navigation Links -->
-                <ul class="navbar-nav me-auto mb-2 mb-xl-0 ms-xl-3 gap-1">
-                    {% if user.is_authenticated %}
-                        {% if is_management %}
-                            <!-- 1. Operations Overview -->
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' and request.resolver_match.namespace == 'accounts' %}active{% endif %}" href="{% url 'accounts:dashboard' %}">
-                                    <i class="fa-solid fa-gauge-high me-1 text-warning"></i> Dashboard
-                                </a>
-                            </li>
 
-                            <!-- 2. Operations Menu (Secretary, Chairman, Field Officer, Super Admin) -->
-                            {% if is_secretary or is_chairman or is_field_officer or is_system_admin %}
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" id="navOps" role="button" data-bs-toggle="dropdown">
-                                    <i class="fa-solid fa-users-gear me-1"></i> Fleet & Operations
-                                </a>
-                                <ul class="dropdown-menu shadow">
-                                    <li><h6 class="dropdown-header text-uppercase small fw-bold">SACCO Registry</h6></li>
-                                    <li><a class="dropdown-item" href="/admin/members/member/"><i class="fa-solid fa-address-card text-primary me-2"></i> Member Operators</a></li>
-                                    <li><a class="dropdown-item" href="/admin/vehicles/vehicle/"><i class="fa-solid fa-bus text-success me-2"></i> Fleet Vehicles</a></li>
-                                    <li><a class="dropdown-item" href="/admin/drivers/driver/"><i class="fa-solid fa-id-badge text-info me-2"></i> PSV Drivers & Crew</a></li>
-                                    <li><a class="dropdown-item" href="/admin/routes/route/"><i class="fa-solid fa-route text-warning me-2"></i> Transit Routes & Stages</a></li>
-                                </ul>
-                            </li>
-                            {% endif %}
-
-                            <!-- 3. Financials Menu (Treasurer, Accountant, Super Admin) -->
-                            {% if is_finance or is_system_admin %}
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" id="navFinance" role="button" data-bs-toggle="dropdown">
-                                    <i class="fa-solid fa-coins me-1 text-success"></i> Treasury & Billing
-                                </a>
-                                <ul class="dropdown-menu shadow">
-                                    <li><h6 class="dropdown-header text-uppercase small fw-bold">Financial Controls</h6></li>
-                                    <li><a class="dropdown-item" href="/admin/billing/invoice/"><i class="fa-solid fa-file-invoice-dollar text-primary me-2"></i> Invoices & Billing</a></li>
-                                    <li><a class="dropdown-item" href="/admin/payments/payment/"><i class="fa-solid fa-mobile-screen-button text-success me-2"></i> M-Pesa & Settlements</a></li>
-                                    <li><a class="dropdown-item" href="/admin/accounting/account/"><i class="fa-solid fa-book-journal-whills text-info me-2"></i> General Ledger Accounts</a></li>
-                                    <li><a class="dropdown-item" href="/admin/accounting/expense/"><i class="fa-solid fa-receipt text-danger me-2"></i> Sacco Expense Claims</a></li>
-                                </ul>
-                            </li>
-                            {% endif %}
-
-                            <!-- 4. Regulatory Compliance & Document Vault (Compliance, Renewal, Super Admin) -->
-                            {% if is_compliance or is_renewal or is_system_admin %}
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" id="navCompliance" role="button" data-bs-toggle="dropdown">
-                                    <i class="fa-solid fa-shield-halved me-1 text-warning"></i> Compliance Vault
-                                </a>
-                                <ul class="dropdown-menu shadow">
-                                    <li><h6 class="dropdown-header text-uppercase small fw-bold">NTSA & Regulatory Verification</h6></li>
-                                    <li><a class="dropdown-item" href="/admin/compliance/compliancealert/"><i class="fa-solid fa-clipboard-check text-success me-2"></i> Compliance Alerts & Records</a></li>
-                                    <li><a class="dropdown-item" href="/admin/documents/document/"><i class="fa-solid fa-vault text-warning me-2"></i> Secure Document Storage</a></li>
-                                    <li><a class="dropdown-item" href="/admin/renewals/renewalrequest/"><i class="fa-solid fa-arrows-rotate text-info me-2"></i> Document Renewal Queue</a></li>
-                                    <li><a class="dropdown-item" href="/admin/maintenance/maintenancerecord/"><i class="fa-solid fa-wrench text-secondary me-2"></i> Maintenance & Inspections</a></li>
-                                </ul>
-                            </li>
-                            {% endif %}
-
-                            <!-- 5. Executive Reports & Audit Trail (Auditor, Chairman, Management) -->
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" id="navReports" role="button" data-bs-toggle="dropdown">
-                                    <i class="fa-solid fa-chart-pie me-1 text-info"></i> Analytics & Audit
-                                </a>
-                                <ul class="dropdown-menu shadow">
-                                    <li><h6 class="dropdown-header text-uppercase small fw-bold">Intelligence & Verification</h6></li>
-                                    <li><a class="dropdown-item" href="{% url 'reports:dashboard' %}"><i class="fa-solid fa-chart-line text-primary me-2"></i> Executive Analytics Dashboard</a></li>
-                                    <li><a class="dropdown-item" href="/admin/audit/auditlog/"><i class="fa-solid fa-fingerprint text-danger me-2"></i> Immutable Audit Trail</a></li>
-                                    <li><a class="dropdown-item" href="/admin/incidents/incident/"><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i> Governance Incidents</a></li>
-                                </ul>
-                            </li>
-
-                            <!-- 6. System Configuration (Super Admin) -->
-                            {% if is_system_admin %}
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'integrations:settings_index' %}">
-                                    <i class="fa-solid fa-sliders me-1"></i> System Settings
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/admin/">
-                                    <i class="fa-solid fa-screwdriver-wrench me-1"></i> Django Admin
-                                </a>
-                            </li>
-                            {% endif %}
-
-                        {% elif user.is_member or user.member_profile %}
-                            <!-- Member Portal Navigation Links -->
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'portal:dashboard' %}"><i class="fa-solid fa-house-chimney me-1 text-warning"></i> Portal Home</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'portal:vehicles' %}"><i class="fa-solid fa-bus-simple me-1"></i> My Fleet</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'portal:invoices' %}"><i class="fa-solid fa-receipt me-1"></i> Bills & Receipts</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'portal:statement' %}"><i class="fa-solid fa-file-invoice me-1"></i> Financial Statement</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'portal:renewals' %}"><i class="fa-solid fa-arrows-rotate me-1"></i> Renewals</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'portal:notifications' %}"><i class="fa-solid fa-bell me-1"></i> Notices</a>
-                            </li>
+            <nav class="mui-nav-links">
+                {% if user.is_authenticated %}
+                    <a class="mui-nav-link" href="/app/">
+                        <span class="material-icons-outlined">apps</span> Material UI Workspace
+                    </a>
+                    {% if is_management %}
+                        <a class="mui-nav-link" href="{% url 'accounts:dashboard' %}">
+                            <span class="material-icons-outlined">dashboard</span> Operations
+                        </a>
+                        <a class="mui-nav-link" href="{% url 'reports:dashboard' %}">
+                            <span class="material-icons-outlined">assessment</span> Analytics
+                        </a>
+                        {% if is_system_admin or is_auditor or is_chairman %}
+                            <a class="mui-nav-link" href="{% url 'integrations:settings_index' %}">
+                                <span class="material-icons-outlined">tune</span> Settings
+                            </a>
                         {% endif %}
+                        {% if user.is_staff %}
+                            <a class="mui-nav-link" href="/admin/">
+                                <span class="material-icons-outlined">admin_panel_settings</span> Django Admin
+                            </a>
+                        {% endif %}
+                    {% elif user.is_member or user.member_profile %}
+                        <a class="mui-nav-link" href="{% url 'portal:dashboard' %}">
+                            <span class="material-icons-outlined">home</span> Portal Home
+                        </a>
+                        <a class="mui-nav-link" href="{% url 'portal:vehicles' %}">
+                            <span class="material-icons-outlined">directions_bus</span> Fleet
+                        </a>
+                        <a class="mui-nav-link" href="{% url 'portal:invoices' %}">
+                            <span class="material-icons-outlined">receipt_long</span> Bills
+                        </a>
+                        <a class="mui-nav-link" href="{% url 'portal:statement' %}">
+                            <span class="material-icons-outlined">account_balance_wallet</span> Statement
+                        </a>
+                        <a class="mui-nav-link" href="{% url 'portal:renewals' %}">
+                            <span class="material-icons-outlined">autorenew</span> Renewals
+                        </a>
                     {% endif %}
-                </ul>
-                
-                <!-- Right Side: User Profile & Security -->
-                <ul class="navbar-nav ms-auto align-items-center">
-                    {% if user.is_authenticated %}
-                        <li class="nav-item me-2">
-                            <a class="btn btn-sm btn-outline-warning fw-semibold" href="/app/">
-                                <i class="fa-solid fa-layer-group me-1"></i> Material SPA
-                            </a>
-                        </li>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle d-flex align-items-center py-1 px-2 rounded" href="#" id="userDrop" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <div class="user-avatar-circle me-2">
-                                    {{ user.first_name|default:user.username|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}
-                                </div>
-                                <div class="text-start d-none d-sm-block me-2">
-                                    <div class="fw-bold text-white small lh-1">{{ user.get_full_name|default:user.username }}</div>
-                                    <span class="badge bg-{{ user_role_badge }} text-white mt-1 font-monospace" style="font-size: 0.65rem;">
-                                        {{ user.get_role_display }}
-                                    </span>
-                                </div>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-lg" aria-labelledby="userDrop">
-                                <li class="px-3 py-2 border-bottom bg-light rounded-top">
-                                    <div class="fw-bold text-dark">{{ user.get_full_name|default:user.username }}</div>
-                                    <div class="small text-muted">{{ user.email }}</div>
-                                    <div class="mt-1">
-                                        <span class="badge bg-{{ user_role_badge }} text-white">{{ user.get_role_display }}</span>
-                                        {% if user.is_superuser %}
-                                            <span class="badge bg-danger">Root</span>
-                                        {% endif %}
-                                    </div>
-                                </li>
-                                <li><a class="dropdown-item py-2" href="{% url 'accounts:profile' %}"><i class="fa-solid fa-user-circle text-primary me-2"></i> Security Profile</a></li>
-                                <li><a class="dropdown-item py-2" href="{% url 'accounts:password_change' %}"><i class="fa-solid fa-key text-warning me-2"></i> Change Password</a></li>
-                                <li><a class="dropdown-item py-2" href="{% url 'accounts:totp_setup' %}"><i class="fa-solid fa-shield-virus text-success me-2"></i> Two-Factor Auth (TOTP)</a></li>
-                                <li><hr class="dropdown-divider my-1"></li>
-                                <li>
-                                    <form method="post" action="{% url 'accounts:logout' %}" class="m-0">
-                                        {% csrf_token %}
-                                        <button type="submit" class="dropdown-item py-2 text-danger"><i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Secure Logout</button>
-                                    </form>
-                                </li>
-                            </ul>
-                        </li>
-                    {% else %}
-                        <li class="nav-item">
-                            <a class="btn btn-nht-primary btn-sm px-3 shadow-sm" href="{% url 'accounts:login' %}">
-                                <i class="fa-solid fa-lock me-1"></i> Sign In to Portal
-                            </a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </div>
+                    <a class="mui-nav-link" href="{% url 'accounts:profile' %}">
+                        <span class="material-icons-outlined">account_circle</span> {{ user.get_full_name|default:user.username }}
+                    </a>
+                    <form method="post" action="{% url 'accounts:logout' %}" style="display:inline; margin:0;">
+                        {% csrf_token %}
+                        <button type="submit" class="mui-btn mui-btn-sm mui-btn-outlined-light">
+                            <span class="material-icons-outlined">logout</span> Sign Out
+                        </button>
+                    </form>
+                {% else %}
+                    <a class="mui-btn mui-btn-sm mui-btn-secondary" href="{% url 'accounts:login' %}">
+                        <span class="material-icons-outlined">lock</span> Sign In
+                    </a>
+                {% endif %}
+            </nav>
         </div>
-    </nav>
+    </header>
 
-    <!-- Main Content Container -->
-    <main class="py-4 flex-grow-1">
-        <div class="container-fluid px-3 px-lg-4">
-            <!-- Flash Message Alerts -->
-            {% if messages %}
-                <div class="row mb-3">
-                    <div class="col-12">
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm border-0 d-flex align-items-center" role="alert">
-                                <i class="fa-solid fa-circle-info me-2 fs-5"></i>
-                                <div>{{ message }}</div>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    </div>
+    <main class="mui-main">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mui-alert mui-alert-{{ message.tags|default:'info' }}" role="alert">
+                    <span class="material-icons-outlined">info</span>
+                    <div>{{ message }}</div>
                 </div>
-            {% endif %}
+            {% endfor %}
+        {% endif %}
 
-            {% block content %}{% endblock %}
-        </div>
+        {% block content %}{% endblock %}
     </main>
 
-    <!-- Footer -->
-    <footer class="mt-auto py-3 bg-white border-top text-center text-muted small">
-        <div class="container-fluid px-4 d-flex flex-wrap justify-content-between align-items-center">
-            <span>&copy; {% now "Y" %} <strong>{{ BRAND_NAME }}</strong>. Enterprise Transit ERP & Fleet Compliance.</span>
-            <div class="text-muted d-none d-md-block">
-                <span class="badge bg-light text-secondary border me-2"><i class="fa-solid fa-shield-halved text-success me-1"></i> OWASP ASVS L2</span>
-                <span class="badge bg-light text-secondary border"><i class="fa-solid fa-database text-primary me-1"></i> PostgreSQL High Availability</span>
-            </div>
+    <footer class="mui-footer">
+        <div class="mui-footer-inner">
+            <span>&copy; {% now "Y" %} <strong>{{ BRAND_NAME }}</strong> &bull; Enterprise SACCO ERP & Fleet Compliance</span>
+            <span>Material UI v5 Design System &bull; OWASP ASVS L2</span>
         </div>
     </footer>
 
-    <!-- Bootstrap 5 Bundle JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

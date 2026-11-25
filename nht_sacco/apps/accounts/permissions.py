@@ -52,10 +52,18 @@ RENEWAL_STAFF_ROLES = {
 }
 
 
+def is_super_admin(user):
+    return bool(
+        user
+        and user.is_authenticated
+        and (user.is_superuser or getattr(user, 'role', None) == UserRole.SUPER_ADMIN)
+    )
+
+
 def has_any_role(user, roles):
     if not user or not user.is_authenticated:
         return False
-    if user.is_superuser:
+    if user.is_superuser or getattr(user, 'role', None) == UserRole.SUPER_ADMIN:
         return True
     return getattr(user, 'role', None) in roles
 

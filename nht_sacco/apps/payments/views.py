@@ -88,8 +88,8 @@ class ManualPaymentVoucherReviewView(LoginRequiredMixin, View):
         if not (request.user.is_superuser or request.user.is_financial_staff):
             return HttpResponseForbidden("Access Denied: Only SACCO Finance Personnel can verify payment vouchers.")
 
-        # STRICT MAKER-CHECKER RULE
-        if voucher.entered_by == request.user and not request.user.is_superuser:
+        # STRICT MAKER-CHECKER RULE (applies to all staff including Super Admin)
+        if voucher.entered_by == request.user:
             messages.error(request, "Maker-Checker Violation: You cannot approve a payment voucher you entered.")
             return redirect('/admin/payments/manualpaymentvoucher/')
 
@@ -167,3 +167,17 @@ class ReceiptDetailView(LoginRequiredMixin, DetailView):
         if user.is_member and receipt.payment.member.user != user:
             raise PermissionDenied("Access Denied: You cannot view another member's receipt.")
         return receipt
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        from nht_sacco.apps.integrations.branding import DocumentBrandingService
+        receipt = self.object
+        brand = DocumentBrandingService.get_branding_context(branding_version=receipt.branding_version)
+        ctx['receipt_brand'] = brand
+        if brand.get('has_logo') and receipt.branding_version_id:
+            ctx['receipt_logo_url'] = f"/settings/api/v1/company-profile/logo-asset/?version={receipt.branding_version.version_number}"
+        elif brand.get('has_logo'):
+            ctx['receipt_logo_url'] = "/settings/api/v1/company-profile/logo-asset/"
+        else:
+            ctx['receipt_logo_url'] = ''
+        return ctx

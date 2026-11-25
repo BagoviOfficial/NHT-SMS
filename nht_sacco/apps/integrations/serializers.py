@@ -6,6 +6,9 @@ from .models import (
     IntegrationHealthLog,
     ConfigCategory,
     ConfigDataType,
+    CompanyProfile,
+    BrandingVersion,
+    NumberSequence,
 )
 from .crypto import CryptoService
 from .services import ConfigurationService
@@ -164,48 +167,74 @@ class IntegrationHealthLogSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class ConfigurationChangeRequestSerializer(serializers.ModelSerializer):
-    setting_key = serializers.CharField(source='setting.key', read_only=True)
-    setting_title = serializers.CharField(source='setting.title', read_only=True)
-    requested_by_username = serializers.CharField(source='requested_by.username', read_only=True)
-    reviewed_by_username = serializers.CharField(source='reviewed_by.username', read_only=True, default='')
-    proposed_display = serializers.SerializerMethodField()
+class BrandingVersionSerializer(serializers.ModelSerializer):
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True, default='SYSTEM')
+    has_logo = serializers.SerializerMethodField()
+    logo_asset_url = serializers.SerializerMethodField()
 
     class Meta:
-        model = ConfigurationChangeRequest
+        model = BrandingVersion
         fields = [
             'id',
-            'setting',
-            'setting_key',
-            'setting_title',
-            'current_value',
-            'proposed_display',
-            'status',
-            'risk_level',
-            'impact_assessment',
-            'justification',
-            'requested_by',
-            'requested_by_username',
-            'reviewed_by',
-            'reviewed_by_username',
-            'review_comments',
-            'requested_at',
-            'reviewed_at',
-            'applied_at',
+            'version_number',
+            'profile_snapshot',
+            'logo_sha256',
+            'has_logo',
+            'logo_asset_url',
+            'change_notes',
+            'created_by_username',
+            'created_at',
         ]
         read_only_fields = fields
 
-    def get_proposed_display(self, obj):
-        if obj.setting.is_secret:
-            return CryptoService.mask_secret(obj.proposed_value)
-        return obj.proposed_value
+    def get_has_logo(self, obj):
+        return bool(obj.logo_archive and obj.logo_archive.name)
+
+    def get_logo_asset_url(self, obj):
+        if obj.logo_archive and obj.logo_archive.name:
+            return f"/settings/api/v1/company-profile/logo-asset/?version={obj.version_number}"
+        return ''
 
 
-class ConfigurationChangeRequestCreateSerializer(serializers.Serializer):
-    key = serializers.CharField(max_length=100)
-    proposed_value = serializers.CharField(allow_blank=True)
-    justification = serializers.CharField(max_length=500, required=False, allow_blank=True, default='')
+class CompanyProfileSerializer(serializers.ModelSerializer):
+    logo_url = serializers.SerializerMethodField()
+    monochrome_logo_url = serializers.SerializerMethodField()
+    updated_by_username = serializers.CharField(source='updated_by.username', read_only=True, default='SYSTEM')
 
+    class Meta:
+        model = CompanyProfile
+        fields = [
+            'id',
+            'legal_name',
+            'trading_name',
+            'short_name',
+            'registration_number',
+            'tax_pin',
+            'physical_address',
+            'postal_address',
+            'phone_numbers',
+            'official_email',
+            'website',
+            'public_base_url',
+            'footer_text',
+            'primary_color',
+            'secondary_color',
+            'logo',
+            'monochrome_logo',
+            'logo_url',
+            'monochrome_logo_url',
+            'current_version',
+            'updated_by_username',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'current_version', 'logo_url', 'monochrome_logo_url', 'updated_by_username', 'updated_at']
 
-class ConfigurationChangeReviewSerializer(serializers.Serializer):
-    comments = serializers.CharField(max_length=500, required=False, allow_blank=True, default='')
+    def get_logo_url(self, obj):
+        if obj.logo and obj.logo.name:
+            return f"/settings/api/v1/company-profile/logo-asset/?v={obj.current_version}"
+        return ''
+
+    def get_monochrome_logo_url(self, obj):
+        if obj.monochrome_logo and obj.monochrome_logo.name:
+            return f"/settings/api/v1/company-profile/logo-asset/?type=monochrome&v={obj.current_version}"
+        return ''

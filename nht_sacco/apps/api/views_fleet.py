@@ -1,5 +1,7 @@
+from datetime import date, timedelta
 from decimal import Decimal
 from django.db import transaction
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -22,10 +24,19 @@ from nht_sacco.apps.compliance.models import ComplianceAlert
 from nht_sacco.apps.compliance.services import ComplianceService
 from nht_sacco.apps.documents.models import Document, DocumentType, DocumentVerification, VerificationStatus
 from nht_sacco.apps.drivers.models import Driver, DriverAssignment
+from nht_sacco.apps.integrations.branding import DocumentBrandingService
+from nht_sacco.apps.integrations.models import CompanyProfile
 from nht_sacco.apps.members.models import Member
 from nht_sacco.apps.renewals.models import RenewalRequest, RenewalStatus
 from nht_sacco.apps.routes.models import Route, VehicleRouteAssignment
-from nht_sacco.apps.vehicles.models import Vehicle, VehicleOwnershipHistory, VehicleStatus
+from nht_sacco.apps.vehicles.models import (
+    ComplianceCardStatus,
+    Vehicle,
+    VehicleComplianceCard,
+    VehicleOwnershipHistory,
+    VehicleStatus,
+)
+from nht_sacco.apps.vehicles.services import ComplianceCardService
 from .serializers import (
     ComplianceAlertSerializer,
     DocumentSerializer,
@@ -35,6 +46,7 @@ from .serializers import (
     MemberSerializer,
     RenewalRequestSerializer,
     RouteSerializer,
+    VehicleComplianceCardSerializer,
     VehicleOwnershipHistorySerializer,
     VehicleRouteAssignmentSerializer,
     VehicleSerializer,
@@ -58,8 +70,10 @@ class MemberViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
-        if user.role == UserRole.MEMBER and hasattr(user, 'member_profile'):
-            return qs.filter(pk=user.member_profile.pk)
+        if user.role == UserRole.MEMBER:
+            if hasattr(user, 'member_profile'):
+                return qs.filter(pk=user.member_profile.pk)
+            return qs.none()
         return qs
 
     def create(self, request, *args, **kwargs):
@@ -67,8 +81,39 @@ class MemberViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Insufficient privileges to register members.'}, status=status.HTTP_403_FORBIDDEN)
         return super().create(request, *args, **kwargs)
 
+    @transaction.atomic
     def perform_create(self, serializer):
-        member = serializer.save(membership_number=Member.generate_membership_number())
+        from nht_sacco.apps.accounts.models import User
+        user_obj = serializer.validated_data.get('user')
+        if not user_obj:
+            base_uname = (
+                serializer.validated_data.get('email', '').split('@')[0]
+                or serializer.validated_data.get('national_id')
+                or 'member'
+            ).lower().replace(' ', '_')[:30]
+            uname = base_uname
+            suffix = 1
+            while User.objects.filter(username=uname).exists():
+                uname = f"{base_uname}_{suffix}"
+                suffix += 1
+            user_obj = User.objects.create(
+                username=uname,
+                email=serializer.validated_data['email'],
+                first_name=serializer.validated_data['first_name'],
+                last_name=serializer.validated_data['last_name'],
+                phone_number=serializer.validated_data.get('phone_number'),
+                national_id=serializer.validated_data.get('national_id'),
+                role=UserRole.MEMBER,
+                is_staff=False,
+                is_superuser=False,
+                must_change_password=True,
+            )
+            user_obj.set_unusable_password()
+            user_obj.save()
+        member = serializer.save(
+            user=user_obj,
+            membership_number=Member.generate_membership_number(),
+        )
         AuditLog.log_action(
             actor=self.request.user,
             action=AuditAction.CREATE,
@@ -102,6 +147,29 @@ class MemberViewSet(viewsets.ModelViewSet):
         member.reinstate(request.user)
         return Response(MemberSerializer(member).data)
 
+    @action(detail=True, methods=['get'])
+    def certificate_pdf(self, request, pk=None):
+        member = self.get_object()
+        reissue = request.query_params.get('reissue') in ('1', 'true', 'yes')
+        if not member.branding_version_id or (reissue and (request.user.is_superuser or request.user.role in REGISTRY_OPS_ROLES)):
+            member.branding_version = CompanyProfile.get_active().get_latest_version()
+            member.save(update_fields=['branding_version', 'updated_at'])
+        pdf_bytes = DocumentBrandingService.generate_membership_certificate_pdf(
+            member,
+            branding_version=member.branding_version,
+        )
+        AuditLog.log_action(
+            actor=request.user,
+            action=AuditAction.EXPORT,
+            entity_type='MembershipCertificatePDF',
+            entity_id=member.membership_number,
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Generated membership certificate PDF for {member.membership_number} (reissue={reissue})",
+        )
+        resp = HttpResponse(pdf_bytes, content_type='application/pdf')
+        resp['Content-Disposition'] = f'inline; filename="NHT_Membership_{member.membership_number}.pdf"'
+        return resp
+
 
 class VehicleViewSet(viewsets.ModelViewSet):
     queryset = Vehicle.objects.select_related('current_owner').order_by('registration_number')
@@ -113,8 +181,10 @@ class VehicleViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
-        if user.role == UserRole.MEMBER and hasattr(user, 'member_profile'):
-            return qs.filter(current_owner=user.member_profile)
+        if user.role == UserRole.MEMBER:
+            if hasattr(user, 'member_profile'):
+                return qs.filter(current_owner=user.member_profile)
+            return qs.none()
         return qs
 
     def perform_create(self, serializer):
@@ -186,6 +256,170 @@ class VehicleViewSet(viewsets.ModelViewSet):
         vehicle = self.get_object()
         qs = vehicle.ownership_history.select_related('previous_owner', 'new_owner', 'authorized_by').all()
         return Response(VehicleOwnershipHistorySerializer(qs, many=True).data)
+
+
+class VehicleComplianceCardViewSet(viewsets.ModelViewSet):
+    """
+    Lifecycle management for digital Vehicle Compliance Cards & Cryptographic QR Tokens.
+    Supports issuing, viewing, renewing, revoking, suspending, reinstating, QR token rotation,
+    and branded PDF export while keeping public verification zero-PII.
+    """
+    queryset = VehicleComplianceCard.objects.select_related(
+        'vehicle', 'vehicle__current_owner', 'issued_by', 'revoked_by', 'branding_version'
+    ).order_by('-created_at')
+    serializer_class = VehicleComplianceCardSerializer
+    permission_classes = [role_permission_factory(
+        COMPLIANCE_STAFF_ROLES | RENEWAL_STAFF_ROLES | REGISTRY_OPS_ROLES | {UserRole.MEMBER},
+        allow_auditor_read=True,
+    )]
+    filterset_fields = ['status', 'vehicle']
+    search_fields = ['certificate_number', 'fleet_number', 'vehicle__registration_number', 'owner_display_name', 'assigned_route_name']
+    http_method_names = ['get', 'post', 'head', 'options']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.role == UserRole.MEMBER:
+            if hasattr(user, 'member_profile'):
+                return qs.filter(vehicle__current_owner=user.member_profile)
+            return qs.none()
+        return qs
+
+    @staticmethod
+    def _parse_expiry_date(raw_val):
+        if not raw_val:
+            return None
+        if isinstance(raw_val, date):
+            return raw_val
+        return date.fromisoformat(str(raw_val).strip())
+
+    def create(self, request, *args, **kwargs):
+        if not (request.user.is_superuser or request.user.role in (COMPLIANCE_STAFF_ROLES | RENEWAL_STAFF_ROLES | REGISTRY_OPS_ROLES)):
+            return Response({'error': 'Compliance or Operations officer clearance required to issue compliance cards.'}, status=status.HTTP_403_FORBIDDEN)
+
+        vehicle_id = request.data.get('vehicle')
+        vehicle = Vehicle.objects.select_related('current_owner').filter(pk=vehicle_id).first()
+        if not vehicle:
+            return Response({'error': 'Target vehicle not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            expiry_date = self._parse_expiry_date(request.data.get('expiry_date'))
+        except ValueError:
+            return Response({'error': 'Invalid expiry_date format (expected YYYY-MM-DD).'}, status=status.HTTP_400_BAD_REQUEST)
+
+        card, _ = ComplianceCardService.issue_card(
+            vehicle=vehicle,
+            issued_by=request.user,
+            expiry_date=expiry_date,
+            fleet_number=(request.data.get('fleet_number') or '').strip(),
+            notes=(request.data.get('notes') or '').strip(),
+            supersede_existing=bool(request.data.get('supersede_existing', True)),
+        )
+        return Response(
+            VehicleComplianceCardSerializer(card, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=True, methods=['post'])
+    def renew(self, request, pk=None):
+        if not (request.user.is_superuser or request.user.role in (COMPLIANCE_STAFF_ROLES | RENEWAL_STAFF_ROLES)):
+            return Response({'error': 'Compliance or Renewal officer clearance required.'}, status=status.HTTP_403_FORBIDDEN)
+        card = self.get_object()
+        try:
+            expiry_date = self._parse_expiry_date(request.data.get('expiry_date'))
+        except ValueError:
+            return Response({'error': 'Invalid expiry_date format (expected YYYY-MM-DD).'}, status=status.HTTP_400_BAD_REQUEST)
+        new_card, _ = ComplianceCardService.renew_card(
+            old_card=card,
+            issued_by=request.user,
+            expiry_date=expiry_date,
+            notes=(request.data.get('notes') or '').strip(),
+        )
+        return Response(
+            VehicleComplianceCardSerializer(new_card, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=True, methods=['post'])
+    def revoke(self, request, pk=None):
+        if not (request.user.is_superuser or request.user.role in COMPLIANCE_STAFF_ROLES):
+            return Response({'error': 'Compliance Officer clearance required.'}, status=status.HTTP_403_FORBIDDEN)
+        card = self.get_object()
+        updated = ComplianceCardService.revoke_card(
+            card=card,
+            revoked_by=request.user,
+            reason=(request.data.get('reason') or 'Administrative revocation').strip(),
+        )
+        return Response(VehicleComplianceCardSerializer(updated, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def suspend(self, request, pk=None):
+        if not (request.user.is_superuser or request.user.role in COMPLIANCE_STAFF_ROLES):
+            return Response({'error': 'Compliance Officer clearance required.'}, status=status.HTTP_403_FORBIDDEN)
+        card = self.get_object()
+        updated = ComplianceCardService.suspend_card(
+            card=card,
+            actor=request.user,
+            reason=(request.data.get('reason') or '').strip(),
+        )
+        return Response(VehicleComplianceCardSerializer(updated, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def reinstate(self, request, pk=None):
+        if not (request.user.is_superuser or request.user.role in COMPLIANCE_STAFF_ROLES):
+            return Response({'error': 'Compliance Officer clearance required.'}, status=status.HTTP_403_FORBIDDEN)
+        card = self.get_object()
+        updated = ComplianceCardService.reinstate_card(
+            card=card,
+            actor=request.user,
+            notes=(request.data.get('notes') or '').strip(),
+        )
+        return Response(VehicleComplianceCardSerializer(updated, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def regenerate_qr(self, request, pk=None):
+        if not (request.user.is_superuser or request.user.role in COMPLIANCE_STAFF_ROLES):
+            return Response({'error': 'Compliance Officer clearance required.'}, status=status.HTTP_403_FORBIDDEN)
+        card = self.get_object()
+        updated, _ = ComplianceCardService.regenerate_qr(card=card, actor=request.user)
+        return Response(VehicleComplianceCardSerializer(updated, context={'request': request}).data)
+
+    @action(detail=True, methods=['get'])
+    def download_pdf(self, request, pk=None):
+        card = self.get_object()
+        verify_url = ComplianceCardService.get_verify_url(card, request=request)
+        qr_png = ComplianceCardService.get_qr_png_bytes(card, request=request)
+        pdf_bytes = DocumentBrandingService.generate_compliance_card_pdf(
+            card=card,
+            verify_url=verify_url,
+            qr_png_bytes=qr_png,
+        )
+        AuditLog.log_action(
+            actor=request.user,
+            action=AuditAction.EXPORT,
+            entity_type='VehicleComplianceCardPDF',
+            entity_id=card.certificate_number,
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Exported compliance card PDF {card.certificate_number}",
+        )
+        resp = HttpResponse(pdf_bytes, content_type='application/pdf')
+        resp['Content-Disposition'] = f'inline; filename="NHT_Compliance_Card_{card.certificate_number}.pdf"'
+        return resp
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        today = timezone.localdate()
+        in_30 = today + timedelta(days=30)
+        qs = self.get_queryset()
+        return Response({
+            'total': qs.count(),
+            'valid': qs.filter(status=ComplianceCardStatus.VALID, expiry_date__gte=today).count(),
+            'expiring_30_days': qs.filter(status=ComplianceCardStatus.VALID, expiry_date__gte=today, expiry_date__lte=in_30).count(),
+            'expired': qs.filter(status=ComplianceCardStatus.EXPIRED).count() + qs.filter(status=ComplianceCardStatus.VALID, expiry_date__lt=today).count(),
+            'revoked': qs.filter(status=ComplianceCardStatus.REVOKED).count(),
+            'suspended': qs.filter(status=ComplianceCardStatus.SUSPENDED).count(),
+            'superseded': qs.filter(status=ComplianceCardStatus.SUPERSEDED).count(),
+        })
 
 
 class DriverViewSet(viewsets.ModelViewSet):
@@ -291,8 +525,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
-        if user.role == UserRole.MEMBER and hasattr(user, 'member_profile'):
-            return qs.filter(vehicle__current_owner=user.member_profile) | qs.filter(member=user.member_profile)
+        if user.role == UserRole.MEMBER:
+            if hasattr(user, 'member_profile'):
+                return qs.filter(vehicle__current_owner=user.member_profile) | qs.filter(member=user.member_profile)
+            return qs.none()
         return qs
 
     def perform_create(self, serializer):
@@ -365,8 +601,10 @@ class ComplianceAlertViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        if self.request.user.role == UserRole.MEMBER and hasattr(self.request.user, 'member_profile'):
-            return qs.filter(recipient_member=self.request.user.member_profile)
+        if self.request.user.role == UserRole.MEMBER:
+            if hasattr(self.request.user, 'member_profile'):
+                return qs.filter(recipient_member=self.request.user.member_profile)
+            return qs.none()
         return qs
 
     @action(detail=True, methods=['post'])
@@ -397,8 +635,10 @@ class RenewalRequestViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        if self.request.user.role == UserRole.MEMBER and hasattr(self.request.user, 'member_profile'):
-            return qs.filter(member=self.request.user.member_profile)
+        if self.request.user.role == UserRole.MEMBER:
+            if hasattr(self.request.user, 'member_profile'):
+                return qs.filter(member=self.request.user.member_profile)
+            return qs.none()
         return qs
 
     def perform_create(self, serializer):

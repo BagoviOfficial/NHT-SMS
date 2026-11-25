@@ -16,6 +16,19 @@ class UserRole(models.TextChoices):
     MEMBER = 'MEMBER', _('SACCO Member')
     DRIVER = 'DRIVER', _('PSV Driver')
 
+
+STAFF_ROLES = (
+    UserRole.SUPER_ADMIN,
+    UserRole.CHAIRMAN,
+    UserRole.SECRETARY,
+    UserRole.TREASURER,
+    UserRole.ACCOUNTANT,
+    UserRole.COMPLIANCE_OFFICER,
+    UserRole.RENEWAL_OFFICER,
+    UserRole.FIELD_OFFICER,
+    UserRole.AUDITOR,
+)
+
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(_('Email Address'), unique=True)

@@ -2,9 +2,10 @@ import base64
 import io
 import qrcode
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.middleware.csrf import get_token
 from django.shortcuts import render
 from django.utils import timezone
@@ -18,11 +19,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from nht_sacco.apps.accounts.models import User, UserRole, LoginHistory
+from nht_sacco.apps.accounts.models import User, UserRole, STAFF_ROLES, LoginHistory
 from nht_sacco.apps.accounts.permissions import (
     IsSystemAdmin,
     IsManagementStaff,
     MANAGEMENT_ROLES,
+    is_super_admin,
 )
 from nht_sacco.apps.audit.models import AuditLog, AuditAction, AuditOutcome
 from nht_sacco.apps.integrations.services import ConfigurationService
@@ -32,33 +34,45 @@ from .serializers import UserManagementSerializer, LoginHistorySerializer
 
 
 ROLE_CAPABILITIES = {
-    UserRole.SUPER_ADMIN: ['dashboard', 'members', 'vehicles', 'drivers', 'routes', 'documents', 'compliance', 'renewals', 'billing', 'payments', 'reconciliation', 'accounting', 'maintenance', 'incidents', 'governance', 'notifications', 'reports', 'users', 'settings', 'audit'],
-    UserRole.CHAIRMAN: ['dashboard', 'members', 'vehicles', 'drivers', 'routes', 'documents', 'compliance', 'renewals', 'billing', 'payments', 'reconciliation', 'accounting', 'maintenance', 'incidents', 'governance', 'notifications', 'reports', 'settings', 'audit'],
-    UserRole.SECRETARY: ['dashboard', 'members', 'vehicles', 'drivers', 'routes', 'documents', 'incidents', 'governance', 'notifications'],
+    UserRole.SUPER_ADMIN: ['dashboard', 'members', 'vehicles', 'compliance-cards', 'drivers', 'routes', 'documents', 'compliance', 'renewals', 'billing', 'payments', 'reconciliation', 'accounting', 'maintenance', 'incidents', 'governance', 'notifications', 'reports', 'staff', 'users', 'settings', 'audit'],
+    UserRole.CHAIRMAN: ['dashboard', 'members', 'vehicles', 'compliance-cards', 'drivers', 'routes', 'documents', 'compliance', 'renewals', 'billing', 'payments', 'reconciliation', 'accounting', 'maintenance', 'incidents', 'governance', 'notifications', 'reports', 'settings', 'audit'],
+    UserRole.SECRETARY: ['dashboard', 'members', 'vehicles', 'compliance-cards', 'drivers', 'routes', 'documents', 'incidents', 'governance', 'notifications'],
     UserRole.FIELD_OFFICER: ['dashboard', 'members', 'vehicles', 'drivers', 'routes', 'maintenance', 'incidents'],
-    UserRole.COMPLIANCE_OFFICER: ['dashboard', 'vehicles', 'drivers', 'documents', 'compliance', 'renewals', 'maintenance', 'incidents', 'reports'],
-    UserRole.RENEWAL_OFFICER: ['dashboard', 'vehicles', 'documents', 'compliance', 'renewals'],
+    UserRole.COMPLIANCE_OFFICER: ['dashboard', 'vehicles', 'compliance-cards', 'drivers', 'documents', 'compliance', 'renewals', 'maintenance', 'incidents', 'reports'],
+    UserRole.RENEWAL_OFFICER: ['dashboard', 'vehicles', 'compliance-cards', 'documents', 'compliance', 'renewals'],
     UserRole.TREASURER: ['dashboard', 'members', 'billing', 'payments', 'reconciliation', 'accounting', 'reports'],
     UserRole.ACCOUNTANT: ['dashboard', 'members', 'billing', 'payments', 'reconciliation', 'accounting', 'reports'],
-    UserRole.AUDITOR: ['dashboard', 'compliance', 'accounting', 'reports', 'settings', 'audit'],
+    UserRole.AUDITOR: ['dashboard', 'compliance', 'compliance-cards', 'accounting', 'reports', 'settings', 'audit'],
     UserRole.MEMBER: ['member-portal', 'notifications'],
     UserRole.DRIVER: ['driver-portal', 'notifications'],
 }
 
 
+def _active_branding_payload():
+    from nht_sacco.apps.integrations.models import CompanyProfile
+    profile = CompanyProfile.get_active()
+    logo_url = '/settings/api/v1/company-profile/logo-asset/' if (profile.logo and profile.logo.name) else ''
+    return {
+        'sacco_name': profile.trading_name or ConfigurationService.get_str('business.sacco_name', 'Northern Highways Transporters SACCO'),
+        'legal_name': profile.legal_name,
+        'short_name': profile.short_name or 'NHT-SMS',
+        'primary_color': profile.primary_color or ConfigurationService.get_str('app.brand_primary_color', '#10315C'),
+        'secondary_color': profile.secondary_color or ConfigurationService.get_str('app.brand_secondary_color', '#FF8A00'),
+        'currency': ConfigurationService.get_str('business.currency', 'KES'),
+        'logo_url': logo_url,
+        'branding_version': profile.current_version,
+        'footer_text': profile.footer_text,
+    }
+
+
 def _build_me_payload(user, request=None):
     csrf_token = get_token(request) if request is not None else ''
+    branding = _active_branding_payload()
     if not user or not user.is_authenticated:
         return {
             'authenticated': False,
             'csrf_token': csrf_token,
-            'branding': {
-                'sacco_name': ConfigurationService.get_str('business.sacco_name', 'Northern Highways Transporters SACCO'),
-                'short_name': 'NHT-SMS',
-                'primary_color': ConfigurationService.get_str('app.brand_primary_color', '#10315C'),
-                'secondary_color': ConfigurationService.get_str('app.brand_secondary_color', '#FF8A00'),
-                'currency': ConfigurationService.get_str('business.currency', 'KES'),
-            },
+            'branding': branding,
         }
 
     role = UserRole.SUPER_ADMIN if user.is_superuser else user.role
@@ -91,13 +105,7 @@ def _build_me_payload(user, request=None):
             'default_route': allowed_sections[0] if allowed_sections else 'dashboard',
         },
         'allowed_sections': allowed_sections,
-        'branding': {
-            'sacco_name': ConfigurationService.get_str('business.sacco_name', 'Northern Highways Transporters SACCO'),
-            'short_name': 'NHT-SMS',
-            'primary_color': ConfigurationService.get_str('app.brand_primary_color', '#10315C'),
-            'secondary_color': ConfigurationService.get_str('app.brand_secondary_color', '#FF8A00'),
-            'currency': ConfigurationService.get_str('business.currency', 'KES'),
-        },
+        'branding': branding,
     }
 
 
@@ -107,11 +115,13 @@ class SpaIndexView(View):
     Serves the CDN-based Material UI Single Page Application shell at /app/.
     """
     def get(self, request, *args, **kwargs):
+        branding = _active_branding_payload()
         context = {
-            'sacco_name': ConfigurationService.get_str('business.sacco_name', 'Northern Highways Transporters SACCO'),
-            'primary_color': ConfigurationService.get_str('app.brand_primary_color', '#10315C'),
-            'secondary_color': ConfigurationService.get_str('app.brand_secondary_color', '#FF8A00'),
-            'currency': ConfigurationService.get_str('business.currency', 'KES'),
+            'sacco_name': branding['sacco_name'],
+            'primary_color': branding['primary_color'],
+            'secondary_color': branding['secondary_color'],
+            'currency': branding['currency'],
+            'logo_url': branding['logo_url'],
         }
         return render(request, 'spa/index.html', context)
 
@@ -245,15 +255,89 @@ class AuthMfaSetupAPIView(APIView):
         return Response({'enabled': True, 'message': 'Two-factor authentication activated.'})
 
 
+def _other_active_super_admin_exists(exclude_pk):
+    return User.objects.filter(is_active=True).filter(
+        Q(role=UserRole.SUPER_ADMIN) | Q(is_superuser=True)
+    ).exclude(pk=exclude_pk).exists()
+
+
 class UserManagementViewSet(viewsets.ModelViewSet):
     """
-    SuperAdmin user provisioning, role allocation, suspension, and login history.
+    SuperAdmin Staff & Role Management ViewSet.
+    Strictly separates SACCO staff accounts from SACCO Member/Driver records,
+    prevents privilege escalation to SUPER_ADMIN, and protects the last active Super Admin.
     """
     queryset = User.objects.all().order_by('-date_joined')
     serializer_class = UserManagementSerializer
     permission_classes = [IsSystemAdmin]
     filterset_fields = ['role', 'is_active', 'is_verified']
     search_fields = ['username', 'email', 'first_name', 'last_name', 'phone_number']
+    staff_only = True
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        scope = (self.request.query_params.get('scope') or '').lower()
+        if self.staff_only and scope != 'all':
+            return qs.filter(Q(role__in=STAFF_ROLES) | Q(is_superuser=True) | Q(is_staff=True))
+        if scope == 'staff':
+            return qs.filter(Q(role__in=STAFF_ROLES) | Q(is_superuser=True) | Q(is_staff=True))
+        if scope == 'operational':
+            return qs.filter(role__in=[UserRole.MEMBER, UserRole.DRIVER], is_superuser=False)
+        return qs
+
+    def perform_create(self, serializer):
+        role = serializer.validated_data.get('role', UserRole.SECRETARY)
+        if role == UserRole.SUPER_ADMIN and not is_super_admin(self.request.user):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only an active Super Administrator may create a SUPER_ADMIN account.")
+        user_obj = serializer.save()
+        AuditLog.log_action(
+            actor=self.request.user,
+            action=AuditAction.CREATE,
+            entity_type='StaffUser',
+            entity_id=str(user_obj.pk),
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Provisioned user {user_obj.username} with role {user_obj.role}",
+            ip_address=self.request.META.get('REMOTE_ADDR'),
+        )
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        if (instance.role == UserRole.SUPER_ADMIN or instance.is_superuser) and not is_super_admin(self.request.user):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only an active Super Administrator may modify a SUPER_ADMIN account.")
+        user_obj = serializer.save()
+        AuditLog.log_action(
+            actor=self.request.user,
+            action=AuditAction.UPDATE,
+            entity_type='StaffUser',
+            entity_id=str(user_obj.pk),
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Updated user profile for {user_obj.username}",
+            ip_address=self.request.META.get('REMOTE_ADDR'),
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        user_obj = self.get_object()
+        if user_obj.pk == request.user.pk:
+            return Response({'error': 'You cannot delete your own active account.'}, status=status.HTTP_400_BAD_REQUEST)
+        if (user_obj.role == UserRole.SUPER_ADMIN or user_obj.is_superuser) and not _other_active_super_admin_exists(user_obj.pk):
+            return Response(
+                {'error': 'Cannot delete the last active Super Administrator.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        username = user_obj.username
+        res = super().destroy(request, *args, **kwargs)
+        AuditLog.log_action(
+            actor=request.user,
+            action=AuditAction.DELETE,
+            entity_type='StaffUser',
+            entity_id=str(kwargs.get('pk', '')),
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Removed staff account {username}",
+            ip_address=request.META.get('REMOTE_ADDR'),
+        )
+        return res
 
     @action(detail=True, methods=['post'])
     def assign_role(self, request, pk=None):
@@ -261,8 +345,26 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         new_role = request.data.get('role')
         if new_role not in UserRole.values:
             return Response({'error': f"Invalid role '{new_role}'."}, status=status.HTTP_400_BAD_REQUEST)
+
+        actor_is_super = is_super_admin(request.user)
+        if (new_role == UserRole.SUPER_ADMIN or user_obj.role == UserRole.SUPER_ADMIN or user_obj.is_superuser) and not actor_is_super:
+            return Response(
+                {'error': 'Only an active Super Administrator may assign or modify SUPER_ADMIN privileges.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        was_active_super = user_obj.is_active and (user_obj.role == UserRole.SUPER_ADMIN or user_obj.is_superuser)
+        if was_active_super and new_role != UserRole.SUPER_ADMIN:
+            if not _other_active_super_admin_exists(user_obj.pk):
+                return Response(
+                    {'error': 'Cannot demote the last active Super Administrator.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         old_role = user_obj.role
         user_obj.role = new_role
+        if old_role == UserRole.SUPER_ADMIN and new_role != UserRole.SUPER_ADMIN:
+            user_obj.is_superuser = False
         user_obj.save()
         AuditLog.log_action(
             actor=request.user,
@@ -271,6 +373,7 @@ class UserManagementViewSet(viewsets.ModelViewSet):
             entity_id=str(user_obj.pk),
             outcome=AuditOutcome.SUCCESS,
             notes=f"Changed role of {user_obj.username} from {old_role} to {new_role}",
+            ip_address=request.META.get('REMOTE_ADDR'),
         )
         return Response(UserManagementSerializer(user_obj).data)
 
@@ -279,6 +382,12 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         user_obj = self.get_object()
         if user_obj.pk == request.user.pk:
             return Response({'error': 'You cannot deactivate your own active session.'}, status=status.HTTP_400_BAD_REQUEST)
+        if user_obj.is_active and (user_obj.role == UserRole.SUPER_ADMIN or user_obj.is_superuser):
+            if not _other_active_super_admin_exists(user_obj.pk):
+                return Response(
+                    {'error': 'Cannot deactivate the last active Super Administrator.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         user_obj.is_active = not user_obj.is_active
         user_obj.save(update_fields=['is_active'])
         AuditLog.log_action(
@@ -287,18 +396,117 @@ class UserManagementViewSet(viewsets.ModelViewSet):
             entity_type='UserStatus',
             entity_id=str(user_obj.pk),
             outcome=AuditOutcome.SUCCESS,
-            notes=f"{'Activated' if user_obj.is_active else 'Suspended'} account {user_obj.username}",
+            notes=f"{'Activated' if user_obj.is_active else 'Deactivated'} account {user_obj.username}",
+            ip_address=request.META.get('REMOTE_ADDR'),
         )
         return Response(UserManagementSerializer(user_obj).data)
 
+    @action(detail=True, methods=['post'])
+    def initiate_recovery(self, request, pk=None):
+        """
+        Initiates staff account recovery: flags must_change_password and optionally
+        dispatches a Django password reset email.
+        """
+        user_obj = self.get_object()
+        send_email = bool(request.data.get('send_email', True))
+        user_obj.must_change_password = True
+        user_obj.save(update_fields=['must_change_password'])
+
+        email_sent = False
+        if send_email and user_obj.email:
+            form = PasswordResetForm({'email': user_obj.email})
+            if form.is_valid():
+                form.save(
+                    request=request,
+                    use_https=request.is_secure(),
+                    email_template_name='accounts/password_reset_email.html' if False else 'registration/password_reset_email.html',
+                )
+                email_sent = True
+
+        AuditLog.log_action(
+            actor=request.user,
+            action=AuditAction.UPDATE,
+            entity_type='AccountRecovery',
+            entity_id=str(user_obj.pk),
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Initiated account recovery for {user_obj.username} (email_sent={email_sent})",
+            ip_address=request.META.get('REMOTE_ADDR'),
+        )
+        return Response({
+            'success': True,
+            'must_change_password': True,
+            'email_sent': email_sent,
+            'message': f"Account recovery initiated for {user_obj.username}.",
+        })
+
+    @action(detail=True, methods=['get'])
+    def activity(self, request, pk=None):
+        user_obj = self.get_object()
+        logins = LoginHistory.objects.filter(
+            Q(user=user_obj) | Q(username_attempted=user_obj.username)
+        ).order_by('-timestamp')[:25]
+        audits = AuditLog.objects.filter(
+            Q(actor=user_obj) | Q(entity_id=str(user_obj.pk))
+        ).order_by('-timestamp')[:30]
+        return Response({
+            'login_history': LoginHistorySerializer(logins, many=True).data,
+            'audit_logs': [
+                {
+                    'id': str(a.pk),
+                    'actor': a.actor_username,
+                    'action': a.action,
+                    'entity_type': a.entity_type,
+                    'entity_id': a.entity_id,
+                    'outcome': a.outcome,
+                    'notes': (a.change_details or {}).get('notes', ''),
+                    'timestamp': a.timestamp.isoformat(),
+                }
+                for a in audits
+            ],
+        })
+
     @action(detail=False, methods=['get'])
     def roles(self, request):
+        scope = (request.query_params.get('scope') or 'staff').lower()
+        if scope == 'staff':
+            choices = [{'value': r.value, 'label': str(r.label)} for r in UserRole if r in STAFF_ROLES]
+            return Response(choices)
         return Response([{'value': k, 'label': str(v)} for k, v in UserRole.choices])
 
     @action(detail=False, methods=['get'])
     def login_history(self, request):
         logs = LoginHistory.objects.all().order_by('-timestamp')[:50]
         return Response(LoginHistorySerializer(logs, many=True).data)
+
+
+class StaffManagementViewSet(UserManagementViewSet):
+    """
+    Dedicated Staff Management endpoint (/api/v1/staff/) strictly excluding
+    SACCO Member and Driver operational accounts.
+    """
+    staff_only = True
+
+    def get_queryset(self):
+        return User.objects.filter(
+            Q(role__in=STAFF_ROLES) | Q(is_superuser=True) | Q(is_staff=True)
+        ).order_by('-date_joined')
+
+    def perform_create(self, serializer):
+        role = serializer.validated_data.get('role', UserRole.SECRETARY)
+        if role not in STAFF_ROLES:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'role': 'Staff accounts cannot be created with Member or Driver operational roles.'})
+        super().perform_create(serializer)
+
+    @action(detail=True, methods=['post'])
+    def assign_role(self, request, pk=None):
+        new_role = request.data.get('role')
+        if new_role not in STAFF_ROLES:
+            return Response(
+                {'error': 'Staff Management only accepts SACCO staff roles; manage Members/Drivers in their dedicated registries.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().assign_role(request, pk=pk)
 
 
 class DashboardAPIView(APIView):
@@ -337,20 +545,43 @@ class DashboardAPIView(APIView):
             'restricted': not can_see_finance,
         }
 
+        recent_transactions = []
+        if can_see_finance:
+            from nht_sacco.apps.payments.models import Payment, PaymentStatus
+            for p in Payment.objects.filter(status=PaymentStatus.SUCCESS).select_related('member', 'invoice').order_by('-confirmed_at', '-created_at')[:8]:
+                recent_transactions.append({
+                    'id': str(p.pk),
+                    'reference': p.provider_transaction_id or p.payment_reference,
+                    'member_name': p.member.full_name if p.member else 'N/A',
+                    'invoice_number': p.invoice.invoice_number if p.invoice else 'N/A',
+                    'method': p.get_method_display(),
+                    'amount': str(p.amount),
+                    'confirmed_at': (p.confirmed_at or p.created_at).isoformat(),
+                })
+
         return Response({
             'kpis': {
                 'total_members': kpis['total_members'],
                 'active_members': kpis['active_members'],
                 'pending_members': kpis['pending_members'],
+                'suspended_members': kpis.get('suspended_members', 0),
                 'total_vehicles': kpis['total_vehicles'],
+                'active_vehicles': kpis.get('active_vehicles', 0),
+                'vehicles_awaiting_compliance': kpis.get('vehicles_awaiting_compliance', 0),
                 'compliant_vehicles': kpis['compliant_vehicles'],
                 'delinquent_vehicles': kpis['delinquent_vehicles'],
                 'compliance_rate': kpis['compliance_rate'],
                 'expiring_docs': kpis['expiring_docs'],
                 'expired_docs': kpis['expired_docs'],
+                'expiring_certificates': kpis.get('expiring_certificates', 0),
+                'expired_certificates': kpis.get('expired_certificates', 0),
+                'active_routes': kpis.get('active_routes', 0),
+                'system_alerts': kpis.get('system_alerts', 0),
+                'pending_approvals': kpis.get('pending_approvals', 0),
                 'financials': financials,
                 'route_distribution': kpis['route_distribution'],
             },
             'fleet_categories': fleet_categories,
+            'recent_transactions': recent_transactions,
             'recent_audit': recent_audit,
         })

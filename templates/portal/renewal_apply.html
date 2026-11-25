@@ -3,23 +3,21 @@
 {% block title %}Apply for Document Renewal{% endblock %}
 
 {% block portal_content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <a href="{% url 'portal:renewals' %}" class="small text-decoration-none mb-1 d-inline-block">
-            <i class="bi bi-arrow-left me-1"></i> Back to Renewals
-        </a>
-        <h4 class="fw-bold mb-0 text-nht-navy">Submit Regulatory Document Renewal</h4>
-    </div>
+<div>
+    <a href="{% url 'portal:renewals' %}" class="mui-caption" style="font-weight: 700;">
+        <span class="material-icons-outlined" style="font-size: 14px;">arrow_back</span> Back to Renewals
+    </a>
+    <h2 class="mui-h5">Submit Regulatory Document Renewal</h2>
 </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-4">
-        <form method="post" action="{% url 'portal:renewal_apply' %}">
+<div class="mui-card">
+    <div class="mui-card-body">
+        <form method="post" action="{% url 'portal:renewal_apply' %}" class="mui-stack">
             {% csrf_token %}
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold small text-muted">Select Target Vehicle <span class="text-danger">*</span></label>
-                    <select name="vehicle_id" class="form-select" required>
+            <div class="mui-grid mui-grid-2">
+                <div class="mui-field">
+                    <label class="mui-label">Select Target Vehicle *</label>
+                    <select name="vehicle_id" class="mui-select" required>
                         <option value="">-- Choose Registered Vehicle --</option>
                         {% for v in vehicles %}
                             <option value="{{ v.id }}" {% if request.GET.vehicle_id == v.id|stringformat:"s" %}selected{% endif %}>
@@ -28,28 +26,25 @@
                         {% endfor %}
                     </select>
                 </div>
-
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold small text-muted">Select Document Type to Renew <span class="text-danger">*</span></label>
-                    <select name="document_type_id" class="form-select" required>
+                <div class="mui-field">
+                    <label class="mui-label">Select Document Type to Renew *</label>
+                    <select name="document_type_id" class="mui-select" required>
                         <option value="">-- Choose Regulatory Permit --</option>
                         {% for dt in document_types %}
                             <option value="{{ dt.id }}">{{ dt.name }} ({{ dt.issuing_authority }})</option>
                         {% endfor %}
                     </select>
                 </div>
-
-                <div class="col-12">
-                    <label class="form-label fw-semibold small text-muted">Additional Notes / Instructions (Optional)</label>
-                    <textarea name="notes" class="form-control" rows="3" placeholder="Provide any special instructions or details regarding this renewal application..."></textarea>
-                </div>
-
-                <div class="col-12 mt-4 text-end">
-                    <a href="{% url 'portal:renewals' %}" class="btn btn-outline-secondary me-2">Cancel</a>
-                    <button type="submit" class="btn btn-nht-primary px-4">
-                        <i class="bi bi-arrow-repeat me-1"></i> Submit Application
-                    </button>
-                </div>
+            </div>
+            <div class="mui-field">
+                <label class="mui-label">Additional Notes / Instructions (Optional)</label>
+                <textarea name="notes" class="mui-textarea" rows="3" placeholder="Provide any special instructions regarding this renewal application..."></textarea>
+            </div>
+            <div class="mui-flex-between">
+                <a href="{% url 'portal:renewals' %}" class="mui-btn mui-btn-outlined">Cancel</a>
+                <button type="submit" class="mui-btn mui-btn-secondary">
+                    <span class="material-icons-outlined">autorenew</span> Submit Application
+                </button>
             </div>
         </form>
     </div>

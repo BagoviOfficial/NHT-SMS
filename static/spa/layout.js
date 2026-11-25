@@ -1,7 +1,7 @@
 import { React, MUI, html, apiFetch } from './api.js';
 import { MaterialIcon, ResponsiveDialog } from './components.js';
 
-const DRAWER_WIDTH = 264;
+const DRAWER_WIDTH = 268;
 
 export const NAV_SECTIONS = [
     {
@@ -13,10 +13,10 @@ export const NAV_SECTIONS = [
         ],
     },
     {
-        group: 'Fleet & Registry',
+        group: 'Membership & Fleet',
         items: [
-            { id: 'members', label: 'Members Registry', icon: 'groups' },
-            { id: 'vehicles', label: 'Vehicles & QR', icon: 'directions_bus' },
+            { id: 'members', label: 'SACCO Members', icon: 'groups' },
+            { id: 'vehicles', label: 'Fleet Vehicles', icon: 'directions_bus' },
             { id: 'drivers', label: 'PSV Drivers', icon: 'badge' },
             { id: 'routes', label: 'Transit Routes', icon: 'alt_route' },
         ],
@@ -24,8 +24,9 @@ export const NAV_SECTIONS = [
     {
         group: 'Compliance & Renewals',
         items: [
+            { id: 'compliance-cards', label: 'Compliance Cards & QR', icon: 'qr_code_2' },
             { id: 'documents', label: 'Document Vault', icon: 'folder_shared' },
-            { id: 'compliance', label: 'Compliance & Alerts', icon: 'verified_user' },
+            { id: 'compliance', label: 'Compliance Alerts', icon: 'verified_user' },
             { id: 'renewals', label: 'Renewal Workflow', icon: 'autorenew' },
         ],
     },
@@ -51,14 +52,14 @@ export const NAV_SECTIONS = [
     {
         group: 'Administration',
         items: [
-            { id: 'users', label: 'Users & Role Allocation', icon: 'manage_accounts' },
-            { id: 'settings', label: 'System Settings & Health', icon: 'tune' },
+            { id: 'staff', label: 'Staff & Role Management', icon: 'manage_accounts' },
+            { id: 'settings', label: 'System Config & Branding', icon: 'tune' },
             { id: 'audit', label: 'Audit Trail', icon: 'fingerprint' },
         ],
     },
 ];
 
-export function AppLayout({ me, activeRoute, onNavigate, onLogout, notify, children }) {
+export function AppLayout({ me, activeRoute, onNavigate, onLogout, notify, themeMode = 'light', onToggleTheme, children }) {
     const theme = MUI.useTheme();
     const isDesktop = MUI.useMediaQuery(theme.breakpoints.up('md'));
     const [mobileOpen, setMobileOpen] = React.useState(false);
@@ -122,20 +123,28 @@ export function AppLayout({ me, activeRoute, onNavigate, onLogout, notify, child
             <${MUI.Box}
                 sx=${{
                     p: 2.5,
-                    background: 'linear-gradient(135deg, #091E38 0%, #10315C 100%)',
+                    background: `linear-gradient(135deg, #091E38 0%, ${branding.primary_color || '#10315C'} 100%)`,
                     color: '#FFFFFF',
-                    borderBottom: '3px solid #FF8A00',
+                    borderBottom: `3px solid ${branding.secondary_color || '#FF8A00'}`,
                 }}
             >
                 <${MUI.Box} sx=${{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <${MUI.Avatar} sx=${{ bgcolor: '#FF8A00', color: '#091E38', fontWeight: 800 }}>
-                        <${MaterialIcon} name="local_shipping" />
-                    </${MUI.Avatar}>
+                    ${branding.logo_url ? html`
+                        <img
+                            src=${`${branding.logo_url}?v=${branding.branding_version || 1}`}
+                            alt=${branding.sacco_name}
+                            style=${{ height: 42, maxWidth: 64, objectFit: 'contain', background: '#FFFFFF', borderRadius: 8, padding: 3 }}
+                        />
+                    ` : html`
+                        <${MUI.Avatar} sx=${{ bgcolor: branding.secondary_color || '#FF8A00', color: '#091E38', fontWeight: 800 }}>
+                            <${MaterialIcon} name="local_shipping" />
+                        </${MUI.Avatar}>
+                    `}
                     <${MUI.Box} sx=${{ minWidth: 0 }}>
                         <${MUI.Typography} variant="subtitle1" sx=${{ fontWeight: 800, lineHeight: 1.2 }} noWrap>
-                            NHT-SMS
+                            ${branding.short_name || 'NHT-SMS'}
                         </${MUI.Typography}>
-                        <${MUI.Typography} variant="caption" sx=${{ color: 'rgba(255,255,255,0.78)' }} noWrap display="block">
+                        <${MUI.Typography} variant="caption" sx=${{ color: 'rgba(255,255,255,0.82)' }} noWrap display="block">
                             ${branding.sacco_name || 'Northern Highways SACCO'}
                         </${MUI.Typography}>
                     </${MUI.Box}>
@@ -165,7 +174,7 @@ export function AppLayout({ me, activeRoute, onNavigate, onLogout, notify, child
                             `}
                         >
                             ${visibleItems.map((item) => {
-                                const selected = activeRoute === item.id;
+                                const selected = activeRoute === item.id || (activeRoute === 'users' && item.id === 'staff');
                                 return html`
                                     <${MUI.ListItemButton}
                                         key=${item.id}
@@ -198,31 +207,9 @@ export function AppLayout({ me, activeRoute, onNavigate, onLogout, notify, child
                 })}
             </${MUI.Box}>
 
-            <${MUI.Divider} />
-            <${MUI.Box} sx=${{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                ${user.is_management_staff && html`
-                    <${MUI.Button}
-                        size="small"
-                        variant="text"
-                        href="/accounts/dashboard/"
-                        startIcon=${html`<${MaterialIcon} name="open_in_new" />`}
-                        sx=${{ justifyContent: 'flex-start' }}
-                    >
-                        Classic Staff View
-                    </${MUI.Button}>
-                `}
-                ${user.is_member && html`
-                    <${MUI.Button}
-                        size="small"
-                        variant="text"
-                        href="/portal/"
-                        startIcon=${html`<${MaterialIcon} name="open_in_new" />`}
-                        sx=${{ justifyContent: 'flex-start' }}
-                    >
-                        Classic Member Portal
-                    </${MUI.Button}>
-                `}
-                ${user.is_superuser && html`
+            ${(user.is_superuser || user.is_management_staff) && html`
+                <${MUI.Divider} />
+                <${MUI.Box} sx=${{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                     <${MUI.Button}
                         size="small"
                         variant="text"
@@ -232,8 +219,8 @@ export function AppLayout({ me, activeRoute, onNavigate, onLogout, notify, child
                     >
                         Django Admin Core
                     </${MUI.Button}>
-                `}
-            </${MUI.Box}>
+                </${MUI.Box}>
+            `}
         </${MUI.Box}>
     `;
 
@@ -245,7 +232,7 @@ export function AppLayout({ me, activeRoute, onNavigate, onLogout, notify, child
                 sx=${{
                     width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
                     ml: { md: `${DRAWER_WIDTH}px` },
-                    bgcolor: '#FFFFFF',
+                    bgcolor: 'background.paper',
                     color: 'text.primary',
                     borderBottom: '1px solid rgba(15,23,42,0.08)',
                 }}
@@ -264,6 +251,14 @@ export function AppLayout({ me, activeRoute, onNavigate, onLogout, notify, child
                     <${MUI.Typography} variant="subtitle1" sx=${{ fontWeight: 700, flexGrow: 1 }} noWrap>
                         ${branding.sacco_name || 'Northern Highways Transporters SACCO'}
                     </${MUI.Typography}>
+
+                    ${onToggleTheme && html`
+                        <${MUI.Tooltip} title=${themeMode === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}>
+                            <${MUI.IconButton} color="inherit" onClick=${onToggleTheme} sx=${{ mr: 1 }} aria-label="Toggle theme">
+                                <${MaterialIcon} name=${themeMode === 'dark' ? 'light_mode' : 'dark_mode'} />
+                            </${MUI.IconButton}>
+                        </${MUI.Tooltip}>
+                    `}
 
                     <${MUI.Button}
                         color="inherit"

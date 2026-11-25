@@ -8,7 +8,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
 from django.views.generic import RedirectView
-from nht_sacco.apps.vehicles.views import VehicleQRVerificationView
+from nht_sacco.apps.vehicles.views import VehicleQRVerificationView, ComplianceCardPublicVerifyView
 from nht_sacco.apps.payments.views import MPesaCallbackView
 from nht_sacco.apps.api.views_auth import SpaIndexView
 
@@ -56,6 +56,7 @@ urlpatterns = [
     # Fleet & Public QR Verification
     path('vehicles/', include('nht_sacco.apps.vehicles.urls', namespace='vehicles')),
     path('verify/vehicle/<uuid:qr_token>/', VehicleQRVerificationView.as_view(), name='vehicle_public_verify'),
+    path('verify/compliance/<str:token>/', ComplianceCardPublicVerifyView.as_view(), name='compliance_card_public_verify'),
 
     # Billing & Financial Payments
     path('billing/', include('nht_sacco.apps.billing.urls', namespace='billing')),

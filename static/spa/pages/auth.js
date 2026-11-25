@@ -38,20 +38,28 @@ export function LoginPage({ branding, onLoginSuccess }) {
             <${MUI.Card} sx=${{ maxWidth: 440, width: '100%', p: { xs: 2, sm: 3.5 }, borderRadius: 4 }}>
                 <${MUI.CardContent}>
                     <${MUI.Box} sx=${{ textAlign: 'center', mb: 3 }}>
-                        <${MUI.Avatar}
-                            sx=${{
-                                width: 64,
-                                height: 64,
-                                mx: 'auto',
-                                mb: 1.5,
-                                bgcolor: '#FFF3E0',
-                                color: '#FF8A00',
-                                border: '2px solid #FF8A00',
-                            }}
-                        >
-                            <${MaterialIcon} name="shield" fontSize="large" />
-                        </${MUI.Avatar}>
-                        <${MUI.Typography} variant="h5" color="primary.main">NHT-SMS</${MUI.Typography}>
+                        ${branding?.logo_url ? html`
+                            <img
+                                src=${`${branding.logo_url}?v=${branding.branding_version || 1}`}
+                                alt=${branding?.sacco_name || 'NHT-SMS'}
+                                style=${{ maxHeight: 68, maxWidth: 180, margin: '0 auto 12px', display: 'block', objectFit: 'contain' }}
+                            />
+                        ` : html`
+                            <${MUI.Avatar}
+                                sx=${{
+                                    width: 64,
+                                    height: 64,
+                                    mx: 'auto',
+                                    mb: 1.5,
+                                    bgcolor: '#FFF3E0',
+                                    color: '#FF8A00',
+                                    border: '2px solid #FF8A00',
+                                }}
+                            >
+                                <${MaterialIcon} name="shield" fontSize="large" />
+                            </${MUI.Avatar}>
+                        `}
+                        <${MUI.Typography} variant="h5" color="primary.main">${branding?.short_name || 'NHT-SMS'}</${MUI.Typography}>
                         <${MUI.Typography} variant="body2" color="text.secondary">
                             ${branding?.sacco_name || 'Northern Highways Transporters SACCO'}
                         </${MUI.Typography}>
@@ -105,11 +113,8 @@ export function LoginPage({ branding, onLoginSuccess }) {
 
                     <${MUI.Divider} sx=${{ my: 2.5 }} />
                     <${MUI.Box} sx=${{ textAlign: 'center' }}>
-                        <${MUI.Button} size="small" href="/accounts/login/">
-                            Switch to Classic Django Login
-                        </${MUI.Button}>
-                        <${MUI.Typography} variant="caption" color="text.secondary" display="block" sx=${{ mt: 1 }}>
-                            Protected by Axes brute-force defense, TOTP MFA & immutable audit logging.
+                        <${MUI.Typography} variant="caption" color="text.secondary" display="block">
+                            Protected by Axes brute-force defense, TOTP MFA &amp; immutable audit logging.
                         </${MUI.Typography}>
                     </${MUI.Box}>
                 </${MUI.CardContent}>
@@ -118,14 +123,17 @@ export function LoginPage({ branding, onLoginSuccess }) {
     `;
 }
 
-export function UsersAdminPage({ notify }) {
-    const [users, setUsers] = React.useState([]);
+export function StaffManagementPage({ notify }) {
+    const [staff, setStaff] = React.useState([]);
     const [roles, setRoles] = React.useState([]);
     const [history, setHistory] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [search, setSearch] = React.useState('');
     const [tab, setTab] = React.useState(0);
     const [createOpen, setCreateOpen] = React.useState(false);
+    const [editTarget, setEditTarget] = React.useState(null);
+    const [activityTarget, setActivityTarget] = React.useState(null);
+    const [activityData, setActivityData] = React.useState(null);
     const [form, setForm] = React.useState({
         username: '',
         email: '',
@@ -140,12 +148,12 @@ export function UsersAdminPage({ notify }) {
     const loadData = React.useCallback(async () => {
         setLoading(true);
         try {
-            const [uRes, rRes, hRes] = await Promise.all([
-                apiFetch(`/api/v1/users/?search=${encodeURIComponent(search)}`),
-                apiFetch('/api/v1/users/roles/'),
-                apiFetch('/api/v1/users/login_history/'),
+            const [sRes, rRes, hRes] = await Promise.all([
+                apiFetch(`/api/v1/staff/?search=${encodeURIComponent(search)}`),
+                apiFetch('/api/v1/staff/roles/?scope=staff'),
+                apiFetch('/api/v1/staff/login_history/'),
             ]);
-            setUsers(extractList(uRes));
+            setStaff(extractList(sRes));
             setRoles(rRes || []);
             setHistory(hRes || []);
         } catch (err) {
@@ -159,8 +167,8 @@ export function UsersAdminPage({ notify }) {
 
     const handleCreate = async () => {
         try {
-            await apiFetch('/api/v1/users/', { method: 'POST', body: form });
-            notify('User provisioned successfully.', 'success');
+            await apiFetch('/api/v1/staff/', { method: 'POST', body: form });
+            notify('Staff account provisioned cleanly.', 'success');
             setCreateOpen(false);
             setForm({ username: '', email: '', first_name: '', last_name: '', phone_number: '', national_id: '', role: 'SECRETARY', password: '' });
             loadData();
@@ -169,10 +177,30 @@ export function UsersAdminPage({ notify }) {
         }
     };
 
+    const handleSaveEdit = async () => {
+        try {
+            await apiFetch(`/api/v1/staff/${editTarget.id}/`, {
+                method: 'PATCH',
+                body: {
+                    email: editTarget.email,
+                    first_name: editTarget.first_name,
+                    last_name: editTarget.last_name,
+                    phone_number: editTarget.phone_number,
+                    national_id: editTarget.national_id,
+                },
+            });
+            notify('Staff profile updated.', 'success');
+            setEditTarget(null);
+            loadData();
+        } catch (err) {
+            notify(err.message, 'error');
+        }
+    };
+
     const handleAssignRole = async (userId, newRole) => {
         try {
-            await apiFetch(`/api/v1/users/${userId}/assign_role/`, { method: 'POST', body: { role: newRole } });
-            notify(`Role updated to ${newRole}`, 'success');
+            await apiFetch(`/api/v1/staff/${userId}/assign_role/`, { method: 'POST', body: { role: newRole } });
+            notify(`Staff role updated to ${newRole}`, 'success');
             loadData();
         } catch (err) {
             notify(err.message, 'error');
@@ -181,9 +209,33 @@ export function UsersAdminPage({ notify }) {
 
     const handleToggleActive = async (userId) => {
         try {
-            await apiFetch(`/api/v1/users/${userId}/toggle_active/`, { method: 'POST' });
-            notify('User status updated.', 'success');
+            await apiFetch(`/api/v1/staff/${userId}/toggle_active/`, { method: 'POST' });
+            notify('Staff account status updated.', 'success');
             loadData();
+        } catch (err) {
+            notify(err.message, 'error');
+        }
+    };
+
+    const handleInitiateRecovery = async (userObj) => {
+        try {
+            const res = await apiFetch(`/api/v1/staff/${userObj.id}/initiate_recovery/`, {
+                method: 'POST',
+                body: { send_email: true },
+            });
+            notify(res.message || 'Password recovery initiated.', 'info');
+            loadData();
+        } catch (err) {
+            notify(err.message, 'error');
+        }
+    };
+
+    const openActivity = async (userObj) => {
+        setActivityTarget(userObj);
+        setActivityData(null);
+        try {
+            const res = await apiFetch(`/api/v1/staff/${userObj.id}/activity/`);
+            setActivityData(res);
         } catch (err) {
             notify(err.message, 'error');
         }
@@ -192,30 +244,30 @@ export function UsersAdminPage({ notify }) {
     return html`
         <${MUI.Box}>
             <${PageHeader}
-                title="Users & Role Allocation"
-                subtitle="Manage all 11 SACCO personas, role clearances, account status, and login telemetry."
+                title="Staff Management & Role Authority"
+                subtitle="Dedicated SACCO staff & administrator directory (strictly separated from SACCO Member & Driver accounts)."
                 action=${html`
                     <${MUI.Button} variant="contained" startIcon=${html`<${MaterialIcon} name="person_add" />`} onClick=${() => setCreateOpen(true)}>
-                        Provision User
+                        Register Staff User
                     </${MUI.Button}>
                 `}
             />
 
             <${MUI.Tabs} value=${tab} onChange=${(_, v) => setTab(v)} sx=${{ mb: 2 }}>
-                <${MUI.Tab} label="System Accounts (${users.length})" />
-                <${MUI.Tab} label="Recent Login History" />
+                <${MUI.Tab} label="SACCO Staff Accounts (${staff.length})" />
+                <${MUI.Tab} label="Security Login Telemetry" />
             </${MUI.Tabs}>
 
             ${tab === 0 ? html`
                 <${ResponsiveDataGrid}
                     loading=${loading}
-                    rows=${users}
+                    rows=${staff}
                     search=${search}
                     onSearchChange=${setSearch}
-                    searchPlaceholder="Search username, email, phone..."
+                    searchPlaceholder="Search staff username, name, email..."
                     columns=${[
                         { key: 'username', label: 'Username', render: (r) => html`<strong>${r.username}</strong>` },
-                        { key: 'full_name', label: 'Name' },
+                        { key: 'full_name', label: 'Staff Name' },
                         { key: 'email', label: 'Email' },
                         {
                             key: 'role',
@@ -235,16 +287,21 @@ export function UsersAdminPage({ notify }) {
                         { key: 'is_active', label: 'Status', render: (r) => html`<${StatusChip} value=${r.is_active ? 'ACTIVE' : 'SUSPENDED'} />` },
                         {
                             key: 'actions',
-                            label: 'Actions',
+                            label: 'Controls',
                             align: 'right',
                             render: (r) => html`
-                                <${MUI.Button}
-                                    size="small"
-                                    color=${r.is_active ? 'warning' : 'success'}
-                                    onClick=${() => handleToggleActive(r.id)}
-                                >
-                                    ${r.is_active ? 'Suspend' : 'Activate'}
-                                </${MUI.Button}>
+                                <${MUI.Stack} direction="row" spacing=${0.5} justifyContent="flex-end" flexWrap="wrap">
+                                    <${MUI.Button} size="small" onClick=${() => setEditTarget({ ...r })}>Edit</${MUI.Button}>
+                                    <${MUI.Button} size="small" onClick=${() => openActivity(r)}>Activity</${MUI.Button}>
+                                    <${MUI.Button} size="small" color="info" onClick=${() => handleInitiateRecovery(r)}>Recovery</${MUI.Button}>
+                                    <${MUI.Button}
+                                        size="small"
+                                        color=${r.is_active ? 'warning' : 'success'}
+                                        onClick=${() => handleToggleActive(r.id)}
+                                    >
+                                        ${r.is_active ? 'Deactivate' : 'Activate'}
+                                    </${MUI.Button}>
+                                </${MUI.Stack}>
                             `,
                         },
                     ]}
@@ -265,10 +322,10 @@ export function UsersAdminPage({ notify }) {
             <${ResponsiveDialog}
                 open=${createOpen}
                 onClose=${() => setCreateOpen(false)}
-                title="Provision New System Account"
+                title="Register New SACCO Staff Account"
                 actions=${html`
                     <${MUI.Button} onClick=${() => setCreateOpen(false)}>Cancel</${MUI.Button}>
-                    <${MUI.Button} variant="contained" onClick=${handleCreate}>Create User</${MUI.Button}>
+                    <${MUI.Button} variant="contained" onClick=${handleCreate}>Create Staff User</${MUI.Button}>
                 `}
             >
                 <${MUI.Stack} spacing=${2} sx=${{ pt: 1 }}>
@@ -286,7 +343,7 @@ export function UsersAdminPage({ notify }) {
                     <${MUI.TextField} label="National ID" fullWidth value=${form.national_id} onChange=${(e) => setForm({ ...form, national_id: e.target.value })} />
                     <${MUI.TextField}
                         select
-                        label="Role"
+                        label="Staff Role"
                         fullWidth
                         value=${form.role}
                         onChange=${(e) => setForm({ ...form, role: e.target.value })}
@@ -296,6 +353,60 @@ export function UsersAdminPage({ notify }) {
                     <${MUI.TextField} label="Initial Password (min 10 chars)" type="password" fullWidth value=${form.password} onChange=${(e) => setForm({ ...form, password: e.target.value })} />
                 </${MUI.Stack}>
             </${ResponsiveDialog}>
+
+            <${ResponsiveDialog}
+                open=${Boolean(editTarget)}
+                onClose=${() => setEditTarget(null)}
+                title=${`Edit Staff Profile: ${editTarget?.username || ''}`}
+                actions=${html`
+                    <${MUI.Button} onClick=${() => setEditTarget(null)}>Cancel</${MUI.Button}>
+                    <${MUI.Button} variant="contained" onClick=${handleSaveEdit}>Save Changes</${MUI.Button}>
+                `}
+            >
+                ${editTarget && html`
+                    <${MUI.Stack} spacing=${2} sx=${{ pt: 1 }}>
+                        <${MUI.TextField} label="Email" type="email" fullWidth value=${editTarget.email || ''} onChange=${(e) => setEditTarget({ ...editTarget, email: e.target.value })} />
+                        <${MUI.TextField} label="First Name" fullWidth value=${editTarget.first_name || ''} onChange=${(e) => setEditTarget({ ...editTarget, first_name: e.target.value })} />
+                        <${MUI.TextField} label="Last Name" fullWidth value=${editTarget.last_name || ''} onChange=${(e) => setEditTarget({ ...editTarget, last_name: e.target.value })} />
+                        <${MUI.TextField} label="Phone Number" fullWidth value=${editTarget.phone_number || ''} onChange=${(e) => setEditTarget({ ...editTarget, phone_number: e.target.value })} />
+                        <${MUI.TextField} label="National ID" fullWidth value=${editTarget.national_id || ''} onChange=${(e) => setEditTarget({ ...editTarget, national_id: e.target.value })} />
+                    </${MUI.Stack}>
+                `}
+            </${ResponsiveDialog}>
+
+            <${ResponsiveDialog}
+                open=${Boolean(activityTarget)}
+                onClose=${() => setActivityTarget(null)}
+                title=${`Account Activity & Audit History: ${activityTarget?.username || ''}`}
+                maxWidth="md"
+                actions=${html`<${MUI.Button} onClick=${() => setActivityTarget(null)}>Close</${MUI.Button}>`}
+            >
+                ${!activityData ? html`<${MUI.Box} sx=${{ p: 3, textAlign: 'center' }}><${MUI.CircularProgress} /></${MUI.Box}>` : html`
+                    <${MUI.Stack} spacing=${2}>
+                        <${MUI.Typography} variant="subtitle2">Recent Login Attempts</${MUI.Typography}>
+                        <${ResponsiveDataGrid}
+                            rows=${activityData.login_history || []}
+                            columns=${[
+                                { key: 'timestamp', label: 'Time', render: (r) => formatDateTime(r.timestamp) },
+                                { key: 'ip_address', label: 'IP' },
+                                { key: 'status', label: 'Status', render: (r) => html`<${StatusChip} value=${r.status} />` },
+                            ]}
+                        />
+                        <${MUI.Typography} variant="subtitle2">Audit Trail Events</${MUI.Typography}>
+                        <${ResponsiveDataGrid}
+                            rows=${activityData.audit_logs || []}
+                            columns=${[
+                                { key: 'timestamp', label: 'Time', render: (r) => formatDateTime(r.timestamp) },
+                                { key: 'action', label: 'Action' },
+                                { key: 'entity_type', label: 'Entity' },
+                                { key: 'outcome', label: 'Outcome', render: (r) => html`<${StatusChip} value=${r.outcome} />` },
+                            ]}
+                        />
+                    </${MUI.Stack}>
+                `}
+            </${ResponsiveDialog}>
         </${MUI.Box}>
     `;
 }
+
+export const UsersAdminPage = StaffManagementPage;

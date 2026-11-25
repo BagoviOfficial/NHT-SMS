@@ -1,14 +1,15 @@
 import { MUI } from './api.js';
 
-export function createNhtTheme(branding = {}) {
+export function createNhtTheme(branding = {}, mode = 'light') {
     const primaryMain = branding.primary_color || '#10315C';
     const secondaryMain = branding.secondary_color || '#FF8A00';
+    const isDark = mode === 'dark';
 
     return MUI.createTheme({
         palette: {
-            mode: 'light',
+            mode: isDark ? 'dark' : 'light',
             primary: {
-                main: primaryMain,
+                main: isDark ? '#5C9DFF' : primaryMain,
                 light: '#1B4A8A',
                 dark: '#091E38',
                 contrastText: '#FFFFFF',
@@ -20,8 +21,8 @@ export function createNhtTheme(branding = {}) {
                 contrastText: '#FFFFFF',
             },
             background: {
-                default: '#F4F7FA',
-                paper: '#FFFFFF',
+                default: isDark ? '#0B1320' : '#F4F7FA',
+                paper: isDark ? '#111B2E' : '#FFFFFF',
             },
             success: { main: '#15803D' },
             warning: { main: '#D97706' },
@@ -43,8 +44,12 @@ export function createNhtTheme(branding = {}) {
                 styleOverrides: {
                     root: {
                         borderRadius: 14,
-                        boxShadow: '0 2px 12px rgba(16, 49, 92, 0.06)',
-                        border: '1px solid rgba(15, 23, 42, 0.06)',
+                        boxShadow: isDark
+                            ? '0 4px 18px rgba(0, 0, 0, 0.35)'
+                            : '0 2px 12px rgba(16, 49, 92, 0.06)',
+                        border: isDark
+                            ? '1px solid rgba(255, 255, 255, 0.08)'
+                            : '1px solid rgba(15, 23, 42, 0.06)',
                     },
                 },
             },

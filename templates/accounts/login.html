@@ -4,74 +4,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Portal Login | Northern Highways Transporters SACCO</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="{% static 'css/nht_brand.css' %}">
+    <title>Secure Portal Login | {{ BRAND_NAME }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined" rel="stylesheet">
+    <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/@mui/material@5.16.7/umd/material-ui.production.min.js"></script>
+    <link rel="stylesheet" href="{% static 'css/mui_unified.css' %}">
 </head>
-<body>
-    <div class="login-container">
-        <div class="login-card">
-            <div class="text-center mb-4">
-                <div class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle p-3 mb-3" style="width: 70px; height: 70px; border: 2px solid var(--nht-orange);">
-                    <i class="bi bi-shield-lock-fill fs-2 text-warning"></i>
-                </div>
-                <h3 class="fw-bold mb-1" style="color: var(--nht-navy);">NHT-SMS</h3>
-                <p class="text-muted small">Northern Highways Transporters SACCO<br>Management & Self-Service Portal</p>
-            </div>
-
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show small" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-
-            {% if form.errors %}
-                <div class="alert alert-danger small py-2">
-                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Invalid username, email, or password. Please try again.
+<body class="mui-auth-bg">
+    <div class="mui-auth-card">
+        <div class="text-center" style="margin-bottom: 24px;">
+            {% if BRAND_LOGO_URL %}
+                <img src="{{ BRAND_LOGO_URL }}" alt="{{ BRAND_NAME }}" style="max-height: 64px; max-width: 180px; margin-bottom: 12px; object-fit: contain;">
+            {% else %}
+                <div style="width: 64px; height: 64px; margin: 0 auto 12px; border-radius: 50%; background: #FFF3E0; border: 2px solid #FF8A00; display: flex; align-items: center; justify-content: center; color: #FF8A00;">
+                    <span class="material-icons-outlined" style="font-size: 32px;">shield</span>
                 </div>
             {% endif %}
+            <h1 class="mui-h5" style="margin-bottom: 2px;">NHT-SMS</h1>
+            <p class="mui-subtitle">{{ BRAND_NAME|default:"Northern Highways Transporters SACCO" }}</p>
+        </div>
 
-            <form method="post" action="{% url 'accounts:login' %}">
-                {% csrf_token %}
-                <div class="mb-3">
-                    <label for="id_username" class="form-label small fw-semibold">Username or Email</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-person"></i></span>
-                        {{ form.username }}
-                    </div>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mui-alert mui-alert-{{ message.tags|default:'info' }}">
+                    <span class="material-icons-outlined">info</span>
+                    <div>{{ message }}</div>
                 </div>
+            {% endfor %}
+        {% endif %}
 
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <label for="id_password" class="form-label small fw-semibold mb-0">Password</label>
-                    </div>
-                    <div class="input-group mt-1">
-                        <span class="input-group-text"><i class="bi bi-key"></i></span>
-                        {{ form.password }}
-                    </div>
-                </div>
-
-                <button type="submit" class="btn btn-nht-primary w-100 py-2 fs-6 shadow-sm">
-                    <i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Portal
-                </button>
-            </form>
-
-            <div class="mt-3 d-grid">
-                <a href="/app/" class="btn btn-outline-primary btn-sm py-2 fw-semibold">
-                    <i class="bi bi-grid-1x2-fill me-1"></i> Open Modern Material UI Workspace (/app/)
-                </a>
+        {% if form.errors %}
+            <div class="mui-alert mui-alert-error">
+                <span class="material-icons-outlined">error_outline</span>
+                <div>Invalid username, email, or password. Please try again.</div>
             </div>
+        {% endif %}
 
-            <div class="mt-4 pt-3 border-top text-center text-muted small">
-                <p class="mb-1"><i class="bi bi-lock-fill me-1"></i> Protected by Rate-Limiting & Audit Log</p>
-                <span>For account access inquiries, contact the SACCO Secretariat.</span>
+        <form method="post" action="{% url 'accounts:login' %}" class="mui-stack">
+            {% csrf_token %}
+            <div class="mui-field">
+                <label class="mui-label" for="id_username">Username or Email</label>
+                {{ form.username }}
             </div>
+            <div class="mui-field">
+                <label class="mui-label" for="id_password">Password</label>
+                {{ form.password }}
+            </div>
+            <button type="submit" class="mui-btn mui-btn-contained mui-btn-lg mui-btn-block">
+                <span class="material-icons-outlined">login</span> Sign In to Portal
+            </button>
+        </form>
+
+        <div style="margin-top: 14px;">
+            <a href="/app/" class="mui-btn mui-btn-outlined mui-btn-block">
+                <span class="material-icons-outlined">dashboard</span> Open Material UI Enterprise Workspace (/app/)
+            </a>
+        </div>
+
+        <div class="text-center mui-caption" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--mui-divider);">
+            <div><span class="material-icons-outlined" style="font-size: 14px;">lock</span> Protected by Rate-Limiting, TOTP MFA &amp; Audit Logging</div>
+            <div style="margin-top: 4px;">For account assistance, contact the SACCO Secretariat.</div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

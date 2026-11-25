@@ -95,10 +95,14 @@ class IncidentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
-        if user.role == UserRole.MEMBER and hasattr(user, 'member_profile'):
-            return qs.filter(reported_by_member=user.member_profile)
-        if user.role == UserRole.DRIVER and hasattr(user, 'driver_profile'):
-            return qs.filter(driver=user.driver_profile)
+        if user.role == UserRole.MEMBER:
+            if hasattr(user, 'member_profile'):
+                return qs.filter(reported_by_member=user.member_profile)
+            return qs.none()
+        if user.role == UserRole.DRIVER:
+            if hasattr(user, 'driver_profile'):
+                return qs.filter(driver=user.driver_profile)
+            return qs.none()
         return qs
 
     def perform_create(self, serializer):

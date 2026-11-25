@@ -93,10 +93,15 @@ export function InvoicesPage({ notify }) {
                         key: 'actions',
                         label: 'Action',
                         align: 'right',
-                        render: (r) => !r.is_fully_paid && html`
-                            <${MUI.Button} size="small" color="success" onClick=${() => { setStkTarget(r); setStkPhone(''); }}>
-                                STK Push
-                            </${MUI.Button}>
+                        render: (r) => html`
+                            <${MUI.Stack} direction="row" spacing=${0.5} justifyContent="flex-end">
+                                <${MUI.Button} size="small" href="/api/v1/invoices/${r.id}/download_pdf/" target="_blank">PDF</${MUI.Button}>
+                                ${!r.is_fully_paid && html`
+                                    <${MUI.Button} size="small" color="success" onClick=${() => { setStkTarget(r); setStkPhone(''); }}>
+                                        STK Push
+                                    </${MUI.Button}>
+                                `}
+                            </${MUI.Stack}>
                         `,
                     },
                 ]}
@@ -263,9 +268,14 @@ export function PaymentsVouchersPage({ notify }) {
                         { key: 'issued_at', label: 'Issued At', render: (r) => formatDateTime(r.issued_at) },
                         {
                             key: 'print_url',
-                            label: 'Print',
+                            label: 'Receipt',
                             align: 'right',
-                            render: (r) => html`<${MUI.Button} size="small" href=${r.print_url} target="_blank">View</${MUI.Button}>`,
+                            render: (r) => html`
+                                <${MUI.Stack} direction="row" spacing=${0.5} justifyContent="flex-end">
+                                    <${MUI.Button} size="small" href="/api/v1/receipts/${r.id}/download_pdf/" target="_blank">PDF</${MUI.Button}>
+                                    <${MUI.Button} size="small" href=${r.print_url} target="_blank">View</${MUI.Button}>
+                                </${MUI.Stack}>
+                            `,
                         },
                     ]}
                 />

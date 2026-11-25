@@ -3,20 +3,20 @@
 {% block title %}Document Renewal Requests{% endblock %}
 
 {% block portal_content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="mui-flex-between">
     <div>
-        <h4 class="fw-bold mb-1 text-nht-navy">Document Renewal Applications</h4>
-        <p class="text-muted small mb-0">Track official renewal submissions with KeNHA, NTSA, and Insurance.</p>
+        <h2 class="mui-h5">Document Renewal Applications</h2>
+        <p class="mui-subtitle">Track official renewal submissions with KeNHA, NTSA, and Insurance.</p>
     </div>
-    <a href="{% url 'portal:renewal_apply' %}" class="btn btn-nht-primary">
-        <i class="bi bi-plus-circle me-1"></i> Apply for Renewal
+    <a href="{% url 'portal:renewal_apply' %}" class="mui-btn mui-btn-secondary">
+        <span class="material-icons-outlined">add_circle</span> Apply for Renewal
     </a>
 </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light small">
+<div class="mui-card">
+    <div class="mui-table-wrap">
+        <table class="mui-table">
+            <thead>
                 <tr>
                     <th>Request #</th>
                     <th>Date Submitted</th>
@@ -30,51 +30,44 @@
             <tbody>
                 {% for r in renewals %}
                     <tr>
-                        <td class="fw-bold text-nht-navy">{{ r.request_number }}</td>
+                        <td class="nht-mono"><strong>{{ r.request_number }}</strong></td>
                         <td>{{ r.created_at|date:"Y-m-d" }}</td>
-                        <td><span class="badge bg-light text-dark border">{{ r.vehicle.registration_number }}</span></td>
+                        <td><span class="mui-chip mui-chip-default">{{ r.vehicle.registration_number }}</span></td>
                         <td>{{ r.document_type.name }}</td>
                         <td>
                             {% if r.invoice %}
                                 {% if r.invoice.is_fully_paid %}
-                                    <span class="badge bg-success">Paid</span>
+                                    <span class="mui-chip mui-chip-success">Paid</span>
                                 {% else %}
-                                    <a href="{% url 'portal:invoice_detail' r.invoice.id %}" class="badge bg-warning text-dark text-decoration-none">
-                                        Pay KES {{ r.invoice.balance_due|floatformat:2 }}
+                                    <a href="{% url 'portal:invoice_detail' r.invoice.id %}" class="mui-chip mui-chip-warning">
+                                        Pay {{ DEFAULT_CURRENCY }} {{ r.invoice.balance_due|floatformat:2 }}
                                     </a>
                                 {% endif %}
                             {% else %}
-                                <span class="badge bg-secondary">Pending Billing</span>
+                                <span class="mui-chip mui-chip-default">Pending Billing</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if r.status == 'COMPLETED' %}
-                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Completed</span>
+                                <span class="mui-chip mui-chip-success">Completed</span>
                             {% elif r.status == 'PAID' or r.status == 'PROCESSING' %}
-                                <span class="badge bg-info text-dark"><i class="bi bi-arrow-repeat me-1"></i> Processing with Authority</span>
+                                <span class="mui-chip mui-chip-info">Processing</span>
                             {% elif r.status == 'DOC_UPLOADED' %}
-                                <span class="badge bg-primary">Document Uploaded</span>
+                                <span class="mui-chip mui-chip-primary">Document Uploaded</span>
                             {% elif r.status == 'REJECTED' %}
-                                <span class="badge bg-danger">Rejected</span>
+                                <span class="mui-chip mui-chip-error">Rejected</span>
                             {% else %}
-                                <span class="badge bg-warning text-dark">{{ r.get_status_display }}</span>
+                                <span class="mui-chip mui-chip-warning">{{ r.get_status_display }}</span>
                             {% endif %}
                         </td>
                         <td class="text-end">
                             {% if r.invoice and not r.invoice.is_fully_paid %}
-                                <a href="{% url 'portal:invoice_detail' r.invoice.id %}" class="btn btn-sm btn-outline-success">
-                                    Pay Now
-                                </a>
+                                <a href="{% url 'portal:invoice_detail' r.invoice.id %}" class="mui-btn mui-btn-sm mui-btn-success">Pay Now</a>
                             {% endif %}
                         </td>
                     </tr>
                 {% empty %}
-                    <tr>
-                        <td colspan="7" class="text-center py-5 text-muted">
-                            <i class="bi bi-arrow-repeat fs-1 d-block mb-3 text-muted"></i>
-                            No document renewals submitted yet.
-                        </td>
-                    </tr>
+                    <tr><td colspan="7" class="text-center mui-subtitle" style="padding: 36px;">No document renewals submitted yet.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

@@ -27,5 +27,9 @@ urlpatterns = [
         path('import/', views.ConfigurationImportAPIView.as_view(), name='api_config_import'),
         path('health/', views.SystemHealthAPIView.as_view(), name='api_system_health'),
         path('test-provider/', views.ProviderTestAPIView.as_view(), name='api_test_provider'),
+        path('company-profile/', views.CompanyProfileAPIView.as_view(), name='api_company_profile'),
+        path('company-profile/logo/', views.CompanyProfileLogoDeleteAPIView.as_view(), name='api_company_profile_logo_delete'),
+        path('company-profile/versions/', views.CompanyProfileVersionsAPIView.as_view(), name='api_company_profile_versions'),
+        path('company-profile/logo-asset/', views.CompanyProfileLogoAssetView.as_view(), name='api_company_profile_logo_asset'),
     ])),
 ]

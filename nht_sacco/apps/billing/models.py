@@ -104,6 +104,14 @@ class Invoice(models.Model):
         db_index=True
     )
     notes = models.TextField(blank=True)
+    branding_version = models.ForeignKey(
+        'integrations.BrandingVersion',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='invoices',
+        help_text=_('Immutable branding snapshot captured when this invoice was issued'),
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -139,10 +147,15 @@ class Invoice(models.Model):
 
     @classmethod
     def generate_invoice_number(cls):
+        from nht_sacco.apps.integrations.models import NumberSequence
         year = timezone.now().year
         prefix = ConfigurationService.get_str('business.invoice_prefix', 'NHT-INV')
-        count = cls.objects.filter(invoice_number__startswith=f"{prefix}-{year}").count() + 1
-        return f"{prefix}-{year}-{count:04d}"
+        return NumberSequence.next_number(
+            prefix=prefix,
+            year=year,
+            model_cls=cls,
+            field_name='invoice_number',
+        )
 
     def recalculate_totals(self):
         """
@@ -182,6 +195,15 @@ class Invoice(models.Model):
             self.status = InvoiceStatus.PARTIALLY_PAID
         self.save(update_fields=['amount_paid', 'status', 'updated_at'])
 
+    def save(self, *args, **kwargs):
+        if self._state.adding and not self.branding_version_id:
+            try:
+                from nht_sacco.apps.integrations.models import CompanyProfile
+                self.branding_version = CompanyProfile.get_active().get_latest_version()
+            except Exception:
+                pass
+        super().save(*args, **kwargs)
+
 
 class InvoiceItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -219,6 +241,11 @@ class CreditNote(models.Model):
 
     @classmethod
     def generate_credit_number(cls):
+        from nht_sacco.apps.integrations.models import NumberSequence
         year = timezone.now().year
-        count = cls.objects.filter(credit_number__startswith=f"NHT-CRN-{year}").count() + 1
-        return f"NHT-CRN-{year}-{count:04d}"
+        return NumberSequence.next_number(
+            prefix='NHT-CRN',
+            year=year,
+            model_cls=cls,
+            field_name='credit_number',
+        )

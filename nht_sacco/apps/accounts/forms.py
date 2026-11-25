@@ -7,7 +7,7 @@ User = get_user_model()
 class CustomAuthenticationForm(AuthenticationForm):
     username = forms.CharField(
         widget=forms.TextInput(attrs={
-            'class': 'form-control form-control-lg',
+            'class': 'mui-input',
             'placeholder': 'Enter your username or email',
             'autocomplete': 'username',
             'autofocus': True,
@@ -15,7 +15,7 @@ class CustomAuthenticationForm(AuthenticationForm):
     )
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={
-            'class': 'form-control form-control-lg',
+            'class': 'mui-input',
             'placeholder': 'Enter your password',
             'autocomplete': 'current-password',
         })
@@ -25,4 +25,4 @@ class CustomPasswordChangeForm(PasswordChangeForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
-            field.widget.attrs.update({'class': 'form-control'})
+            field.widget.attrs.update({'class': 'mui-input'})

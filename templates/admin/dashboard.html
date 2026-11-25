@@ -4,573 +4,177 @@
 {% block title %}Operations Dashboard{% endblock %}
 
 {% block content %}
-<!-- 1. Hero Welcome & Executive Status Banner -->
-<div class="nht-hero-banner mb-4 animate__animated animate__fadeIn">
-    <div class="row align-items-center">
-        <div class="col-lg-8">
-            <div class="d-flex align-items-center mb-2 flex-wrap gap-2">
-                <span class="badge bg-{{ user_role_badge }} text-white px-3 py-2 rounded-pill font-monospace shadow-sm">
-                    <i class="fa-solid fa-{{ user_role_icon }} me-1"></i> {{ user.get_role_display|upper }}
-                </span>
-                <span class="badge bg-white bg-opacity-25 text-white px-3 py-2 rounded-pill">
-                    <i class="fa-regular fa-calendar-days me-1 text-warning"></i> {% now "l, d F Y" %}
-                </span>
-                <span class="badge bg-success bg-opacity-75 text-white px-3 py-2 rounded-pill">
-                    <i class="fa-solid fa-circle-check me-1"></i> Systems Operational
-                </span>
-            </div>
-            <h2 class="fw-extrabold mb-1 tracking-tight text-white">
-                Welcome back, {{ user.get_full_name|default:user.username }}
-            </h2>
-            <p class="text-white text-opacity-75 mb-0 small">
-                Northern Highways Transporters SACCO ERP &bull; Operations, Fleet Compliance & Financial Engine
-            </p>
-        </div>
-        <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
-            <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
-                <a href="{% url 'reports:dashboard' %}" class="btn btn-nht-primary btn-sm shadow-sm">
-                    <i class="fa-solid fa-chart-line me-1"></i> Executive Analytics
-                </a>
-                <a href="/admin/audit/auditlog/" class="btn btn-outline-light btn-sm">
-                    <i class="fa-solid fa-fingerprint me-1"></i> Audit Trail
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 2. Primary Operational KPI Cards -->
-<div class="row g-3 mb-4 animate__animated animate__fadeInUp">
-    <!-- Active Members -->
-    <div class="col-12 col-sm-6 col-xl-2">
-        <div class="nht-stat-card">
+<div class="mui-stack">
+    <div class="mui-hero" style="margin-bottom: 0;">
+        <div class="mui-flex-between">
             <div>
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="nht-stat-label">Active Members</span>
-                    <div class="nht-stat-icon-box bg-primary-subtle text-primary">
-                        <i class="fa-solid fa-users"></i>
-                    </div>
+                <div class="mui-flex" style="margin-bottom: 8px; flex-wrap: wrap;">
+                    <span class="mui-chip" style="background: var(--mui-secondary); color: #091E38;">{{ user.get_role_display|upper }}</span>
+                    <span class="mui-chip" style="background: rgba(255,255,255,0.18); color: #FFFFFF;">{% now "l, d F Y" %}</span>
+                    <span class="mui-chip mui-chip-success">Systems Operational</span>
                 </div>
-                <div class="nht-stat-value">{{ active_members|default:"0" }}</div>
+                <h1 class="mui-h4" style="color: #FFFFFF;">Welcome back, {{ user.get_full_name|default:user.username }}</h1>
+                <p style="margin: 0; opacity: 0.85; font-size: 0.88rem;">{{ BRAND_NAME }} &bull; Operations, Fleet Compliance &amp; Financial Engine</p>
             </div>
-            <div class="small text-muted mt-2 d-flex align-items-center">
-                <span class="text-success fw-bold me-1"><i class="fa-solid fa-check"></i> {{ total_members }}</span> Total Operators
+            <div class="mui-flex" style="flex-wrap: wrap;">
+                <a href="/app/" class="mui-btn mui-btn-secondary">
+                    <span class="material-icons-outlined">apps</span> Material UI SPA
+                </a>
+                <a href="{% url 'reports:dashboard' %}" class="mui-btn mui-btn-outlined-light">
+                    <span class="material-icons-outlined">assessment</span> Executive Analytics
+                </a>
+                <a href="/admin/audit/auditlog/" class="mui-btn mui-btn-outlined-light">
+                    <span class="material-icons-outlined">fingerprint</span> Audit Trail
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- Fleet Vehicles -->
-    <div class="col-12 col-sm-6 col-xl-2">
-        <div class="nht-stat-card">
-            <div>
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="nht-stat-label">Fleet Vehicles</span>
-                    <div class="nht-stat-icon-box bg-success-subtle text-success">
-                        <i class="fa-solid fa-bus-simple"></i>
-                    </div>
-                </div>
-                <div class="nht-stat-value">{{ total_vehicles|default:"0" }}</div>
+    <div class="mui-grid mui-grid-6">
+        <div class="mui-card">
+            <div class="mui-card-body">
+                <div class="mui-caption" style="font-weight: 700; text-transform: uppercase;">Active Members</div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: var(--mui-primary);">{{ active_members|default:"0" }}</div>
+                <div class="mui-caption">{{ total_members }} Total Operators</div>
             </div>
-            <div class="small text-muted mt-2 d-flex align-items-center">
-                <span class="text-success fw-bold me-1">{{ compliant_vehicles }}</span> Compliant in Service
+        </div>
+        <div class="mui-card">
+            <div class="mui-card-body">
+                <div class="mui-caption" style="font-weight: 700; text-transform: uppercase;">Fleet Vehicles</div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: var(--mui-primary);">{{ total_vehicles|default:"0" }}</div>
+                <div class="mui-caption">{{ compliant_vehicles }} Compliant</div>
+            </div>
+        </div>
+        <div class="mui-card">
+            <div class="mui-card-body">
+                <div class="mui-caption" style="font-weight: 700; text-transform: uppercase;">Compliance Rate</div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: var(--mui-success);">{{ compliance_rate|default:"100" }}%</div>
+                <div class="mui-caption">{{ delinquent_vehicles }} Non-Compliant</div>
+            </div>
+        </div>
+        <div class="mui-card">
+            <div class="mui-card-body">
+                <div class="mui-caption" style="font-weight: 700; text-transform: uppercase;">Total Invoiced</div>
+                <div style="font-size: 1.25rem; font-weight: 800;">{{ DEFAULT_CURRENCY }} {{ total_invoiced|default:"0.00"|floatformat:0 }}</div>
+                <div class="mui-caption">Total SACCO Billings</div>
+            </div>
+        </div>
+        <div class="mui-card">
+            <div class="mui-card-body">
+                <div class="mui-caption" style="font-weight: 700; text-transform: uppercase;">Outstanding</div>
+                <div style="font-size: 1.25rem; font-weight: 800; color: var(--mui-error);">{{ DEFAULT_CURRENCY }} {{ total_outstanding|default:"0.00"|floatformat:0 }}</div>
+                <div class="mui-caption">Pending Settlement</div>
+            </div>
+        </div>
+        <div class="mui-card">
+            <div class="mui-card-body">
+                <div class="mui-caption" style="font-weight: 700; text-transform: uppercase;">Vault Alerts</div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: var(--mui-warning);">{{ expiring_docs|default:"0" }}</div>
+                <div class="mui-caption">{{ expired_docs }} Expired Docs</div>
             </div>
         </div>
     </div>
 
-    <!-- Compliance Rate -->
-    <div class="col-12 col-sm-6 col-xl-2">
-        <div class="nht-stat-card">
-            <div>
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="nht-stat-label">Compliance Rate</span>
-                    <div class="nht-stat-icon-box bg-warning-subtle text-warning">
-                        <i class="fa-solid fa-shield-halved"></i>
-                    </div>
-                </div>
-                <div class="nht-stat-value text-{{ compliance_rate|yesno:'success,danger' }}">
-                    {{ compliance_rate|default:"100" }}%
-                </div>
+    <div class="mui-grid mui-grid-3">
+        <div class="mui-card">
+            <div class="mui-card-header">
+                <span class="mui-h6">Fleet Compliance Health</span>
+                <span class="mui-chip mui-chip-default">Real-Time</span>
             </div>
-            <div class="small text-muted mt-2 d-flex align-items-center">
-                <span class="text-{{ delinquent_vehicles|yesno:'danger,success' }} fw-bold me-1">
-                    {{ delinquent_vehicles }}
-                </span> Non-Compliant
+            <div class="mui-card-body">
+                <div id="chart-compliance" style="min-height: 230px;"></div>
+            </div>
+        </div>
+        <div class="mui-card">
+            <div class="mui-card-header">
+                <span class="mui-h6">Billings vs Collections</span>
+                <span class="mui-chip mui-chip-default">{{ DEFAULT_CURRENCY }}</span>
+            </div>
+            <div class="mui-card-body">
+                <div id="chart-finance" style="min-height: 230px;"></div>
+            </div>
+        </div>
+        <div class="mui-card">
+            <div class="mui-card-header">
+                <span class="mui-h6">Fleet Categories</span>
+                <span class="mui-chip mui-chip-default">Active</span>
+            </div>
+            <div class="mui-card-body">
+                <div id="chart-fleet" style="min-height: 230px;"></div>
             </div>
         </div>
     </div>
 
-    <!-- Invoiced Revenue -->
-    <div class="col-12 col-sm-6 col-xl-2">
-        <div class="nht-stat-card">
-            <div>
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="nht-stat-label">Total Invoiced</span>
-                    <div class="nht-stat-icon-box bg-info-subtle text-info">
-                        <i class="fa-solid fa-file-invoice-dollar"></i>
-                    </div>
-                </div>
-                <div class="nht-stat-value text-dark fs-4">
-                    KES {{ total_invoiced|default:"0.00"|floatformat:0 }}
-                </div>
+    <div class="mui-grid mui-grid-2">
+        <div class="mui-card">
+            <div class="mui-card-header mui-card-header-primary">
+                <span style="font-weight: 700;">System Activity &amp; Immutable Audit Trail</span>
+                <a href="/admin/audit/auditlog/" class="mui-btn mui-btn-sm mui-btn-outlined-light">View All ({{ total_audit_logs }})</a>
             </div>
-            <div class="small text-muted mt-2">
-                <span>Total SACCO Billings</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Outstanding Receivables -->
-    <div class="col-12 col-sm-6 col-xl-2">
-        <div class="nht-stat-card">
-            <div>
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="nht-stat-label">Outstanding</span>
-                    <div class="nht-stat-icon-box bg-danger-subtle text-danger">
-                        <i class="fa-solid fa-wallet"></i>
-                    </div>
-                </div>
-                <div class="nht-stat-value text-danger fs-4">
-                    KES {{ total_outstanding|default:"0.00"|floatformat:0 }}
-                </div>
-            </div>
-            <div class="small text-muted mt-2">
-                <span class="text-danger fw-semibold">Pending Settlement</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Document Expirations -->
-    <div class="col-12 col-sm-6 col-xl-2">
-        <div class="nht-stat-card">
-            <div>
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="nht-stat-label">Vault Alerts</span>
-                    <div class="nht-stat-icon-box bg-purple-subtle text-purple" style="background-color: #EDE9FE; color: #7C3AED;">
-                        <i class="fa-solid fa-bell"></i>
-                    </div>
-                </div>
-                <div class="nht-stat-value text-dark">
-                    {{ expiring_docs|default:"0" }}
-                </div>
-            </div>
-            <div class="small text-muted mt-2">
-                <span class="text-warning fw-bold">{{ expired_docs }}</span> Expired Documents
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 3. Interactive ApexCharts Visualizations Section -->
-<div class="row g-4 mb-4">
-    <!-- Chart 1: Fleet Regulatory Compliance Donut -->
-    <div class="col-lg-4">
-        <div class="nht-chart-card">
-            <div class="nht-chart-header">
-                <h6 class="nht-chart-title">
-                    <i class="fa-solid fa-chart-pie text-warning me-2"></i> Fleet Compliance Health
-                </h6>
-                <span class="badge bg-light text-muted border">Real-Time</span>
-            </div>
-            <div class="p-3">
-                <div id="chart-compliance" style="min-height: 250px;"></div>
-                <div class="row text-center mt-2 pt-2 border-top g-2">
-                    <div class="col-6">
-                        <div class="small text-muted">Compliant Vehicles</div>
-                        <div class="fw-bold text-success fs-5">{{ compliant_vehicles }}</div>
-                    </div>
-                    <div class="col-6">
-                        <div class="small text-muted">Action Required</div>
-                        <div class="fw-bold text-danger fs-5">{{ delinquent_vehicles }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Chart 2: Revenue Invoiced vs Collections -->
-    <div class="col-lg-5">
-        <div class="nht-chart-card">
-            <div class="nht-chart-header">
-                <h6 class="nht-chart-title">
-                    <i class="fa-solid fa-money-bill-trend-up text-success me-2"></i> Billings vs Collections (KES)
-                </h6>
-                <span class="badge bg-light text-muted border">Current Cycle</span>
-            </div>
-            <div class="p-3">
-                <div id="chart-finance" style="min-height: 250px;"></div>
-                <div class="row text-center mt-2 pt-2 border-top g-2">
-                    <div class="col-6">
-                        <div class="small text-muted">Settled Collections</div>
-                        <div class="fw-bold text-success fs-5">KES {{ total_collected|floatformat:2 }}</div>
-                    </div>
-                    <div class="col-6">
-                        <div class="small text-muted">Pending Balance</div>
-                        <div class="fw-bold text-danger fs-5">KES {{ total_outstanding|floatformat:2 }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Chart 3: Fleet PSV Categories -->
-    <div class="col-lg-3">
-        <div class="nht-chart-card">
-            <div class="nht-chart-header">
-                <h6 class="nht-chart-title">
-                    <i class="fa-solid fa-truck-ramp-box text-primary me-2"></i> Fleet Categories
-                </h6>
-                <span class="badge bg-light text-muted border">Active</span>
-            </div>
-            <div class="p-3">
-                <div id="chart-fleet" style="min-height: 250px;"></div>
-                <div class="text-center mt-2 pt-2 border-top small text-muted">
-                    Total Active Fleet: <strong>{{ total_vehicles }} Vehicles</strong>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 4. Role-Specific Dynamic Quick Action Hub -->
-<div class="card shadow-sm border-0 mb-4 bg-white">
-    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
-        <div class="fw-bold text-dark d-flex align-items-center">
-            <i class="fa-solid fa-bolt-lightning text-warning me-2 fs-5"></i>
-            <span>Role-Tailored Operational Hub &mdash; {{ user.get_role_display }}</span>
-        </div>
-        <span class="badge bg-light text-muted border">Quick Launch</span>
-    </div>
-    <div class="card-body p-3">
-        <div class="row g-3">
-            <!-- Secretary / Chairman Actions -->
-            {% if is_secretary or is_chairman or is_system_admin %}
-            <div class="col-md-3 col-sm-6">
-                <a href="/admin/members/member/add/" class="nht-action-tile">
-                    <div class="nht-action-tile-icon bg-primary-subtle text-primary">
-                        <i class="fa-solid fa-user-plus"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold small">Onboard Member</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Register SACCO operator</div>
-                    </div>
-                </a>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <a href="/admin/vehicles/vehicle/add/" class="nht-action-tile">
-                    <div class="nht-action-tile-icon bg-success-subtle text-success">
-                        <i class="fa-solid fa-bus"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold small">Register Vehicle</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Add PSV to fleet</div>
-                    </div>
-                </a>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <a href="/admin/drivers/driver/add/" class="nht-action-tile">
-                    <div class="nht-action-tile-icon bg-info-subtle text-info">
-                        <i class="fa-solid fa-id-card"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold small">Assign Driver</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Link crew to vehicle</div>
-                    </div>
-                </a>
-            </div>
-            {% endif %}
-
-            <!-- Treasurer / Finance Actions -->
-            {% if is_finance or is_system_admin %}
-            <div class="col-md-3 col-sm-6">
-                <a href="/admin/billing/invoice/add/" class="nht-action-tile">
-                    <div class="nht-action-tile-icon bg-warning-subtle text-warning">
-                        <i class="fa-solid fa-file-circle-plus"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold small">Generate Invoice</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Bill membership & fees</div>
-                    </div>
-                </a>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <a href="/admin/payments/payment/add/" class="nht-action-tile">
-                    <div class="nht-action-tile-icon bg-success-subtle text-success">
-                        <i class="fa-solid fa-cash-register"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold small">Record Settlement</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Cash / M-Pesa offline post</div>
-                    </div>
-                </a>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <a href="/admin/accounting/journalentry/" class="nht-action-tile">
-                    <div class="nht-action-tile-icon bg-purple-subtle text-purple" style="background-color: #EDE9FE; color: #7C3AED;">
-                        <i class="fa-solid fa-book"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold small">General Ledger</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Double-entry journals</div>
-                    </div>
-                </a>
-            </div>
-            {% endif %}
-
-            <!-- Compliance Actions -->
-            {% if is_compliance or is_renewal or is_system_admin %}
-            <div class="col-md-3 col-sm-6">
-                <a href="/admin/compliance/compliancealert/" class="nht-action-tile">
-                    <div class="nht-action-tile-icon bg-warning-subtle text-warning">
-                        <i class="fa-solid fa-clipboard-check"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold small">Verify Compliance</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">NTSA & Speed Governor scan</div>
-                    </div>
-                </a>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <a href="/admin/documents/document/add/" class="nht-action-tile">
-                    <div class="nht-action-tile-icon bg-info-subtle text-info">
-                        <i class="fa-solid fa-file-arrow-up"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold small">Upload Certificate</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Store in encrypted vault</div>
-                    </div>
-                </a>
-            </div>
-            {% endif %}
-
-            <!-- Auditor & Reporting Actions -->
-            {% if is_auditor or is_system_admin %}
-            <div class="col-md-3 col-sm-6">
-                <a href="/admin/audit/auditlog/" class="nht-action-tile">
-                    <div class="nht-action-tile-icon bg-danger-subtle text-danger">
-                        <i class="fa-solid fa-fingerprint"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold small">Audit Trail</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Immutable security events</div>
-                    </div>
-                </a>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <a href="{% url 'reports:export_compliance_pdf' %}" class="nht-action-tile">
-                    <div class="nht-action-tile-icon bg-secondary-subtle text-secondary">
-                        <i class="fa-solid fa-file-pdf text-danger"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold small">Export PDF Report</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Official Compliance Audit</div>
-                    </div>
-                </a>
-            </div>
-            {% endif %}
-
-            <!-- System Settings -->
-            {% if is_system_admin %}
-            <div class="col-md-3 col-sm-6">
-                <a href="{% url 'integrations:settings_index' %}" class="nht-action-tile">
-                    <div class="nht-action-tile-icon bg-dark-subtle text-dark">
-                        <i class="fa-solid fa-sliders"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold small">System Settings</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Dynamic config registry</div>
-                    </div>
-                </a>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <a href="/admin/" class="nht-action-tile">
-                    <div class="nht-action-tile-icon bg-primary-subtle text-primary">
-                        <i class="fa-solid fa-gear"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold small">Django Admin Suite</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Full root access</div>
-                    </div>
-                </a>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-</div>
-
-<!-- 5. Two-Column Live Insights Section -->
-<div class="row g-4 mb-4">
-    <!-- Left Column: Recent Audit Log Activity & Flagged Vehicles -->
-    <div class="col-lg-8">
-        <!-- Live Audit Trail Feed -->
-        <div class="nht-table-card mb-4">
-            <div class="nht-table-header d-flex justify-content-between align-items-center">
-                <span><i class="fa-solid fa-fingerprint text-warning me-2"></i> System Activity & Immutable Audit Trail</span>
-                <a href="/admin/audit/auditlog/" class="btn btn-sm btn-outline-light py-1 px-2" style="font-size: 0.78rem;">
-                    View All ({{ total_audit_logs }})
-                </a>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Timestamp</th>
-                            <th>Actor</th>
-                            <th>Action</th>
-                            <th>Entity</th>
-                            <th>Outcome</th>
-                        </tr>
+            <div class="mui-table-wrap">
+                <table class="mui-table">
+                    <thead>
+                        <tr><th>Timestamp</th><th>Actor</th><th>Action</th><th>Entity</th><th>Outcome</th></tr>
                     </thead>
                     <tbody>
                         {% for log in recent_logs %}
                             <tr>
-                                <td class="small font-monospace text-muted">{{ log.timestamp|date:"d M H:i:s" }}</td>
-                                <td class="fw-semibold small">
-                                    <span class="user-avatar-circle me-1" style="width: 24px; height: 24px; font-size: 0.65rem;">
-                                        {{ log.actor_username|slice:":1"|upper|default:"S" }}
-                                    </span>
-                                    {{ log.actor_username|default:"System Engine" }}
-                                </td>
-                                <td>
-                                    <span class="badge bg-secondary font-monospace" style="font-size: 0.72rem;">{{ log.action }}</span>
-                                </td>
-                                <td class="small">
-                                    <span class="fw-bold text-dark">{{ log.entity_type }}</span>
-                                    <span class="text-muted font-monospace" style="font-size: 0.75rem;">#{{ log.entity_id|truncatechars:10 }}</span>
-                                </td>
+                                <td class="nht-mono mui-caption">{{ log.timestamp|date:"d M H:i:s" }}</td>
+                                <td><strong>{{ log.actor_username|default:"System Engine" }}</strong></td>
+                                <td><span class="mui-chip mui-chip-default nht-mono">{{ log.action }}</span></td>
+                                <td><strong>{{ log.entity_type }}</strong> <span class="mui-caption">#{{ log.entity_id|truncatechars:10 }}</span></td>
                                 <td>
                                     {% if log.outcome == 'SUCCESS' %}
-                                        <span class="badge badge-soft-success"><i class="fa-solid fa-circle-check me-1"></i> Success</span>
+                                        <span class="mui-chip mui-chip-success">Success</span>
                                     {% elif log.outcome == 'DENIED' %}
-                                        <span class="badge badge-soft-danger"><i class="fa-solid fa-ban me-1"></i> Denied</span>
+                                        <span class="mui-chip mui-chip-error">Denied</span>
                                     {% else %}
-                                        <span class="badge badge-soft-warning">{{ log.outcome }}</span>
+                                        <span class="mui-chip mui-chip-warning">{{ log.outcome }}</span>
                                     {% endif %}
                                 </td>
                             </tr>
                         {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center text-muted py-4">No recent audit log events recorded.</td>
-                            </tr>
+                            <tr><td colspan="5" class="text-center mui-subtitle">No recent audit log events recorded.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Fleet Compliance Attention Queue -->
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
-                <div class="fw-bold text-dark">
-                    <i class="fa-solid fa-truck-pickup text-primary me-2"></i> Fleet Regulatory Status Overview
-                </div>
-                <a href="/admin/compliance/compliancealert/" class="btn btn-sm btn-outline-primary py-1 px-2" style="font-size: 0.78rem;">
-                    Compliance Registry
-                </a>
+        <div class="mui-card">
+            <div class="mui-card-header">
+                <span class="mui-h6">Fleet Regulatory Status Overview</span>
+                <a href="/admin/compliance/compliancealert/" class="mui-btn mui-btn-sm mui-btn-outlined">Compliance Registry</a>
             </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Registration</th>
-                            <th>PSV Category</th>
-                            <th>Owner</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
+            <div class="mui-table-wrap">
+                <table class="mui-table">
+                    <thead>
+                        <tr><th>Registration</th><th>Category</th><th>Owner</th><th>Status</th><th>Action</th></tr>
                     </thead>
                     <tbody>
                         {% for v in flagged_vehicles %}
                             <tr>
-                                <td class="fw-bold font-monospace text-primary">{{ v.registration_number }}</td>
-                                <td class="small">{{ v.category_display }}</td>
-                                <td class="small text-muted">{{ v.owner }}</td>
+                                <td class="nht-mono"><strong>{{ v.registration_number }}</strong></td>
+                                <td class="mui-caption">{{ v.category_display }}</td>
+                                <td class="mui-caption">{{ v.owner }}</td>
                                 <td>
                                     {% if v.is_compliant %}
-                                        <span class="badge badge-soft-success"><i class="fa-solid fa-shield-check me-1"></i> Compliant</span>
+                                        <span class="mui-chip mui-chip-success">Compliant</span>
                                     {% else %}
-                                        <span class="badge badge-soft-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> {{ v.compliance_status }}</span>
+                                        <span class="mui-chip mui-chip-error">{{ v.compliance_status }}</span>
                                     {% endif %}
                                 </td>
                                 <td>
                                     {% if v.qr_token %}
-                                        <a href="/verify/vehicle/{{ v.qr_token }}/" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;">
-                                            <i class="fa-solid fa-qrcode me-1"></i> Verify QR
-                                        </a>
+                                        <a href="/verify/vehicle/{{ v.qr_token }}/" target="_blank" class="mui-btn mui-btn-sm mui-btn-outlined">Verify QR</a>
                                     {% endif %}
                                 </td>
                             </tr>
                         {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center text-muted py-3">No active vehicles registered.</td>
-                            </tr>
+                            <tr><td colspan="5" class="text-center mui-subtitle">No active vehicles registered.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Right Column: Security Controls & System Health -->
-    <div class="col-lg-4">
-        <!-- System & Security Health -->
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header bg-white py-3 border-bottom fw-bold text-dark">
-                <i class="fa-solid fa-shield-halved text-success me-2"></i> Security Controls & Health
-            </div>
-            <div class="card-body p-3">
-                <ul class="list-unstyled mb-0 small">
-                    <li class="mb-3 d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="fw-bold text-dark">OWASP ASVS Standard</div>
-                            <span class="text-muted" style="font-size: 0.75rem;">Application Security Verification</span>
-                        </div>
-                        <span class="badge bg-success font-monospace">Level 2 Compliant</span>
-                    </li>
-                    <li class="mb-3 d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="fw-bold text-dark">Database Engine</div>
-                            <span class="text-muted font-monospace" style="font-size: 0.75rem;">PostgreSQL 16 &bull; Port 5432</span>
-                        </div>
-                        <span class="badge badge-soft-success"><i class="fa-solid fa-circle-check me-1"></i> Connected</span>
-                    </li>
-                    <li class="mb-3 d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="fw-bold text-dark">Brute-Force Defense</div>
-                            <span class="text-muted" style="font-size: 0.75rem;">django-axes Shield Active</span>
-                        </div>
-                        <span class="badge badge-soft-primary"><i class="fa-solid fa-lock me-1"></i> Enforced</span>
-                    </li>
-                    <li class="mb-3 d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="fw-bold text-dark">Multi-Factor Auth (MFA)</div>
-                            <span class="text-muted" style="font-size: 0.75rem;">RFC 6238 TOTP Engine</span>
-                        </div>
-                        <span class="badge badge-soft-info">Ready</span>
-                    </li>
-                    <li class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="fw-bold text-dark">Audit Trail Policy</div>
-                            <span class="text-muted" style="font-size: 0.75rem;">Cryptographic Immutable Log</span>
-                        </div>
-                        <span class="badge badge-soft-purple">Append-Only</span>
-                    </li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- Quick Access Information Card -->
-        <div class="card shadow-sm border-0 bg-light p-3">
-            <div class="d-flex align-items-center mb-2">
-                <i class="fa-solid fa-circle-question text-warning fs-4 me-2"></i>
-                <div class="fw-bold text-dark">Need Support or Audit Assistance?</div>
-            </div>
-            <p class="small text-muted mb-2">
-                For administrative role escalations, maker-checker approvals, or emergency token rotation, contact the SACCO ICT security desk.
-            </p>
-            <div class="d-grid">
-                <a href="/admin/" class="btn btn-nht-navy btn-sm">
-                    <i class="fa-solid fa-screwdriver-wrench me-1"></i> SACCO ERP Administration
-                </a>
             </div>
         </div>
     </div>
@@ -580,160 +184,31 @@
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    // 1. Compliance Donut Chart
-    const complianceSeries = {{ chart_compliance_series|safe }};
-    const complianceLabels = {{ chart_compliance_labels|safe }};
-
-    const complianceOptions = {
-        series: complianceSeries,
-        labels: complianceLabels,
-        chart: {
-            type: 'donut',
-            height: 230,
-            fontFamily: 'Plus Jakarta Sans, sans-serif',
-        },
-        colors: ['#10B981', '#EF4444'],
-        dataLabels: {
-            enabled: false
-        },
-        legend: {
-            position: 'bottom',
-            fontSize: '12px'
-        },
-        plotOptions: {
-            pie: {
-                donut: {
-                    size: '70%',
-                    labels: {
-                        show: true,
-                        total: {
-                            show: true,
-                            label: 'Health',
-                            formatter: () => '{{ compliance_rate }}%'
-                        }
-                    }
-                }
-            }
-        },
-        responsive: [
-            {
-                breakpoint: 768,
-                options: {
-                    chart: { height: 210 },
-                    legend: { position: 'bottom', fontSize: '11px' }
-                }
-            },
-            {
-                breakpoint: 480,
-                options: {
-                    chart: { height: 190 },
-                    legend: { show: false }
-                }
-            }
-        ]
-    };
-    new ApexCharts(document.querySelector("#chart-compliance"), complianceOptions).render();
-
-    // 2. Financial Collections Spline Area Chart
-    const financeSeries = {{ chart_finance_series|safe }};
-    const financeCategories = {{ chart_finance_categories|safe }};
-
-    const financeOptions = {
-        series: financeSeries,
-        chart: {
-            type: 'bar',
-            height: 230,
-            toolbar: { show: false },
-            fontFamily: 'Plus Jakarta Sans, sans-serif',
-        },
-        colors: ['#1B4A8A', '#10B981'],
-        plotOptions: {
-            bar: {
-                horizontal: false,
-                columnWidth: '45%',
-                borderRadius: 4
-            },
-        },
+    if (!window.ApexCharts) return;
+    new ApexCharts(document.querySelector("#chart-compliance"), {
+        series: {{ chart_compliance_series|safe }},
+        labels: {{ chart_compliance_labels|safe }},
+        chart: { type: 'donut', height: 230, fontFamily: 'Plus Jakarta Sans, sans-serif' },
+        colors: ['#15803D', '#B91C1C'],
         dataLabels: { enabled: false },
-        xaxis: {
-            categories: financeCategories,
-            labels: { style: { fontSize: '11px' } }
-        },
-        yaxis: {
-            labels: {
-                formatter: (val) => 'KES ' + Number(val).toLocaleString()
-            }
-        },
-        legend: {
-            position: 'bottom',
-            fontSize: '12px'
-        },
-        responsive: [
-            {
-                breakpoint: 768,
-                options: {
-                    chart: { height: 210 },
-                    plotOptions: { bar: { columnWidth: '60%' } },
-                    legend: { fontSize: '11px' }
-                }
-            },
-            {
-                breakpoint: 480,
-                options: {
-                    chart: { height: 190 },
-                    plotOptions: { bar: { columnWidth: '75%' } }
-                }
-            }
-        ]
-    };
-    new ApexCharts(document.querySelector("#chart-finance"), financeOptions).render();
+        legend: { position: 'bottom' },
+    }).render();
 
-    // 3. Fleet Categories Distribution Bar Chart
-    const fleetLabels = {{ chart_fleet_labels|safe }};
-    const fleetCounts = {{ chart_fleet_counts|safe }};
+    new ApexCharts(document.querySelector("#chart-finance"), {
+        series: {{ chart_finance_series|safe }},
+        chart: { type: 'bar', height: 230, toolbar: { show: false }, fontFamily: 'Plus Jakarta Sans, sans-serif' },
+        colors: ['#1B4A8A', '#15803D'],
+        xaxis: { categories: {{ chart_finance_categories|safe }} },
+        legend: { position: 'bottom' },
+    }).render();
 
-    const fleetOptions = {
-        series: [{
-            name: 'Vehicles',
-            data: fleetCounts
-        }],
-        chart: {
-            type: 'bar',
-            height: 230,
-            toolbar: { show: false },
-            fontFamily: 'Plus Jakarta Sans, sans-serif',
-        },
+    new ApexCharts(document.querySelector("#chart-fleet"), {
+        series: [{ name: 'Vehicles', data: {{ chart_fleet_counts|safe }} }],
+        chart: { type: 'bar', height: 230, toolbar: { show: false }, fontFamily: 'Plus Jakarta Sans, sans-serif' },
         colors: ['#FF8A00'],
-        plotOptions: {
-            bar: {
-                borderRadius: 4,
-                horizontal: true,
-                barHeight: '50%'
-            }
-        },
-        dataLabels: { enabled: true },
-        xaxis: {
-            categories: fleetLabels,
-            labels: { style: { fontSize: '11px' } }
-        },
-        responsive: [
-            {
-                breakpoint: 768,
-                options: {
-                    chart: { height: 210 },
-                    plotOptions: { bar: { barHeight: '65%' } }
-                }
-            },
-            {
-                breakpoint: 480,
-                options: {
-                    chart: { height: 190 },
-                    plotOptions: { bar: { barHeight: '75%' } }
-                }
-            }
-        ]
-    };
-    new ApexCharts(document.querySelector("#chart-fleet"), fleetOptions).render();
+        plotOptions: { bar: { borderRadius: 4, horizontal: true } },
+        xaxis: { categories: {{ chart_fleet_labels|safe }} },
+    }).render();
 });
 </script>
 {% endblock %}

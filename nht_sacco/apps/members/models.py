@@ -64,6 +64,14 @@ class Member(models.Model):
     )
     approval_date = models.DateTimeField(null=True, blank=True)
     approval_notes = models.TextField(blank=True)
+    branding_version = models.ForeignKey(
+        'integrations.BrandingVersion',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='member_certificates',
+        help_text=_('Immutable branding snapshot captured when membership certificate is issued'),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -101,9 +109,14 @@ class Member(models.Model):
 
     @classmethod
     def generate_membership_number(cls):
+        from nht_sacco.apps.integrations.models import NumberSequence
         year = timezone.now().year
-        count = cls.objects.filter(membership_number__startswith=f"NHT-MBR-{year}").count() + 1
-        return f"NHT-MBR-{year}-{count:04d}"
+        return NumberSequence.next_number(
+            prefix='NHT-MBR',
+            year=year,
+            model_cls=cls,
+            field_name='membership_number',
+        )
 
 
 class MemberDocument(models.Model):

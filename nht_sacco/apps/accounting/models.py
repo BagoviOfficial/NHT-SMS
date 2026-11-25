@@ -108,9 +108,14 @@ class JournalEntry(models.Model):
 
     @classmethod
     def generate_entry_number(cls):
+        from nht_sacco.apps.integrations.models import NumberSequence
         year = timezone.now().year
-        count = cls.objects.filter(entry_number__startswith=f"NHT-JRN-{year}").count() + 1
-        return f"NHT-JRN-{year}-{count:04d}"
+        return NumberSequence.next_number(
+            prefix='NHT-JRN',
+            year=year,
+            model_cls=cls,
+            field_name='entry_number',
+        )
 
     def clean(self):
         # Enforce financial period closed check
@@ -222,6 +227,11 @@ class Expense(models.Model):
 
     @classmethod
     def generate_expense_number(cls):
+        from nht_sacco.apps.integrations.models import NumberSequence
         year = timezone.now().year
-        count = cls.objects.filter(expense_number__startswith=f"NHT-EXP-{year}").count() + 1
-        return f"NHT-EXP-{year}-{count:04d}"
+        return NumberSequence.next_number(
+            prefix='NHT-EXP',
+            year=year,
+            model_cls=cls,
+            field_name='expense_number',
+        )

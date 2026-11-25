@@ -3,7 +3,7 @@
    Custom Professional Django Administration Theme
    ============================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
     --nht-navy: #10315C;
@@ -48,7 +48,7 @@
 
 /* Base Typography & Background */
 html, body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+    font-family: 'Plus Jakarta Sans', 'Roboto', system-ui, -apple-system, sans-serif !important;
     background-color: var(--nht-bg) !important;
     color: var(--nht-text-main) !important;
     -webkit-font-smoothing: antialiased;

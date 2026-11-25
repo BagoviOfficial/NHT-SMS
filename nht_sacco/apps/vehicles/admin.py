@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Vehicle, VehicleOwnershipHistory, VehiclePhoto
+from .models import Vehicle, VehicleOwnershipHistory, VehiclePhoto, VehicleComplianceCard
 
 class VehiclePhotoInline(admin.TabularInline):
     model = VehiclePhoto
@@ -31,3 +31,11 @@ class VehicleOwnershipHistoryAdmin(admin.ModelAdmin):
     list_display = ('vehicle', 'previous_owner', 'new_owner', 'transfer_date', 'authorized_by')
     list_filter = ('transfer_date',)
     search_fields = ('vehicle__registration_number', 'previous_owner__first_name', 'new_owner__first_name')
+
+
+@admin.register(VehicleComplianceCard)
+class VehicleComplianceCardAdmin(admin.ModelAdmin):
+    list_display = ('certificate_number', 'vehicle', 'status', 'issue_date', 'expiry_date', 'issued_by')
+    list_filter = ('status', 'issue_date', 'expiry_date')
+    search_fields = ('certificate_number', 'vehicle__registration_number', 'owner_display_name', 'token_hint')
+    readonly_fields = ('certificate_number', 'token_hash', 'token_hint', 'encrypted_token', 'branding_version', 'created_at', 'updated_at')

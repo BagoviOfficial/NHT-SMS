@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from nht_sacco.apps.accounts.models import User, UserRole, LoginHistory
 from nht_sacco.apps.members.models import Member
-from nht_sacco.apps.vehicles.models import Vehicle, VehicleOwnershipHistory
+from nht_sacco.apps.vehicles.models import Vehicle, VehicleOwnershipHistory, VehicleComplianceCard
 from nht_sacco.apps.drivers.models import Driver, DriverAssignment
 from nht_sacco.apps.routes.models import Route, VehicleRouteAssignment
 from nht_sacco.apps.documents.models import Document, DocumentType
@@ -34,6 +34,7 @@ class UserManagementSerializer(serializers.ModelSerializer):
     role_display = serializers.CharField(source='get_role_display', read_only=True)
     full_name = serializers.SerializerMethodField()
     password = serializers.CharField(write_only=True, required=False, min_length=10)
+    account_category = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -48,19 +49,34 @@ class UserManagementSerializer(serializers.ModelSerializer):
             'national_id',
             'role',
             'role_display',
+            'account_category',
             'is_active',
             'is_verified',
             'is_staff',
+            'is_superuser',
             'must_change_password',
             'last_login',
             'last_login_ip',
             'date_joined',
             'password',
         ]
-        read_only_fields = ['id', 'is_staff', 'last_login', 'last_login_ip', 'date_joined']
+        read_only_fields = ['id', 'is_staff', 'is_superuser', 'last_login', 'last_login_ip', 'date_joined']
 
     def get_full_name(self, obj):
         return obj.get_full_name() or obj.username
+
+    def get_account_category(self, obj):
+        if obj.role in (UserRole.MEMBER, UserRole.DRIVER) and not obj.is_superuser:
+            return 'OPERATIONAL_PORTAL'
+        return 'SACCO_STAFF'
+
+    def validate_role(self, value):
+        request = self.context.get('request')
+        actor = getattr(request, 'user', None)
+        if value == UserRole.SUPER_ADMIN:
+            if not actor or not (actor.is_superuser or actor.role == UserRole.SUPER_ADMIN):
+                raise serializers.ValidationError("Only an active Super Administrator may assign the SUPER_ADMIN role.")
+        return value
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
@@ -74,6 +90,19 @@ class UserManagementSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         password = validated_data.pop('password', None)
+        new_role = validated_data.get('role', instance.role)
+        new_active = validated_data.get('is_active', instance.is_active)
+        was_active_super = instance.is_active and (instance.role == UserRole.SUPER_ADMIN or instance.is_superuser)
+        will_be_active_super = new_active and (new_role == UserRole.SUPER_ADMIN or (instance.is_superuser and new_role == instance.role))
+        if was_active_super and not will_be_active_super:
+            from django.db.models import Q
+            other_exists = User.objects.filter(is_active=True).filter(
+                Q(role=UserRole.SUPER_ADMIN) | Q(is_superuser=True)
+            ).exclude(pk=instance.pk).exists()
+            if not other_exists:
+                raise serializers.ValidationError("Cannot deactivate or demote the last active Super Administrator.")
+        if instance.role == UserRole.SUPER_ADMIN and new_role != UserRole.SUPER_ADMIN:
+            instance.is_superuser = False
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
         if password:
@@ -89,6 +118,7 @@ class LoginHistorySerializer(serializers.ModelSerializer):
 
 
 class MemberSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False, allow_null=True)
     full_name = serializers.ReadOnlyField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     category_display = serializers.CharField(source='get_category_display', read_only=True)
@@ -136,6 +166,48 @@ class VehicleOwnershipHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = VehicleOwnershipHistory
         fields = ['id', 'vehicle', 'previous_owner', 'previous_owner_name', 'new_owner', 'new_owner_name', 'transfer_date', 'transfer_reason', 'authorized_by_username']
+
+
+class VehicleComplianceCardSerializer(serializers.ModelSerializer):
+    registration_number = serializers.CharField(source='vehicle.registration_number', read_only=True)
+    vehicle_make_model = serializers.SerializerMethodField()
+    vehicle_category = serializers.CharField(source='vehicle.get_category_display', read_only=True)
+    issued_by_name = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    branding_version_number = serializers.IntegerField(source='branding_version.version_number', read_only=True, default=1)
+    verify_url = serializers.SerializerMethodField()
+    qr_data_uri = serializers.SerializerMethodField()
+
+    class Meta:
+        model = VehicleComplianceCard
+        fields = [
+            'id', 'vehicle', 'registration_number', 'vehicle_make_model', 'vehicle_category',
+            'certificate_number', 'fleet_number', 'owner_display_name', 'assigned_route_name',
+            'token_hint', 'status', 'status_display', 'issue_date', 'expiry_date',
+            'issued_by', 'issued_by_name', 'revoked_by', 'revoked_at', 'revocation_reason',
+            'superseded_by', 'branding_version_number', 'verify_url', 'qr_data_uri',
+            'notes', 'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'id', 'certificate_number', 'token_hint', 'status', 'issued_by',
+            'revoked_by', 'revoked_at', 'superseded_by', 'created_at', 'updated_at',
+        ]
+
+    def get_vehicle_make_model(self, obj):
+        return f"{obj.vehicle.make} {obj.vehicle.model}"
+
+    def get_issued_by_name(self, obj):
+        if not obj.issued_by:
+            return 'SACCO Compliance Desk'
+        return obj.issued_by.get_full_name() or obj.issued_by.username
+
+    def get_verify_url(self, obj):
+        from nht_sacco.apps.vehicles.services import ComplianceCardService
+        return ComplianceCardService.get_verify_url(obj, request=self.context.get('request'))
+
+    def get_qr_data_uri(self, obj):
+        from nht_sacco.apps.vehicles.services import ComplianceCardService
+        return ComplianceCardService.get_qr_data_uri(obj, request=self.context.get('request'))
 
 
 class DriverSerializer(serializers.ModelSerializer):

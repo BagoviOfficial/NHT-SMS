@@ -3,7 +3,7 @@
 **System:** Northern Highways Transporters SACCO Management System (NHT-SMS)  
 **Document:** Project Status & Stage Verification Report  
 **Date:** 2026-11-25  
-**Current Milestone:** Phase II — Stages 12–15 (11-Role RBAC, Reconciliation Engine, Unified `/api/v1/` & Material UI `/app/` SPA) Complete & Verified — **(Release v1.4.0)**  
+**Current Milestone:** Enterprise Material UI ERP Transformation — Stages 1–16 (Unified MUI v5, 11-Role RBAC, Staff/Member Separation, QR Compliance Cards, Central Versioned Branding & Atomic Sequencing) Complete & Verified — **(Release v1.5.0)**  
 
 ---
 

@@ -9,6 +9,8 @@ from django.core.exceptions import ValidationError
 
 from rest_framework import views, viewsets, status
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from .models import (
@@ -18,6 +20,8 @@ from .models import (
     IntegrationHealthLog,
     ConfigCategory,
     ConfigDataType,
+    CompanyProfile,
+    BrandingVersion,
 )
 from .crypto import CryptoService
 from .services import ConfigurationService
@@ -39,6 +43,8 @@ from .serializers import (
     ConfigurationChangeRequestSerializer,
     ConfigurationChangeRequestCreateSerializer,
     ConfigurationChangeReviewSerializer,
+    CompanyProfileSerializer,
+    BrandingVersionSerializer,
 )
 
 
@@ -466,3 +472,131 @@ class ConfigurationChangeRequestViewSet(viewsets.ReadOnlyModelViewSet):
             return Response(ConfigurationChangeRequestSerializer(updated).data, status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CompanyProfileAPIView(views.APIView):
+    """
+    Centralized Company Profile & Branding endpoint.
+    Read: Super Admin, Chairman, Auditor.
+    Write / Logo Upload / Replace: Super Admin only.
+    """
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_permissions(self):
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return [IsAuditorOrSystemAdmin()]
+        return [IsSystemAdminUser()]
+
+    def get(self, request, *args, **kwargs):
+        profile = CompanyProfile.get_active()
+        return Response(CompanyProfileSerializer(profile).data, status=status.HTTP_200_OK)
+
+    def _save_profile(self, request):
+        from nht_sacco.apps.audit.models import AuditAction, AuditLog, AuditOutcome
+        profile = CompanyProfile.get_active()
+        notes = (request.data.get('change_notes') or 'Updated company profile & branding').strip()
+        serializer = CompanyProfileSerializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        updated = serializer.save(updated_by=request.user)
+        version_obj = updated.create_branding_version(user=request.user, notes=notes, bump_version=True)
+        AuditLog.log_action(
+            actor=request.user,
+            action=AuditAction.UPDATE,
+            entity_type='CompanyProfile',
+            entity_id=f"v{version_obj.version_number}",
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Updated Company Profile & Branding to v{version_obj.version_number}: {notes}",
+            ip_address=request.META.get('REMOTE_ADDR'),
+        )
+        return Response(CompanyProfileSerializer(updated).data, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        return self._save_profile(request)
+
+    def put(self, request, *args, **kwargs):
+        return self._save_profile(request)
+
+    def patch(self, request, *args, **kwargs):
+        return self._save_profile(request)
+
+
+class CompanyProfileLogoDeleteAPIView(views.APIView):
+    """
+    Removes active company logo or monochrome logo and archives a new BrandingVersion.
+    """
+    permission_classes = [IsSystemAdminUser]
+
+    def delete(self, request, *args, **kwargs):
+        from nht_sacco.apps.audit.models import AuditAction, AuditLog, AuditOutcome
+        profile = CompanyProfile.get_active()
+        logo_type = (request.query_params.get('type') or 'primary').lower()
+        if logo_type == 'monochrome':
+            if profile.monochrome_logo and profile.monochrome_logo.name:
+                profile.monochrome_logo.delete(save=False)
+            profile.monochrome_logo = None
+            profile.save(update_fields=['monochrome_logo', 'updated_at'])
+            msg = 'Removed monochrome company logo'
+        else:
+            if profile.logo and profile.logo.name:
+                profile.logo.delete(save=False)
+            profile.logo = None
+            profile.save(update_fields=['logo', 'updated_at'])
+            msg = 'Removed primary company logo'
+
+        version_obj = profile.create_branding_version(user=request.user, notes=msg, bump_version=True)
+        AuditLog.log_action(
+            actor=request.user,
+            action=AuditAction.UPDATE,
+            entity_type='CompanyProfile',
+            entity_id=f"v{version_obj.version_number}",
+            outcome=AuditOutcome.SUCCESS,
+            notes=msg,
+            ip_address=request.META.get('REMOTE_ADDR'),
+        )
+        return Response(CompanyProfileSerializer(profile).data, status=status.HTTP_200_OK)
+
+
+class CompanyProfileVersionsAPIView(views.APIView):
+    permission_classes = [IsAuditorOrSystemAdmin]
+
+    def get(self, request, *args, **kwargs):
+        profile = CompanyProfile.get_active()
+        versions = profile.versions.select_related('created_by').order_by('-version_number')[:50]
+        return Response(BrandingVersionSerializer(versions, many=True).data, status=status.HTTP_200_OK)
+
+
+class CompanyProfileLogoAssetView(views.APIView):
+    """
+    Streams validated PNG/JPEG logo bytes for active or versioned branding snapshots.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        from django.http import Http404
+        profile = CompanyProfile.get_active()
+        ver_param = request.query_params.get('version')
+        logo_type = (request.query_params.get('type') or 'primary').lower()
+
+        file_field = None
+        if ver_param and ver_param.isdigit():
+            ver_obj = BrandingVersion.objects.filter(company_profile=profile, version_number=int(ver_param)).first()
+            if ver_obj:
+                file_field = ver_obj.monochrome_logo_archive if logo_type == 'monochrome' else ver_obj.logo_archive
+        else:
+            file_field = profile.monochrome_logo if logo_type == 'monochrome' else profile.logo
+
+        if not file_field or not file_field.name:
+            raise Http404("No logo uploaded.")
+
+        try:
+            file_field.open('rb')
+            data = file_field.read()
+            file_field.close()
+        except Exception:
+            raise Http404("Logo file unavailable.")
+
+        content_type = 'image/png' if file_field.name.lower().endswith('.png') else 'image/jpeg'
+        resp = HttpResponse(data, content_type=content_type)
+        resp['Cache-Control'] = 'public, max-age=300'
+        resp['X-Content-Type-Options'] = 'nosniff'
+        return resp

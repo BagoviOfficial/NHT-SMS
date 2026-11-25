@@ -3,58 +3,59 @@
 {% block title %}Official Payment Receipt - {{ receipt.receipt_number }}{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-8 col-md-10">
-        <div class="d-flex justify-content-between align-items-center mb-3 d-print-none">
-            <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-left me-1"></i> Back
+<div class="mui-container-narrow">
+    <div class="mui-flex-between no-print" style="margin-bottom: 16px;">
+        <a href="javascript:history.back()" class="mui-btn mui-btn-outlined">
+            <span class="material-icons-outlined">arrow_back</span> Back
+        </a>
+        <div class="mui-flex">
+            <a href="/api/v1/receipts/{{ receipt.pk }}/download_pdf/" target="_blank" class="mui-btn mui-btn-secondary">
+                <span class="material-icons-outlined">picture_as_pdf</span> Download Branded PDF
             </a>
-            <button onclick="window.print()" class="btn btn-nht-navy btn-sm">
-                <i class="bi bi-printer-fill me-1"></i> Print / Save as PDF
+            <button onclick="window.print()" class="mui-btn mui-btn-contained">
+                <span class="material-icons-outlined">print</span> Print Receipt
             </button>
         </div>
+    </div>
 
-        <div class="card shadow-sm border-0 p-4 p-md-5 bg-white rounded-3">
-            <!-- Receipt Header -->
-            <div class="border-bottom pb-4 mb-4">
-                <div class="row align-items-center">
-                    <div class="col-sm-8">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="bi bi-truck-front-fill fs-2 text-warning me-2"></i>
-                            <h4 class="fw-bold mb-0" style="color: var(--nht-navy);">Northern Highways Transporters</h4>
-                        </div>
-                        <p class="text-muted small mb-0">SACCO Society Limited &bull; ERP Financial Secretariat</p>
-                        <p class="text-muted small mb-0">P.O. Box 450-60300, Isiolo, Kenya &bull; info@nhttransporters.co.ke</p>
+    <div class="mui-card">
+        <div class="mui-card-body" style="padding: 28px;">
+            <div class="mui-flex-between" style="padding-bottom: 18px; border-bottom: 1px solid var(--mui-divider); margin-bottom: 20px;">
+                <div class="mui-flex">
+                    {% if receipt_logo_url %}
+                        <img src="{{ receipt_logo_url }}" alt="{{ receipt_brand.trading_name|default:BRAND_NAME }}" style="max-height: 52px; max-width: 140px; object-fit: contain;">
+                    {% else %}
+                        <span class="material-icons-outlined" style="font-size: 36px; color: var(--mui-secondary);">local_shipping</span>
+                    {% endif %}
+                    <div>
+                        <h2 class="mui-h5" style="margin: 0;">{{ receipt_brand.trading_name|default:BRAND_NAME }}</h2>
+                        <div class="mui-caption">{{ receipt_brand.legal_name|default:BRAND_LEGAL_NAME|default:"SACCO Society Limited" }} &bull; Official Financial Secretariat</div>
                     </div>
-                    <div class="col-sm-4 text-sm-end mt-3 mt-sm-0">
-                        <div class="badge bg-success-subtle text-success fs-6 px-3 py-2 border border-success">
-                            <i class="bi bi-patch-check-fill me-1"></i> OFFICIAL RECEIPT
-                        </div>
-                        <div class="small fw-bold text-muted mt-2">No: {{ receipt.receipt_number }}</div>
-                    </div>
+                </div>
+                <div class="text-end">
+                    <span class="mui-chip mui-chip-success"><span class="material-icons-outlined">verified</span> OFFICIAL RECEIPT</span>
+                    <div class="nht-mono" style="font-weight: 700; margin-top: 6px;">No: {{ receipt.receipt_number }}</div>
                 </div>
             </div>
 
-            <!-- Receipt Details Grid -->
-            <div class="row mb-4">
-                <div class="col-sm-6 mb-3 mb-sm-0">
-                    <span class="text-muted small text-uppercase fw-semibold">Received From:</span>
-                    <div class="fw-bold fs-6">{{ receipt.payment.member.full_name }}</div>
-                    <div class="small text-muted">Member No: <span class="fw-semibold">{{ receipt.payment.member.membership_number }}</span></div>
-                    <div class="small text-muted">Phone: {{ receipt.payment.member.phone_number }}</div>
+            <div class="mui-grid mui-grid-2" style="margin-bottom: 20px;">
+                <div>
+                    <div class="mui-caption" style="text-transform: uppercase; font-weight: 700;">Received From</div>
+                    <div style="font-weight: 700; font-size: 1rem;">{{ receipt.payment.member.full_name }}</div>
+                    <div class="mui-subtitle">Member No: <strong>{{ receipt.payment.member.membership_number }}</strong></div>
+                    <div class="mui-subtitle">Phone: {{ receipt.payment.member.phone_number }}</div>
                 </div>
-                <div class="col-sm-6 text-sm-end">
-                    <span class="text-muted small text-uppercase fw-semibold">Payment Details:</span>
-                    <div class="small"><span class="text-muted">Date:</span> {{ receipt.issued_at|date:"d M Y, H:i" }} EAT</div>
-                    <div class="small"><span class="text-muted">Method:</span> <span class="badge bg-secondary">{{ receipt.payment.get_method_display }}</span></div>
-                    <div class="small"><span class="text-muted">Transaction Ref:</span> <span class="font-monospace fw-bold">{{ receipt.payment.provider_transaction_id|default:receipt.payment.payment_reference }}</span></div>
+                <div class="text-end">
+                    <div class="mui-caption" style="text-transform: uppercase; font-weight: 700;">Settlement Details</div>
+                    <div class="mui-subtitle">Issued: {{ receipt.issued_at|date:"d M Y, H:i" }} EAT</div>
+                    <div class="mui-subtitle">Method: <span class="mui-chip mui-chip-default">{{ receipt.payment.get_method_display }}</span></div>
+                    <div class="mui-subtitle">Ref: <span class="nht-mono"><strong>{{ receipt.payment.provider_transaction_id|default:receipt.payment.payment_reference }}</strong></span></div>
                 </div>
             </div>
 
-            <!-- Payment Summary Table -->
-            <div class="table-responsive mb-4">
-                <table class="table table-bordered mb-0">
-                    <thead class="table-light">
+            <div class="mui-table-wrap" style="margin-bottom: 20px;">
+                <table class="mui-table">
+                    <thead>
                         <tr>
                             <th>Description</th>
                             <th>Invoice Reference</th>
@@ -63,35 +64,31 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>Settlement of SACCO Services & Fleet Dues</td>
-                            <td class="font-monospace">{{ receipt.payment.invoice.invoice_number }}</td>
-                            <td class="text-end fw-bold">KES {{ receipt.payment.amount }}</td>
+                            <td>Settlement of SACCO Services &amp; Fleet Dues</td>
+                            <td class="nht-mono">{{ receipt.payment.invoice.invoice_number }}</td>
+                            <td class="text-end"><strong>{{ DEFAULT_CURRENCY }} {{ receipt.payment.amount }}</strong></td>
                         </tr>
                     </tbody>
                     <tfoot>
                         <tr>
-                            <th colspan="2" class="text-end text-uppercase">Total Cleared:</th>
-                            <th class="text-end fs-5 text-success">KES {{ receipt.payment.amount }}</th>
+                            <th colspan="2" class="text-end">Total Cleared</th>
+                            <th class="text-end" style="color: var(--mui-success); font-size: 1.05rem;">{{ DEFAULT_CURRENCY }} {{ receipt.payment.amount }}</th>
                         </tr>
                         <tr>
-                            <td colspan="2" class="text-end small text-muted">Invoice Outstanding Balance Due:</td>
-                            <td class="text-end font-monospace small fw-bold">KES {{ receipt.payment.invoice.balance_due }}</td>
+                            <td colspan="2" class="text-end mui-caption">Invoice Outstanding Balance Due</td>
+                            <td class="text-end nht-mono"><strong>{{ DEFAULT_CURRENCY }} {{ receipt.payment.invoice.balance_due }}</strong></td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
 
-            <!-- Footer Seal -->
-            <div class="border-top pt-3 d-flex justify-content-between align-items-center">
-                <div class="text-muted small">
-                    <i class="bi bi-shield-lock-fill text-success me-1"></i> System-generated verifiable electronic receipt.
-                    <br>
-                    <span style="font-size: 0.75rem;">Payment Reference: {{ receipt.payment.payment_reference }}</span>
+            <div class="mui-flex-between" style="padding-top: 14px; border-top: 1px solid var(--mui-divider);">
+                <div class="mui-caption">
+                    <span class="material-icons-outlined" style="color: var(--mui-success); font-size: 15px;">lock</span>
+                    System-generated verifiable electronic receipt &bull; Ref: {{ receipt.payment.payment_reference }}
                 </div>
-                <div class="text-end">
-                    <div class="fw-bold small text-muted">Authorized Financial Signature</div>
-                    <div class="text-muted" style="font-family: cursive; font-size: 1.1rem; color: var(--nht-navy);">Fatuma Mohamed</div>
-                    <div class="small text-muted" style="font-size: 0.75rem;">SACCO Treasury Office</div>
+                <div class="text-end mui-caption">
+                    <strong>SACCO Treasury Office</strong>
                 </div>
             </div>
         </div>

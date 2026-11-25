@@ -4,6 +4,9 @@ from .models import (
     SystemConfiguration,
     ConfigurationHistory,
     IntegrationHealthLog,
+    CompanyProfile,
+    BrandingVersion,
+    NumberSequence,
 )
 from .crypto import CryptoService
 from .services import ConfigurationService
@@ -115,6 +118,48 @@ class IntegrationHealthLogAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(CompanyProfile)
+class CompanyProfileAdmin(admin.ModelAdmin):
+    list_display = ['trading_name', 'legal_name', 'short_name', 'current_version', 'updated_by', 'updated_at']
+    readonly_fields = ['current_version', 'updated_by', 'created_at', 'updated_at']
+
+    def has_add_permission(self, request):
+        return not CompanyProfile.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def save_model(self, request, obj, form, change):
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
+        obj.create_branding_version(user=request.user, notes="Updated via Django Admin", bump_version=True)
+
+
+@admin.register(BrandingVersion)
+class BrandingVersionAdmin(admin.ModelAdmin):
+    list_display = ['company_profile', 'version_number', 'logo_sha256', 'created_by', 'created_at']
+    readonly_fields = ['company_profile', 'version_number', 'profile_snapshot', 'logo_archive', 'monochrome_logo_archive', 'logo_sha256', 'change_notes', 'created_by', 'created_at']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(NumberSequence)
+class NumberSequenceAdmin(admin.ModelAdmin):
+    list_display = ['prefix', 'year', 'last_number', 'updated_at']
+    search_fields = ['prefix']
+    readonly_fields = ['prefix', 'year', 'last_number', 'updated_at']
 
     def has_delete_permission(self, request, obj=None):
         return False

@@ -3,25 +3,25 @@
 {% block title %}My Invoices & Billing{% endblock %}
 
 {% block portal_content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="mui-flex-between">
     <div>
-        <h4 class="fw-bold mb-1 text-nht-navy">Invoices & Billing History</h4>
-        <p class="text-muted small mb-0">Track all SACCO dues, regulatory fee billings, and payment settlements.</p>
+        <h2 class="mui-h5">Invoices &amp; Billing History</h2>
+        <p class="mui-subtitle">Track all SACCO dues, regulatory fee billings, and payment settlements.</p>
     </div>
-    <div>
-        <a href="{% url 'portal:statement' %}" class="btn btn-outline-primary me-2">
-            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Full Statement
+    <div class="mui-flex">
+        <a href="{% url 'portal:statement' %}" class="mui-btn mui-btn-outlined">
+            <span class="material-icons-outlined">account_balance_wallet</span> Full Statement
         </a>
-        <a href="{% url 'portal:receipts' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-receipt me-1"></i> Receipts
+        <a href="{% url 'portal:receipts' %}" class="mui-btn mui-btn-outlined">
+            <span class="material-icons-outlined">receipt</span> Receipts
         </a>
     </div>
 </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light small">
+<div class="mui-card">
+    <div class="mui-table-wrap">
+        <table class="mui-table">
+            <thead>
                 <tr>
                     <th>Invoice #</th>
                     <th>Issue Date</th>
@@ -37,39 +37,34 @@
             <tbody>
                 {% for inv in invoices %}
                     <tr>
-                        <td class="fw-bold text-nht-navy">{{ inv.invoice_number }}</td>
+                        <td class="nht-mono"><strong>{{ inv.invoice_number }}</strong></td>
                         <td>{{ inv.issue_date }}</td>
                         <td>{{ inv.due_date }}</td>
                         <td>{{ inv.vehicle.registration_number|default:"General / SACCO" }}</td>
-                        <td class="fw-semibold">KES {{ inv.total_amount|floatformat:2 }}</td>
-                        <td class="text-success">KES {{ inv.amount_paid|floatformat:2 }}</td>
-                        <td class="fw-bold {% if inv.balance_due > 0 %}text-danger{% else %}text-muted{% endif %}">
-                            KES {{ inv.balance_due|floatformat:2 }}
+                        <td>{{ DEFAULT_CURRENCY }} {{ inv.total_amount|floatformat:2 }}</td>
+                        <td style="color: var(--mui-success);">{{ DEFAULT_CURRENCY }} {{ inv.amount_paid|floatformat:2 }}</td>
+                        <td style="font-weight: 700; color: {% if inv.balance_due > 0 %}var(--mui-error){% else %}var(--mui-text-secondary){% endif %};">
+                            {{ DEFAULT_CURRENCY }} {{ inv.balance_due|floatformat:2 }}
                         </td>
                         <td>
                             {% if inv.status == 'PAID' %}
-                                <span class="badge bg-success">Paid in Full</span>
+                                <span class="mui-chip mui-chip-success">Paid in Full</span>
                             {% elif inv.status == 'PARTIALLY_PAID' %}
-                                <span class="badge bg-info text-dark">Partially Paid</span>
+                                <span class="mui-chip mui-chip-info">Partially Paid</span>
                             {% elif inv.status == 'CANCELLED' %}
-                                <span class="badge bg-secondary">Cancelled</span>
+                                <span class="mui-chip mui-chip-default">Cancelled</span>
                             {% else %}
-                                <span class="badge bg-warning text-dark">Pending Payment</span>
+                                <span class="mui-chip mui-chip-warning">Pending Payment</span>
                             {% endif %}
                         </td>
                         <td class="text-end">
-                            <a href="{% url 'portal:invoice_detail' inv.id %}" class="btn btn-sm btn-nht-primary">
-                                Details & Pay
+                            <a href="{% url 'portal:invoice_detail' inv.id %}" class="mui-btn mui-btn-sm mui-btn-secondary">
+                                Details &amp; Pay
                             </a>
                         </td>
                     </tr>
                 {% empty %}
-                    <tr>
-                        <td colspan="9" class="text-center py-5 text-muted">
-                            <i class="bi bi-receipt-cutoff fs-1 d-block mb-3 text-muted"></i>
-                            No invoices issued to your account yet.
-                        </td>
-                    </tr>
+                    <tr><td colspan="9" class="text-center mui-subtitle" style="padding: 36px;">No invoices issued to your account yet.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

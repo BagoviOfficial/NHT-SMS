@@ -3,51 +3,44 @@
 {% block title %}Notifications & Alerts{% endblock %}
 
 {% block portal_content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="mui-flex-between">
     <div>
-        <h4 class="fw-bold mb-1 text-nht-navy">Notification Centre</h4>
-        <p class="text-muted small mb-0">System alerts, regulatory compliance reminders, and payment receipts.</p>
+        <h2 class="mui-h5">Notification Centre</h2>
+        <p class="mui-subtitle">System alerts, regulatory compliance reminders, and payment receipts.</p>
     </div>
-    <a href="{% url 'portal:preferences' %}" class="btn btn-outline-secondary">
-        <i class="bi bi-sliders me-1"></i> Notification Preferences
+    <a href="{% url 'portal:preferences' %}" class="mui-btn mui-btn-outlined">
+        <span class="material-icons-outlined">tune</span> Notification Preferences
     </a>
 </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
-        <div class="list-group list-group-flush">
-            {% for notif in notifications %}
-                <div class="list-group-item p-3 {% if notif.status != 'READ' %}bg-light border-start border-4 border-warning{% endif %}">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <div class="d-flex align-items-center mb-1">
-                                <span class="badge bg-nht-navy me-2">{{ notif.get_category_display }}</span>
-                                <h6 class="fw-bold mb-0 text-nht-navy">{{ notif.title }}</h6>
-                            </div>
-                            <p class="mb-1 text-dark small">{{ notif.message }}</p>
-                            <span class="text-muted small"><i class="bi bi-clock me-1"></i>{{ notif.created_at|date:"d M Y, H:i" }}</span>
-                        </div>
-                        <div>
-                            {% if notif.status != 'READ' %}
-                                <form method="post" action="{% url 'portal:notification_read' notif.id %}">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-2" title="Mark as Read">
-                                        <i class="bi bi-check2"></i> Mark Read
-                                    </button>
-                                </form>
-                            {% else %}
-                                <span class="badge bg-secondary-subtle text-secondary small">Read</span>
-                            {% endif %}
-                        </div>
+<div class="mui-card">
+    <div class="mui-card-body mui-stack">
+        {% for notif in notifications %}
+            <div class="mui-flex-between" style="padding: 12px; border-radius: 10px; border: 1px solid var(--mui-divider); {% if notif.status != 'READ' %}background: #FFFBEB; border-left: 4px solid var(--mui-secondary);{% endif %}">
+                <div>
+                    <div class="mui-flex" style="margin-bottom: 4px;">
+                        <span class="mui-chip mui-chip-primary">{{ notif.get_category_display }}</span>
+                        <strong>{{ notif.title }}</strong>
                     </div>
+                    <div style="font-size: 0.88rem; margin-bottom: 4px;">{{ notif.message }}</div>
+                    <div class="mui-caption">{{ notif.created_at|date:"d M Y, H:i" }}</div>
                 </div>
-            {% empty %}
-                <div class="text-center py-5 text-muted">
-                    <i class="bi bi-bell-slash fs-1 d-block mb-3 text-muted"></i>
-                    No notifications or alerts received yet.
+                <div>
+                    {% if notif.status != 'READ' %}
+                        <form method="post" action="{% url 'portal:notification_read' notif.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="mui-btn mui-btn-sm mui-btn-outlined">
+                                <span class="material-icons-outlined">done</span> Mark Read
+                            </button>
+                        </form>
+                    {% else %}
+                        <span class="mui-chip mui-chip-default">Read</span>
+                    {% endif %}
                 </div>
-            {% endfor %}
-        </div>
+            </div>
+        {% empty %}
+            <div class="text-center mui-subtitle" style="padding: 36px;">No notifications or alerts received yet.</div>
+        {% endfor %}
     </div>
 </div>
 {% endblock %}
