@@ -25,13 +25,17 @@ class ComplianceCardService:
 
     @staticmethod
     def resolve_public_base_url(request=None) -> str:
-        profile = CompanyProfile.get_active()
-        base = (profile.public_base_url or '').strip().rstrip('/')
-        if base:
-            return base
+        """
+        Resolves the internal verification base URL from the active request when
+        available, returning '' (relative path) when no request is supplied.
+        """
         if request is not None:
             return request.build_absolute_uri('/').rstrip('/')
-        return 'https://nhtsms.bagovi.com'
+        profile = CompanyProfile.get_active()
+        base = (profile.public_base_url or '').strip().rstrip('/')
+        if base and base != 'https://nhtsms.bagovi.com':
+            return base
+        return ''
 
     @classmethod
     def decrypt_token(cls, card: VehicleComplianceCard) -> str:
@@ -42,10 +46,12 @@ class ComplianceCardService:
     @classmethod
     def get_verify_url(cls, card: VehicleComplianceCard, raw_token: str = '', request=None) -> str:
         token = raw_token or cls.decrypt_token(card)
-        base = cls.resolve_public_base_url(request=request)
         if not token:
             return ''
-        return f"{base}/verify/compliance/{token}/"
+        base = cls.resolve_public_base_url(request=request)
+        if base:
+            return f"{base}/verify/compliance/{token}/"
+        return f"/verify/compliance/{token}/"
 
     @classmethod
     def get_qr_png_bytes(cls, card: VehicleComplianceCard, raw_token: str = '', request=None) -> bytes:

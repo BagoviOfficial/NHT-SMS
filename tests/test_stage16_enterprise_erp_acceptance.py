@@ -435,7 +435,8 @@ class TestVehicleComplianceCardAndQRSecurity:
         assert len(raw_token) >= 32
         assert card.token_hash != raw_token
         assert card.token_hash == VehicleComplianceCard.hash_token(raw_token)
-        assert card_data['verify_url'].startswith('https://nhtsms.bagovi.com/verify/compliance/')
+        assert card_data['verify_url'] == f"http://testserver/verify/compliance/{raw_token}/"
+        assert ComplianceCardService.get_verify_url(card) == f"/verify/compliance/{raw_token}/"
 
         # Download branded compliance card PDF
         pdf_res = client.get(f"/api/v1/compliance-cards/{card.pk}/download_pdf/")

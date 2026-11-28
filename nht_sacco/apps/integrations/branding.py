@@ -128,7 +128,7 @@ class DocumentBrandingService:
             'phone_numbers': snap.get('phone_numbers') or '',
             'official_email': snap.get('official_email') or '',
             'website': snap.get('website') or '',
-            'public_base_url': snap.get('public_base_url') or 'https://nhtsms.bagovi.com',
+            'public_base_url': snap.get('public_base_url') or '',
             'footer_text': snap.get('footer_text') or '',
             'primary_color': primary_hex,
             'secondary_color': secondary_hex,

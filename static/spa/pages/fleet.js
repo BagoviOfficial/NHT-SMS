@@ -402,12 +402,12 @@ export function MembersPage({ notify }) {
                 maxWidth="md"
                 actions=${html`
                     <${MUI.Button} onClick=${() => setCreateOpen(false)}>Cancel</${MUI.Button}>
-                    <${MUI.Button} variant="contained" onClick=${handleCreate}>Register Member &amp; Vehicles</${MUI.Button}>
+                    <${MUI.Button} variant="contained" onClick=${handleCreate}>Register Member & Vehicles</${MUI.Button}>
                 `}
             >
                 <${MUI.Stack} spacing=${2.5} sx=${{ pt: 1 }}>
                     <${MUI.Typography} variant="subtitle2" sx=${{ fontWeight: 700, color: 'primary.main' }}>
-                        1. Member Personal &amp; KYC Details
+                        1. Member Personal & KYC Details
                     </${MUI.Typography}>
                     <${MUI.Grid} container spacing=${2}>
                         <${MUI.Grid} size=${{ xs: 12, sm: 4 }}><${MUI.TextField} label="First Name" fullWidth required value=${form.first_name} onChange=${(e) => setForm({ ...form, first_name: e.target.value })} /></${MUI.Grid}>
@@ -427,7 +427,7 @@ export function MembersPage({ notify }) {
                         <${MUI.Grid} size=${{ xs: 12, sm: 6 }}>
                             <${MUI.TextField} select label="Membership Category" fullWidth value=${form.category} onChange=${(e) => setForm({ ...form, category: e.target.value })}>
                                 <${MUI.MenuItem} value="INDIVIDUAL">Individual Truck / Commercial Owner</${MUI.MenuItem}>
-                                <${MUI.MenuItem} value="FLEET_OWNER">Fleet Owner (Multiple Trucks &amp; Trailers)</${MUI.MenuItem}>
+                                <${MUI.MenuItem} value="FLEET_OWNER">Fleet Owner (Multiple Trucks & Trailers)</${MUI.MenuItem}>
                                 <${MUI.MenuItem} value="CORPORATE">Corporate Transport Operator</${MUI.MenuItem}>
                             </${MUI.TextField}>
                         </${MUI.Grid}>
@@ -476,7 +476,7 @@ export function MembersPage({ notify }) {
 
                     <${MUI.Box} sx=${{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                         <${MUI.Typography} variant="subtitle2" sx=${{ fontWeight: 700, color: 'primary.main' }}>
-                            3. Vehicle Details (Commercial Trucks &amp; Trailers)
+                            3. Vehicle Details (Commercial Trucks & Trailers)
                         </${MUI.Typography}>
                         <${MUI.Button}
                             size="small"
@@ -555,7 +555,7 @@ export function MembersPage({ notify }) {
                 title=${`Provision / Reset Portal Account: ${portalTarget?.full_name || ''}`}
                 actions=${html`
                     <${MUI.Button} onClick=${() => setPortalTarget(null)}>Cancel</${MUI.Button}>
-                    <${MUI.Button} variant="contained" color="info" onClick=${handleProvisionPortal}>Activate &amp; Issue Credentials</${MUI.Button}>
+                    <${MUI.Button} variant="contained" color="info" onClick=${handleProvisionPortal}>Activate & Issue Credentials</${MUI.Button}>
                 `}
             >
                 ${portalTarget && html`
@@ -814,7 +814,7 @@ function DriverFieldsSection({ value, onChange, vehicles, canAllocateVehicles })
     return html`
         <${MUI.Stack} spacing=${2.5}>
             <${MUI.Typography} variant="subtitle2" sx=${{ fontWeight: 700, color: 'primary.main' }}>
-                1. Driver Personal &amp; Emergency Contact Details
+                1. Driver Personal & Emergency Contact Details
             </${MUI.Typography}>
             <${MUI.Grid} container spacing=${2}>
                 <${MUI.Grid} size=${{ xs: 12, sm: 6 }}>
@@ -892,7 +892,7 @@ function DriverFieldsSection({ value, onChange, vehicles, canAllocateVehicles })
             <${MUI.Divider} />
 
             <${MUI.Typography} variant="subtitle2" sx=${{ fontWeight: 700, color: 'primary.main' }}>
-                2. Driving License &amp; NTSA Endorsement Details
+                2. Driving License & NTSA Endorsement Details
             </${MUI.Typography}>
             <${MUI.Grid} container spacing=${2}>
                 <${MUI.Grid} size=${{ xs: 12, sm: 6 }}>
@@ -1316,7 +1316,7 @@ export function DriversPage({ me, notify }) {
                     }] : []),
                 ]}
             />
-            <${MUI.Typography} variant="h6" sx=${{ mt: 3, mb: 1.5 }}>Active &amp; Historical Crew Assignments</${MUI.Typography}>
+            <${MUI.Typography} variant="h6" sx=${{ mt: 3, mb: 1.5 }}>Active & Historical Crew Assignments</${MUI.Typography}>
             <${ResponsiveDataGrid}
                 loading=${loading}
                 rows=${assignments}
@@ -1451,7 +1451,7 @@ export function DriversPage({ me, notify }) {
                 title=${`Driver Portal Account: ${portalTarget?.full_name || ''}`}
                 actions=${html`
                     <${MUI.Button} onClick=${() => setPortalTarget(null)}>Cancel</${MUI.Button}>
-                    <${MUI.Button} variant="contained" color="info" onClick=${handleProvisionPortal}>Activate &amp; Issue Credentials</${MUI.Button}>
+                    <${MUI.Button} variant="contained" color="info" onClick=${handleProvisionPortal}>Activate & Issue Credentials</${MUI.Button}>
                 `}
             >
                 ${portalTarget && html`

@@ -455,8 +455,9 @@ class CompanyProfile(models.Model):
     website = models.URLField(_('Website'), blank=True, default='https://nhtsms.bagovi.com')
     public_base_url = models.URLField(
         _('Public Verification Base URL'),
-        default='https://nhtsms.bagovi.com',
-        help_text=_('Base HTTPS URL embedded in QR compliance verification links'),
+        blank=True,
+        default='',
+        help_text=_('Optional base URL for QR compliance verification links; leave blank to use the internal endpoint'),
     )
     footer_text = models.CharField(
         _('Official Document Footer'),

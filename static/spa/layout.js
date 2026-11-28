@@ -288,7 +288,7 @@ export function AppLayout({ me, activeRoute, onNavigate, onLogout, notify, theme
                     >
                         <${MUI.MenuItem} onClick=${() => { setMenuAnchor(null); onNavigate('profile'); }}>
                             <${MUI.ListItemIcon}><${MaterialIcon} name="account_circle" /></${MUI.ListItemIcon}>
-                            My Profile &amp; Security
+                            My Profile & Security
                         </${MUI.MenuItem}>
                         <${MUI.MenuItem} onClick=${() => { setMenuAnchor(null); setPwdOpen(true); }}>
                             <${MUI.ListItemIcon}><${MaterialIcon} name="key" /></${MUI.ListItemIcon}>

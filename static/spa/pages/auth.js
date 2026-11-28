@@ -132,7 +132,7 @@ export function LoginPage({ branding, onLoginSuccess }) {
                             Forgot Password?
                         </${MUI.Button}>
                         <${MUI.Typography} variant="caption" color="text.secondary" display="block">
-                            Protected by Axes brute-force defense, TOTP MFA &amp; immutable audit logging.
+                            Protected by Axes brute-force defense, TOTP MFA & immutable audit logging.
                         </${MUI.Typography}>
                     </${MUI.Box}>
         </${AuthShellCard}>

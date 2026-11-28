@@ -176,7 +176,7 @@ export function ReceiptDetailPage({ me }) {
                             </${MUI.TableHead}>
                             <${MUI.TableBody}>
                                 <${MUI.TableRow}>
-                                    <${MUI.TableCell}>Settlement of SACCO Services &amp; Fleet Dues</${MUI.TableCell}>
+                                    <${MUI.TableCell}>Settlement of SACCO Services & Fleet Dues</${MUI.TableCell}>
                                     <${MUI.TableCell} className="nht-mono">${receipt.invoice_number}</${MUI.TableCell}>
                                     <${MUI.TableCell} align="right"><strong>${formatCurrency(receipt.amount)}</strong></${MUI.TableCell}>
                                 </${MUI.TableRow}>

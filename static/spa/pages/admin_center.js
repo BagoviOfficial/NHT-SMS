@@ -211,10 +211,10 @@ export function SuperAdminConsolePage({ notify, onNavigate }) {
                 action=${html`
                     <${MUI.Stack} direction="row" spacing=${1} flexWrap="wrap">
                         <${MUI.Button} variant="outlined" startIcon=${html`<${MaterialIcon} name="manage_accounts" />`} onClick=${() => onNavigate('staff')}>
-                            Staff &amp; Roles
+                            Staff & Roles
                         </${MUI.Button}>
                         <${MUI.Button} variant="outlined" startIcon=${html`<${MaterialIcon} name="tune" />`} onClick=${() => onNavigate('settings')}>
-                            Config &amp; Branding
+                            Config & Branding
                         </${MUI.Button}>
                         <${MUI.Button} variant="contained" startIcon=${html`<${MaterialIcon} name="refresh" />`} onClick=${loadAll}>
                             Refresh
@@ -246,7 +246,7 @@ export function SuperAdminConsolePage({ notify, onNavigate }) {
 
             <${MUI.Card} sx=${{ p: 2, mb: 3 }}>
                 <${MUI.Typography} variant="subtitle2" sx=${{ mb: 1.5, fontWeight: 700, textTransform: 'uppercase', color: 'text.secondary' }}>
-                    System Operations &amp; Maintenance Jobs
+                    System Operations & Maintenance Jobs
                 </${MUI.Typography}>
                 <${MUI.Stack} direction="row" spacing=${1.5} flexWrap="wrap" useFlexGap>
                     <${MUI.Button} variant="contained" size="small" startIcon=${html`<${MaterialIcon} name="verified_user" />`} onClick=${() => runAction('/api/v1/compliance/scan/', 'Daily compliance scan')}>
@@ -281,7 +281,7 @@ export function SuperAdminConsolePage({ notify, onNavigate }) {
             ${tab === 0 && html`
                 <${MUI.Stack} spacing=${3}>
                     <${MUI.Box}>
-                        <${MUI.Typography} variant="h6" sx=${{ mb: 1 }}>Axes Brute-Force Attempts &amp; Lockouts</${MUI.Typography}>
+                        <${MUI.Typography} variant="h6" sx=${{ mb: 1 }}>Axes Brute-Force Attempts & Lockouts</${MUI.Typography}>
                         <${ResponsiveDataGrid}
                             loading=${loading}
                             rows=${sec.lockouts || []}
@@ -306,7 +306,7 @@ export function SuperAdminConsolePage({ notify, onNavigate }) {
                     </${MUI.Box}>
 
                     <${MUI.Box}>
-                        <${MUI.Typography} variant="h6" sx=${{ mb: 1 }}>Member &amp; Driver Operational Portal Accounts</${MUI.Typography}>
+                        <${MUI.Typography} variant="h6" sx=${{ mb: 1 }}>Member & Driver Operational Portal Accounts</${MUI.Typography}>
                         <${ResponsiveDataGrid}
                             loading=${loading}
                             rows=${portalUsers}
@@ -460,7 +460,7 @@ export function SuperAdminConsolePage({ notify, onNavigate }) {
                     </${MUI.Box}>
 
                     <${MUI.Box}>
-                        <${MUI.Typography} variant="h6" sx=${{ mb: 1 }}>Provider Connectivity Probes &amp; Health Log</${MUI.Typography}>
+                        <${MUI.Typography} variant="h6" sx=${{ mb: 1 }}>Provider Connectivity Probes & Health Log</${MUI.Typography}>
                         <${MUI.Stack} direction="row" spacing=${1} flexWrap="wrap" useFlexGap sx=${{ mb: 2 }}>
                             ${PROVIDERS.map(([code, label]) => html`
                                 <${MUI.Button}
@@ -824,7 +824,7 @@ export function SettingsCenterPage({ notify, onRefreshMe }) {
                 <${MUI.Stack} spacing=${3}>
                     <${MUI.Card} sx=${{ p: 3 }}>
                         <${MUI.Box} sx=${{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
-                            <${MUI.Typography} variant="h6">Company Profile &amp; Official Document Metadata</${MUI.Typography}>
+                            <${MUI.Typography} variant="h6">Company Profile & Official Document Metadata</${MUI.Typography}>
                             <${MUI.Chip} color="primary" label=${`Active Branding v${profile.current_version}`} />
                         </${MUI.Box}>
                         <${MUI.Grid} container spacing=${2}>
@@ -838,7 +838,7 @@ export function SettingsCenterPage({ notify, onRefreshMe }) {
                             <${MUI.Grid} size=${{ xs: 12, sm: 4 }}><${MUI.TextField} label="Telephone Numbers" fullWidth value=${profile.phone_numbers || ''} onChange=${(e) => setProfile({ ...profile, phone_numbers: e.target.value })} /></${MUI.Grid}>
                             <${MUI.Grid} size=${{ xs: 12, sm: 4 }}><${MUI.TextField} label="Official Email" fullWidth value=${profile.official_email || ''} onChange=${(e) => setProfile({ ...profile, official_email: e.target.value })} /></${MUI.Grid}>
                             <${MUI.Grid} size=${{ xs: 12, sm: 4 }}><${MUI.TextField} label="Website" fullWidth value=${profile.website || ''} onChange=${(e) => setProfile({ ...profile, website: e.target.value })} /></${MUI.Grid}>
-                            <${MUI.Grid} size=${{ xs: 12, sm: 6 }}><${MUI.TextField} label="Public QR Verification Base URL (HTTPS)" fullWidth value=${profile.public_base_url || ''} onChange=${(e) => setProfile({ ...profile, public_base_url: e.target.value })} /></${MUI.Grid}>
+                            <${MUI.Grid} size=${{ xs: 12, sm: 6 }}><${MUI.TextField} label="Public QR Verification Base URL (Optional)" placeholder="Leave blank to use internal endpoint" fullWidth value=${profile.public_base_url || ''} onChange=${(e) => setProfile({ ...profile, public_base_url: e.target.value })} /></${MUI.Grid}>
                             <${MUI.Grid} size=${{ xs: 6, sm: 3 }}><${MUI.TextField} label="Primary Brand Color" fullWidth value=${profile.primary_color || '#10315C'} onChange=${(e) => setProfile({ ...profile, primary_color: e.target.value })} /></${MUI.Grid}>
                             <${MUI.Grid} size=${{ xs: 6, sm: 3 }}><${MUI.TextField} label="Secondary Accent Color" fullWidth value=${profile.secondary_color || '#FF8A00'} onChange=${(e) => setProfile({ ...profile, secondary_color: e.target.value })} /></${MUI.Grid}>
                             <${MUI.Grid} size=${{ xs: 12 }}><${MUI.TextField} label="Document Footer Text" fullWidth value=${profile.footer_text || ''} onChange=${(e) => setProfile({ ...profile, footer_text: e.target.value })} /></${MUI.Grid}>
@@ -867,7 +867,7 @@ export function SettingsCenterPage({ notify, onRefreshMe }) {
                                             <img src=${profile.monochrome_logo_url} alt="Monochrome Logo" style=${{ maxHeight: 72, maxWidth: 180, objectFit: 'contain', border: '1px solid #E2E8F0', padding: 4, borderRadius: 8 }} />
                                             <${MUI.Button} size="small" color="error" variant="outlined" onClick=${() => handleDeleteLogo('monochrome')}>Remove Monochrome</${MUI.Button}>
                                         </${MUI.Box}>
-                                    ` : html`<${MUI.Typography} variant="caption" color="text.secondary" display="block" sx=${{ mb: 1.5 }}>Optional monochrome emblem for thermal or B&amp;W prints.</${MUI.Typography}>`}
+                                    ` : html`<${MUI.Typography} variant="caption" color="text.secondary" display="block" sx=${{ mb: 1.5 }}>Optional monochrome emblem for thermal or B&W prints.</${MUI.Typography}>`}
                                     <input type="file" accept=".png,.jpg,.jpeg" onChange=${(e) => setMonoFile(e.target.files?.[0] || null)} />
                                 </${MUI.Paper}>
                             </${MUI.Grid}>
@@ -876,7 +876,7 @@ export function SettingsCenterPage({ notify, onRefreshMe }) {
                         <${MUI.Stack} direction=${{ xs: 'column', sm: 'row' }} spacing=${2} sx=${{ mt: 3, alignItems: 'center' }}>
                             <${MUI.TextField} label="Branding Change Notes (Audit Trail)" fullWidth value=${changeNotes} onChange=${(e) => setChangeNotes(e.target.value)} />
                             <${MUI.Button} variant="contained" size="large" onClick=${handleSaveBranding} sx=${{ whiteSpace: 'nowrap' }}>
-                                Save Profile &amp; Publish Branding
+                                Save Profile & Publish Branding
                             </${MUI.Button}>
                         </${MUI.Stack}>
                     </${MUI.Card}>
@@ -911,10 +911,10 @@ export function SettingsCenterPage({ notify, onRefreshMe }) {
                             >
                                 <${MUI.MenuItem} value="">All Categories</${MUI.MenuItem}>
                                 <${MUI.MenuItem} value="INTEGRATIONS">External Integrations</${MUI.MenuItem}>
-                                <${MUI.MenuItem} value="BUSINESS">Business &amp; Operations</${MUI.MenuItem}>
+                                <${MUI.MenuItem} value="BUSINESS">Business & Operations</${MUI.MenuItem}>
                                 <${MUI.MenuItem} value="APPLICATION">Application Customisation</${MUI.MenuItem}>
                                 <${MUI.MenuItem} value="SECURITY">Security Policies</${MUI.MenuItem}>
-                                <${MUI.MenuItem} value="SYSTEM">System &amp; Runtime</${MUI.MenuItem}>
+                                <${MUI.MenuItem} value="SYSTEM">System & Runtime</${MUI.MenuItem}>
                             </${MUI.TextField}>
                             <${MUI.Button} size="small" variant="outlined" startIcon=${html`<${MaterialIcon} name="download" />`} onClick=${handleExportConfigs}>
                                 Export JSON
@@ -1023,7 +1023,7 @@ export function SettingsCenterPage({ notify, onRefreshMe }) {
                     `}
                     ${configHistory.length > 0 && html`
                         <${MUI.Box}>
-                            <${MUI.Typography} variant="subtitle2" sx=${{ mb: 1 }}>Version History &amp; Rollback</${MUI.Typography}>
+                            <${MUI.Typography} variant="subtitle2" sx=${{ mb: 1 }}>Version History & Rollback</${MUI.Typography}>
                             <${ResponsiveDataGrid}
                                 rows=${configHistory}
                                 columns=${[
