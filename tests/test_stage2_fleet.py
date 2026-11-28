@@ -230,3 +230,270 @@ class TestDriverAndRouteAssignments:
         assert route_alloc.vehicle == v
         assert route_alloc.route == route
         assert v.route_allocations.first().route.route_code == 'NHT-TEST-01'
+
+
+@pytest.mark.django_db
+class TestDriverRegistrationAllocationAndAdminEdit:
+    def test_register_driver_with_license_details_vehicle_and_portal(self, client, sample_member, sacco_admin):
+        v1 = Vehicle.objects.create(
+            registration_number='KDG 101A',
+            chassis_number='CHS-KDG101A',
+            engine_number='ENG-KDG101A',
+            make='Isuzu',
+            model='FVZ',
+            year_of_manufacture=2023,
+            category=VehicleCategory.HEAVY_TRUCK,
+            carrying_capacity=20,
+            current_owner=sample_member,
+            status=VehicleStatus.ACTIVE,
+        )
+        client.force_login(sacco_admin)
+        today = date.today()
+        res = client.post('/api/v1/drivers/', {
+            'full_name': 'Hassan Abdullahi',
+            'national_id': '22334455',
+            'phone_number': '+254722334455',
+            'email': 'hassan.driver@nhttransporters.co.ke',
+            'driving_license_number': 'dl-ntsa-7788',
+            'dl_class': 'ce',
+            'dl_issue_date': str(today - timedelta(days=30)),
+            'dl_expiry_date': str(today + timedelta(days=365)),
+            'psv_badge_number': 'COM-2026-7788',
+            'psv_badge_expiry': str(today + timedelta(days=300)),
+            'emergency_contact_name': 'Halima Abdullahi',
+            'emergency_contact_phone': '+254722334456',
+            'status': DriverStatus.ACTIVE,
+            'vehicle': str(v1.pk),
+            'create_portal_account': True,
+            'portal_username': 'hassan_drv',
+        }, content_type='application/json')
+
+        assert res.status_code == 201
+        data = res.json()
+        assert data['driving_license_number'] == 'DL-NTSA-7788'
+        assert data['dl_class'] == 'CE'
+        assert data['dl_issue_date'] == str(today - timedelta(days=30))
+        assert data['dl_expiry_date'] == str(today + timedelta(days=365))
+        assert data['psv_badge_number'] == 'COM-2026-7788'
+        assert data['current_vehicle'] == str(v1.pk)
+        assert data['current_vehicle_plate'] == 'KDG 101A'
+        assert data['has_portal_account'] is True
+        assert data['username'] == 'hassan_drv'
+
+        creds = data['provisioned_portal_credentials']
+        assert creds['username'] == 'hassan_drv'
+        assert creds['generated'] is True
+
+        driver = Driver.objects.get(pk=data['id'])
+        assert driver.user.role == UserRole.DRIVER
+        assert driver.user.is_staff is False
+        assert DriverAssignment.objects.filter(driver=driver, vehicle=v1, is_current=True).exists()
+
+        # Newly provisioned driver can log in, change temporary password, and view allocated vehicle & license in Driver Portal
+        client.logout()
+        login_res = client.post('/api/v1/auth/login/', {
+            'username': 'hassan_drv',
+            'password': creds['temporary_password'],
+        }, content_type='application/json')
+        assert login_res.status_code == 200
+        assert login_res.json()['user']['must_change_password'] is True
+
+        pw_change = client.post('/api/v1/auth/password-change/', {
+            'old_password': creds['temporary_password'],
+            'new_password': 'DriverNewStrong!2026',
+        }, content_type='application/json')
+        assert pw_change.status_code == 200
+
+        portal_res = client.get('/api/v1/driver/portal/')
+        assert portal_res.status_code == 200
+        portal_data = portal_res.json()
+        assert portal_data['driver']['dl_class'] == 'CE'
+        assert portal_data['assigned_vehicles'][0]['registration_number'] == 'KDG 101A'
+
+    def test_register_driver_rejects_expiry_before_issue_date(self, client, sacco_admin):
+        client.force_login(sacco_admin)
+        today = date.today()
+        before = Driver.objects.count()
+        res = client.post('/api/v1/drivers/', {
+            'full_name': 'Invalid Dates Driver',
+            'national_id': '22334499',
+            'phone_number': '+254722334499',
+            'driving_license_number': 'DL-BAD-01',
+            'dl_issue_date': str(today),
+            'dl_expiry_date': str(today - timedelta(days=5)),
+            'emergency_contact_name': 'Kin',
+            'emergency_contact_phone': '+254722334498',
+        }, content_type='application/json')
+        assert res.status_code == 400
+        assert Driver.objects.count() == before
+
+    def test_admin_can_edit_driver_details_and_vehicle_allocation(self, client, sample_member, sacco_admin):
+        v1 = Vehicle.objects.create(
+            registration_number='KDH 201B',
+            chassis_number='CHS-KDH201B',
+            engine_number='ENG-KDH201B',
+            make='Mercedes-Benz',
+            model='Actros',
+            year_of_manufacture=2023,
+            category=VehicleCategory.PRIME_MOVER,
+            carrying_capacity=28,
+            current_owner=sample_member,
+            status=VehicleStatus.ACTIVE,
+        )
+        v2 = Vehicle.objects.create(
+            registration_number='KDH 202B',
+            chassis_number='CHS-KDH202B',
+            engine_number='ENG-KDH202B',
+            make='Scania',
+            model='R450',
+            year_of_manufacture=2024,
+            category=VehicleCategory.PRIME_MOVER,
+            carrying_capacity=30,
+            current_owner=sample_member,
+            status=VehicleStatus.ACTIVE,
+        )
+        client.force_login(sacco_admin)
+        today = date.today()
+        create_res = client.post('/api/v1/drivers/', {
+            'full_name': 'Mohamed Noor',
+            'national_id': '33445511',
+            'phone_number': '+254733445511',
+            'email': 'mohamed.noor@nhttransporters.co.ke',
+            'driving_license_number': 'DL-NTSA-8801',
+            'dl_class': 'C1',
+            'dl_issue_date': str(today - timedelta(days=60)),
+            'dl_expiry_date': str(today + timedelta(days=180)),
+            'emergency_contact_name': 'Faduma Noor',
+            'emergency_contact_phone': '+254733445512',
+            'vehicle': str(v1.pk),
+            'create_portal_account': True,
+        }, content_type='application/json')
+        assert create_res.status_code == 201
+        drv_id = create_res.json()['id']
+
+        # Admin edits driver personal, DL details, status, and reassigns vehicle to v2
+        patch_res = client.patch(f'/api/v1/drivers/{drv_id}/', {
+            'full_name': 'Mohamed Noor Aden',
+            'phone_number': '+254733445599',
+            'driving_license_number': 'dl-ntsa-8801-u',
+            'dl_class': 'bce',
+            'dl_expiry_date': str(today + timedelta(days=730)),
+            'psv_badge_number': 'COM-2026-8801',
+            'status': DriverStatus.ON_LEAVE,
+            'vehicle': str(v2.pk),
+        }, content_type='application/json')
+        assert patch_res.status_code == 200
+        updated = patch_res.json()
+        assert updated['full_name'] == 'Mohamed Noor Aden'
+        assert updated['phone_number'] == '+254733445599'
+        assert updated['driving_license_number'] == 'DL-NTSA-8801-U'
+        assert updated['dl_class'] == 'BCE'
+        assert updated['dl_expiry_date'] == str(today + timedelta(days=730))
+        assert updated['psv_badge_number'] == 'COM-2026-8801'
+        assert updated['status'] == DriverStatus.ON_LEAVE
+        assert updated['current_vehicle'] == str(v2.pk)
+        assert updated['current_vehicle_plate'] == 'KDH 202B'
+
+        driver = Driver.objects.get(pk=drv_id)
+        assert driver.user.first_name == 'Mohamed'
+        assert driver.user.last_name == 'Noor Aden'
+        assert DriverAssignment.objects.filter(driver=driver, vehicle=v1, is_current=False).exists()
+        assert DriverAssignment.objects.filter(driver=driver, vehicle=v2, is_current=True).exists()
+
+        # Admin can also clear vehicle allocation via empty value
+        clear_res = client.patch(f'/api/v1/drivers/{drv_id}/', {
+            'vehicle': '',
+        }, content_type='application/json')
+        assert clear_res.status_code == 200
+        assert clear_res.json()['current_vehicle'] is None
+        assert clear_res.json()['current_vehicle_plate'] == ''
+        assert not DriverAssignment.objects.filter(driver=driver, is_current=True).exists()
+
+    def test_driver_registration_and_edit_rbac_and_portal_provisioning(self, client, sample_member, sacco_admin):
+        v = Vehicle.objects.create(
+            registration_number='KDJ 303C',
+            chassis_number='CHS-KDJ303C',
+            engine_number='ENG-KDJ303C',
+            make='Volvo',
+            model='FH16',
+            year_of_manufacture=2024,
+            category=VehicleCategory.HEAVY_TRUCK,
+            carrying_capacity=25,
+            current_owner=sample_member,
+            status=VehicleStatus.ACTIVE,
+        )
+        today = date.today()
+        driver_user = User.objects.create_user(
+            username='drv_rbac_user',
+            email='drv_rbac@nhttransporters.co.ke',
+            password='DriverPassword123!',
+            role=UserRole.DRIVER,
+        )
+        auditor = User.objects.create_user(
+            username='aud_rbac_user',
+            email='aud_rbac@nhttransporters.co.ke',
+            password='AuditorPassword123!',
+            role=UserRole.AUDITOR,
+        )
+        compliance = User.objects.create_user(
+            username='comp_rbac_user',
+            email='comp_rbac@nhttransporters.co.ke',
+            password='CompliancePassword123!',
+            role=UserRole.COMPLIANCE_OFFICER,
+        )
+        driver = Driver.objects.create(
+            user=driver_user,
+            full_name='John Kamau',
+            national_id='44556611',
+            phone_number='+254744556611',
+            driving_license_number='DL-RBAC-01',
+            dl_expiry_date=today + timedelta(days=100),
+            emergency_contact_name='Mary Kamau',
+            emergency_contact_phone='+254744556612',
+        )
+
+        # Drivers, Members, and Auditors cannot register or edit drivers
+        for non_admin in (driver_user, sample_member.user, auditor):
+            client.force_login(non_admin)
+            assert client.post('/api/v1/drivers/', {
+                'full_name': 'Unauthorized Driver',
+                'national_id': '00001111',
+                'phone_number': '+254700001111',
+                'driving_license_number': 'DL-UNAUTH',
+                'dl_expiry_date': str(today + timedelta(days=50)),
+                'emergency_contact_name': 'Kin',
+                'emergency_contact_phone': '+254700001112',
+            }, content_type='application/json').status_code == 403
+            assert client.patch(f'/api/v1/drivers/{driver.pk}/', {
+                'full_name': 'Tampered Name',
+            }, content_type='application/json').status_code == 403
+
+        # Compliance Officer cannot allocate vehicles through driver edit, but can update DL details
+        client.force_login(compliance)
+        assert client.patch(f'/api/v1/drivers/{driver.pk}/', {
+            'vehicle': str(v.pk),
+        }, content_type='application/json').status_code == 403
+        assert client.patch(f'/api/v1/drivers/{driver.pk}/', {
+            'dl_class': 'CE',
+        }, content_type='application/json').status_code == 200
+
+        # Admin provisions portal account for an unlinked driver
+        client.force_login(sacco_admin)
+        unlinked = Driver.objects.create(
+            full_name='Peter Wanjala',
+            national_id='44556622',
+            phone_number='+254744556622',
+            driving_license_number='DL-UNLINKED-02',
+            dl_expiry_date=today + timedelta(days=200),
+            emergency_contact_name='Jane Wanjala',
+            emergency_contact_phone='+254744556623',
+        )
+        prov_res = client.post(f'/api/v1/drivers/{unlinked.pk}/provision_portal_account/', {
+            'email': 'peter.wanjala@nhttransporters.co.ke',
+            'must_change_password': True,
+        }, content_type='application/json')
+        assert prov_res.status_code == 200
+        assert prov_res.json()['has_portal_account'] is True
+        unlinked.refresh_from_db()
+        assert unlinked.user is not None
+        assert unlinked.user.role == UserRole.DRIVER

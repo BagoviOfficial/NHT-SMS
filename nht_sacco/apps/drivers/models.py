@@ -23,10 +23,19 @@ class Driver(models.Model):
     full_name = models.CharField(_('Full Name'), max_length=150)
     national_id = models.CharField(_('National ID'), max_length=30, unique=True, db_index=True)
     phone_number = models.CharField(_('Phone Number'), max_length=20, unique=True)
+    email = models.EmailField(_('Email Address'), blank=True, default='')
     driving_license_number = models.CharField(_('Driving License Number'), max_length=30, unique=True)
+    dl_class = models.CharField(
+        _('Driving License Class(es)'),
+        max_length=50,
+        blank=True,
+        default='',
+        help_text=_('e.g. BCE, CE, C1, D1')
+    )
+    dl_issue_date = models.DateField(_('DL Issue Date'), null=True, blank=True)
     dl_expiry_date = models.DateField(_('DL Expiry Date'), db_index=True)
-    psv_badge_number = models.CharField(_('NTSA PSV Badge Number'), max_length=30, blank=True)
-    psv_badge_expiry = models.DateField(_('PSV Badge Expiry Date'), null=True, blank=True)
+    psv_badge_number = models.CharField(_('NTSA Commercial Endorsement / Badge Number'), max_length=30, blank=True)
+    psv_badge_expiry = models.DateField(_('Endorsement / Badge Expiry Date'), null=True, blank=True)
     emergency_contact_name = models.CharField(_('Emergency Contact Person'), max_length=150)
     emergency_contact_phone = models.CharField(_('Emergency Contact Phone'), max_length=20)
     status = models.CharField(

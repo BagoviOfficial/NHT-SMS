@@ -7,11 +7,10 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Count, Q
 from django.middleware.csrf import get_token
-from django.shortcuts import render
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -21,20 +20,22 @@ from rest_framework.views import APIView
 
 from nht_sacco.apps.accounts.models import User, UserRole, STAFF_ROLES, LoginHistory
 from nht_sacco.apps.accounts.permissions import (
+    FINANCE_CHECKER_ROLES,
     IsSystemAdmin,
     IsManagementStaff,
     MANAGEMENT_ROLES,
     is_super_admin,
 )
+from nht_sacco.apps.accounts.services import AccountSecurityService
 from nht_sacco.apps.audit.models import AuditLog, AuditAction, AuditOutcome
-from nht_sacco.apps.integrations.services import ConfigurationService
 from nht_sacco.apps.reports.services import ExecutiveDashboardMetrics
 from nht_sacco.apps.vehicles.models import Vehicle, VehicleCategory
+from nht_sacco.config.mui import get_active_branding_payload, render_mui_app
 from .serializers import UserManagementSerializer, LoginHistorySerializer
 
 
 ROLE_CAPABILITIES = {
-    UserRole.SUPER_ADMIN: ['dashboard', 'members', 'vehicles', 'compliance-cards', 'drivers', 'routes', 'documents', 'compliance', 'renewals', 'billing', 'payments', 'reconciliation', 'accounting', 'maintenance', 'incidents', 'governance', 'notifications', 'reports', 'staff', 'users', 'settings', 'audit'],
+    UserRole.SUPER_ADMIN: ['superadmin', 'dashboard', 'members', 'vehicles', 'compliance-cards', 'drivers', 'routes', 'documents', 'compliance', 'renewals', 'billing', 'payments', 'reconciliation', 'accounting', 'maintenance', 'incidents', 'governance', 'notifications', 'reports', 'staff', 'users', 'settings', 'audit'],
     UserRole.CHAIRMAN: ['dashboard', 'members', 'vehicles', 'compliance-cards', 'drivers', 'routes', 'documents', 'compliance', 'renewals', 'billing', 'payments', 'reconciliation', 'accounting', 'maintenance', 'incidents', 'governance', 'notifications', 'reports', 'settings', 'audit'],
     UserRole.SECRETARY: ['dashboard', 'members', 'vehicles', 'compliance-cards', 'drivers', 'routes', 'documents', 'incidents', 'governance', 'notifications'],
     UserRole.FIELD_OFFICER: ['dashboard', 'members', 'vehicles', 'drivers', 'routes', 'maintenance', 'incidents'],
@@ -48,26 +49,9 @@ ROLE_CAPABILITIES = {
 }
 
 
-def _active_branding_payload():
-    from nht_sacco.apps.integrations.models import CompanyProfile
-    profile = CompanyProfile.get_active()
-    logo_url = '/settings/api/v1/company-profile/logo-asset/' if (profile.logo and profile.logo.name) else ''
-    return {
-        'sacco_name': profile.trading_name or ConfigurationService.get_str('business.sacco_name', 'Northern Highways Transporters SACCO'),
-        'legal_name': profile.legal_name,
-        'short_name': profile.short_name or 'NHT-SMS',
-        'primary_color': profile.primary_color or ConfigurationService.get_str('app.brand_primary_color', '#10315C'),
-        'secondary_color': profile.secondary_color or ConfigurationService.get_str('app.brand_secondary_color', '#FF8A00'),
-        'currency': ConfigurationService.get_str('business.currency', 'KES'),
-        'logo_url': logo_url,
-        'branding_version': profile.current_version,
-        'footer_text': profile.footer_text,
-    }
-
-
 def _build_me_payload(user, request=None):
     csrf_token = get_token(request) if request is not None else ''
-    branding = _active_branding_payload()
+    branding = get_active_branding_payload()
     if not user or not user.is_authenticated:
         return {
             'authenticated': False,
@@ -112,18 +96,16 @@ def _build_me_payload(user, request=None):
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 class SpaIndexView(View):
     """
-    Serves the CDN-based Material UI Single Page Application shell at /app/.
+    Serves the CDN-based Material UI Single Page Application shell at /app/ and /admin/.
     """
+    is_admin_portal = False
+
     def get(self, request, *args, **kwargs):
-        branding = _active_branding_payload()
-        context = {
-            'sacco_name': branding['sacco_name'],
-            'primary_color': branding['primary_color'],
-            'secondary_color': branding['secondary_color'],
-            'currency': branding['currency'],
-            'logo_url': branding['logo_url'],
-        }
-        return render(request, 'spa/index.html', context)
+        return render_mui_app(
+            request,
+            is_admin_portal=bool(self.is_admin_portal),
+            page_title='Admin Dashboard' if self.is_admin_portal else 'Workspace',
+        )
 
 
 @method_decorator(ensure_csrf_cookie, name='dispatch')
@@ -134,6 +116,7 @@ class AuthMeAPIView(APIView):
         return Response(_build_me_payload(request.user, request=request), status=status.HTTP_200_OK)
 
 
+@method_decorator(csrf_protect, name='dispatch')
 class AuthLoginAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -145,25 +128,12 @@ class AuthLoginAPIView(APIView):
 
         user = authenticate(request=request, username=username, password=password)
         if user is None:
-            LoginHistory.objects.create(
-                username_attempted=username,
-                ip_address=request.META.get('REMOTE_ADDR'),
-                user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
-                status=LoginHistory.Status.FAILED,
-            )
             return Response({'error': 'Invalid credentials or account locked.'}, status=status.HTTP_401_UNAUTHORIZED)
 
         if not user.is_active:
             return Response({'error': 'Account is deactivated. Contact SACCO Admin.'}, status=status.HTTP_403_FORBIDDEN)
 
         login(request, user)
-        LoginHistory.objects.create(
-            user=user,
-            username_attempted=username,
-            ip_address=request.META.get('REMOTE_ADDR'),
-            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
-            status=LoginHistory.Status.SUCCESS,
-        )
         return Response(_build_me_payload(user, request=request), status=status.HTTP_200_OK)
 
 
@@ -198,15 +168,12 @@ class AuthPasswordChangeAPIView(APIView):
             return Response({'error': ' '.join(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
 
         request.user.set_password(new_password)
-        request.user.must_change_password = False
-        request.user.save(update_fields=['password', 'must_change_password'])
+        request.user.save(update_fields=['password'])
         update_session_auth_hash(request, request.user)
-        AuditLog.log_action(
-            actor=request.user,
-            action=AuditAction.UPDATE,
-            entity_type='UserPassword',
-            entity_id=str(request.user.pk),
-            outcome=AuditOutcome.SUCCESS,
+        AccountSecurityService.finalize_password_change(
+            user=request.user,
+            current_session_key=request.session.session_key,
+            ip_address=request.META.get('REMOTE_ADDR'),
             notes='Password updated via SPA',
         )
         return Response({'success': True, 'message': 'Password changed successfully.'})
@@ -253,12 +220,6 @@ class AuthMfaSetupAPIView(APIView):
             notes='Enabled TOTP 2FA via SPA',
         )
         return Response({'enabled': True, 'message': 'Two-factor authentication activated.'})
-
-
-def _other_active_super_admin_exists(exclude_pk):
-    return User.objects.filter(is_active=True).filter(
-        Q(role=UserRole.SUPER_ADMIN) | Q(is_superuser=True)
-    ).exclude(pk=exclude_pk).exists()
 
 
 class UserManagementViewSet(viewsets.ModelViewSet):
@@ -321,7 +282,7 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         user_obj = self.get_object()
         if user_obj.pk == request.user.pk:
             return Response({'error': 'You cannot delete your own active account.'}, status=status.HTTP_400_BAD_REQUEST)
-        if (user_obj.role == UserRole.SUPER_ADMIN or user_obj.is_superuser) and not _other_active_super_admin_exists(user_obj.pk):
+        if (user_obj.role == UserRole.SUPER_ADMIN or user_obj.is_superuser) and not AccountSecurityService.other_active_super_admin_exists(user_obj.pk):
             return Response(
                 {'error': 'Cannot delete the last active Super Administrator.'},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -355,7 +316,7 @@ class UserManagementViewSet(viewsets.ModelViewSet):
 
         was_active_super = user_obj.is_active and (user_obj.role == UserRole.SUPER_ADMIN or user_obj.is_superuser)
         if was_active_super and new_role != UserRole.SUPER_ADMIN:
-            if not _other_active_super_admin_exists(user_obj.pk):
+            if not AccountSecurityService.other_active_super_admin_exists(user_obj.pk):
                 return Response(
                     {'error': 'Cannot demote the last active Super Administrator.'},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -383,7 +344,7 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         if user_obj.pk == request.user.pk:
             return Response({'error': 'You cannot deactivate your own active session.'}, status=status.HTTP_400_BAD_REQUEST)
         if user_obj.is_active and (user_obj.role == UserRole.SUPER_ADMIN or user_obj.is_superuser):
-            if not _other_active_super_admin_exists(user_obj.pk):
+            if not AccountSecurityService.other_active_super_admin_exists(user_obj.pk):
                 return Response(
                     {'error': 'Cannot deactivate the last active Super Administrator.'},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -419,7 +380,7 @@ class UserManagementViewSet(viewsets.ModelViewSet):
                 form.save(
                     request=request,
                     use_https=request.is_secure(),
-                    email_template_name='accounts/password_reset_email.html' if False else 'registration/password_reset_email.html',
+                    email_template_name='registration/password_reset_email.html',
                 )
                 email_sent = True
 
@@ -533,9 +494,7 @@ class DashboardAPIView(APIView):
         ]
 
         # Hide exact financial totals from non-finance/non-oversight operational staff
-        can_see_finance = request.user.is_superuser or request.user.role in {
-            UserRole.SUPER_ADMIN, UserRole.CHAIRMAN, UserRole.TREASURER, UserRole.ACCOUNTANT, UserRole.AUDITOR
-        }
+        can_see_finance = request.user.is_superuser or request.user.role in (FINANCE_CHECKER_ROLES | {UserRole.AUDITOR})
         financials = {
             'total_invoiced': str(kpis['total_invoiced']) if can_see_finance else None,
             'total_collected': str(kpis['total_collected']) if can_see_finance else None,
@@ -585,3 +544,162 @@ class DashboardAPIView(APIView):
             'recent_transactions': recent_transactions,
             'recent_audit': recent_audit,
         })
+
+
+class SuperAdminOverviewAPIView(APIView):
+    """
+    Centralized Super Administrator control-plane overview replacing Django Core Admin.
+    Provides live user/session/lockout/registry/configuration telemetry exclusively to SUPER_ADMIN.
+    """
+    permission_classes = [IsSystemAdmin]
+
+    def get(self, request):
+        from django.contrib.sessions.models import Session
+        from axes.models import AccessAttempt
+        from nht_sacco.apps.billing.models import ServiceItem
+        from nht_sacco.apps.documents.models import DocumentType
+        from nht_sacco.apps.integrations.models import (
+            BrandingVersion,
+            CompanyProfile,
+            ConfigurationChangeRequest,
+            ChangeRequestStatus,
+            IntegrationHealthLog,
+            NumberSequence,
+            SystemConfiguration,
+        )
+        from nht_sacco.apps.notifications.models import NotificationTemplate
+
+        now = timezone.now()
+        staff_qs = User.objects.filter(Q(role__in=STAFF_ROLES) | Q(is_superuser=True) | Q(is_staff=True))
+        operational_qs = User.objects.filter(role__in=[UserRole.MEMBER, UserRole.DRIVER], is_superuser=False)
+
+        attempts = list(AccessAttempt.objects.order_by('-attempt_time')[:50])
+        lockouts = [
+            {
+                'id': str(a.pk),
+                'username': a.username or '—',
+                'ip_address': a.ip_address or '—',
+                'failures': a.failures_since_start,
+                'path_info': a.path_info or '',
+                'attempt_time': a.attempt_time.isoformat() if a.attempt_time else None,
+            }
+            for a in attempts
+        ]
+
+        active_sessions = Session.objects.filter(expire_date__gte=now).count()
+        profile = CompanyProfile.get_active()
+
+        recent_health = [
+            {
+                'id': str(h.pk),
+                'service_name': h.service_name,
+                'status': h.status,
+                'response_time_ms': h.response_time_ms,
+                'error_message': h.error_message,
+                'tested_at': h.tested_at.isoformat(),
+            }
+            for h in IntegrationHealthLog.objects.order_by('-tested_at')[:15]
+        ]
+
+        return Response({
+            'users': {
+                'total': User.objects.count(),
+                'staff_total': staff_qs.count(),
+                'staff_active': staff_qs.filter(is_active=True).count(),
+                'super_admins': User.objects.filter(is_active=True).filter(Q(role=UserRole.SUPER_ADMIN) | Q(is_superuser=True)).count(),
+                'operational_total': operational_qs.count(),
+                'operational_active': operational_qs.filter(is_active=True).count(),
+                'must_change_password': User.objects.filter(must_change_password=True).count(),
+            },
+            'security': {
+                'active_sessions': active_sessions,
+                'axes_attempts_count': AccessAttempt.objects.count(),
+                'lockouts': lockouts,
+                'audit_logs_total': AuditLog.objects.count(),
+            },
+            'registries': {
+                'document_types': DocumentType.objects.count(),
+                'service_items': ServiceItem.objects.count(),
+                'notification_templates': NotificationTemplate.objects.count(),
+                'number_sequences': NumberSequence.objects.count(),
+                'system_configurations': SystemConfiguration.objects.count(),
+                'pending_change_requests': ConfigurationChangeRequest.objects.filter(status=ChangeRequestStatus.PENDING).count(),
+                'branding_version': profile.current_version,
+                'branding_versions_total': BrandingVersion.objects.filter(company_profile=profile).count(),
+            },
+            'recent_health_logs': recent_health,
+        })
+
+
+class SuperAdminClearLockoutsAPIView(APIView):
+    """
+    Clears django-axes brute-force lockout records (all or by username/ip).
+    """
+    permission_classes = [IsSystemAdmin]
+
+    def post(self, request):
+        from axes.models import AccessAttempt
+        username = (request.data.get('username') or '').strip()
+        ip_address = (request.data.get('ip_address') or '').strip()
+        qs = AccessAttempt.objects.all()
+        if username:
+            qs = qs.filter(username=username)
+        if ip_address:
+            qs = qs.filter(ip_address=ip_address)
+        deleted_count, _ = qs.delete()
+        AuditLog.log_action(
+            actor=request.user,
+            action=AuditAction.UPDATE,
+            entity_type='AxesLockout',
+            entity_id=username or ip_address or 'ALL',
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Cleared {deleted_count} Axes lockout record(s) via MUI Admin Dashboard",
+            ip_address=request.META.get('REMOTE_ADDR'),
+        )
+        return Response({'success': True, 'cleared': deleted_count})
+
+
+class SuperAdminTerminateSessionsAPIView(APIView):
+    """
+    Terminates all other active sessions (or sessions for a specific user_id), keeping current admin session intact.
+    """
+    permission_classes = [IsSystemAdmin]
+
+    def post(self, request):
+        target_user_id = str(request.data.get('user_id') or '').strip() or None
+        terminated = AccountSecurityService.terminate_sessions(
+            target_user_id=target_user_id,
+            exclude_session_key=request.session.session_key,
+        )
+
+        AuditLog.log_action(
+            actor=request.user,
+            action=AuditAction.SYSTEM,
+            entity_type='UserSession',
+            entity_id=target_user_id or 'ALL_OTHERS',
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Terminated {terminated} active session(s) via MUI Admin Dashboard",
+            ip_address=request.META.get('REMOTE_ADDR'),
+        )
+        return Response({'success': True, 'terminated': terminated})
+
+
+class SuperAdminRunInvoiceRemindersAPIView(APIView):
+    """
+    Triggers overdue invoice reminder scan directly from MUI Admin Dashboard.
+    """
+    permission_classes = [IsSystemAdmin]
+
+    def post(self, request):
+        from nht_sacco.apps.billing.tasks import task_overdue_invoice_reminders
+        result = task_overdue_invoice_reminders()
+        AuditLog.log_action(
+            actor=request.user,
+            action=AuditAction.SYSTEM,
+            entity_type='BillingReminders',
+            entity_id='MANUAL_TRIGGER',
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Triggered overdue invoice reminders: {result}",
+            ip_address=request.META.get('REMOTE_ADDR'),
+        )
+        return Response({'success': True, 'result': result})

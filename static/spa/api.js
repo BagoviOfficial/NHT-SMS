@@ -1,7 +1,10 @@
-export const React = window.React;
-export const ReactDOM = window.ReactDOM;
-export const MUI = window.MaterialUI;
-export const html = window.htm.bind(React.createElement);
+import * as React from 'react';
+import { createRoot } from 'react-dom/client';
+import * as MUI from '@mui/material';
+import htm from 'htm';
+
+export { React, createRoot, MUI };
+export const html = htm.bind(React.createElement);
 
 let cachedCsrfToken = '';
 
@@ -17,22 +20,26 @@ export function getCookie(name) {
 }
 
 export function getCsrfToken() {
-    if (cachedCsrfToken) return cachedCsrfToken;
     const cookieToken = getCookie('csrftoken');
     if (cookieToken) return cookieToken;
+    if (cachedCsrfToken) return cachedCsrfToken;
     const meta = document.querySelector('meta[name="csrf-token"]');
-    return meta ? (meta.getAttribute('content') || '') : '';
+    if (meta && meta.getAttribute('content')) {
+        return meta.getAttribute('content');
+    }
+    const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    return input ? (input.value || '') : '';
 }
 
 export async function apiFetch(url, options = {}) {
     const opts = {
         credentials: 'same-origin',
-        headers: { ...(options.headers || {}) },
         ...options,
+        headers: { ...(options.headers || {}) },
     };
 
     const method = (opts.method || 'GET').toUpperCase();
-    if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
         opts.headers['X-CSRFToken'] = getCsrfToken();
     }
 
@@ -47,6 +54,8 @@ export async function apiFetch(url, options = {}) {
 
     if (data && typeof data === 'object' && data.csrf_token) {
         cachedCsrfToken = data.csrf_token;
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta) meta.setAttribute('content', data.csrf_token);
     }
 
     if (!res.ok) {

@@ -90,7 +90,7 @@ export function AccountingPage({ notify }) {
 
             ${tab === 0 && reports && html`
                 <${MUI.Grid} container spacing=${2.5}>
-                    <${MUI.Grid} item xs=${12} md=${6}>
+                    <${MUI.Grid} size=${{ xs: 12, md: 6 }}>
                         <${MUI.Card} sx=${{ p: 2.5 }}>
                             <${MUI.Box} sx=${{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                                 <${MUI.Typography} variant="h6">Income & Expenditure</${MUI.Typography}>
@@ -100,7 +100,7 @@ export function AccountingPage({ notify }) {
                             <${MUI.Typography} variant="body2">Total Expenses: <strong>${formatCurrency(reports.income_and_expenditure.total_expenses)}</strong></${MUI.Typography}>
                         </${MUI.Card}>
                     </${MUI.Grid}>
-                    <${MUI.Grid} item xs=${12} md=${6}>
+                    <${MUI.Grid} size=${{ xs: 12, md: 6 }}>
                         <${MUI.Card} sx=${{ p: 2.5 }}>
                             <${MUI.Box} sx=${{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                                 <${MUI.Typography} variant="h6">Balance Sheet</${MUI.Typography}>
@@ -110,14 +110,14 @@ export function AccountingPage({ notify }) {
                             <${MUI.Typography} variant="body2">Liabilities + Equity: <strong>${formatCurrency(reports.balance_sheet.total_liabilities_and_equity)}</strong></${MUI.Typography}>
                         </${MUI.Card}>
                     </${MUI.Grid}>
-                    <${MUI.Grid} item xs=${12}>
+                    <${MUI.Grid} size=${{ xs: 12 }}>
                         <${MUI.Typography} variant="h6" sx=${{ mb: 1 }}>
                             Trial Balance (Debits: ${formatCurrency(reports.trial_balance.total_debits)} | Credits: ${formatCurrency(reports.trial_balance.total_credits)})
                         </${MUI.Typography}>
                         <${ResponsiveDataGrid}
                             rows=${reports.trial_balance.lines || []}
                             columns=${[
-                                { key: 'code', label: 'Code', render: (r) => html`<span class="nht-mono">${r.code}</span>` },
+                                { key: 'code', label: 'Code', render: (r) => html`<span className="nht-mono">${r.code}</span>` },
                                 { key: 'name', label: 'Account' },
                                 { key: 'type', label: 'Type' },
                                 { key: 'debit', label: 'Debits', align: 'right', render: (r) => formatCurrency(r.debit) },
@@ -134,7 +134,7 @@ export function AccountingPage({ notify }) {
                     loading=${loading}
                     rows=${accounts}
                     columns=${[
-                        { key: 'code', label: 'Code', render: (r) => html`<span class="nht-mono">${r.code}</span>` },
+                        { key: 'code', label: 'Code', render: (r) => html`<span className="nht-mono">${r.code}</span>` },
                         { key: 'name', label: 'Name' },
                         { key: 'type_display', label: 'Type' },
                         { key: 'current_balance', label: 'Balance', align: 'right', render: (r) => formatCurrency(r.current_balance) },
@@ -147,7 +147,7 @@ export function AccountingPage({ notify }) {
                     loading=${loading}
                     rows=${journals}
                     columns=${[
-                        { key: 'entry_number', label: 'Entry #', render: (r) => html`<span class="nht-mono">${r.entry_number}</span>` },
+                        { key: 'entry_number', label: 'Entry #', render: (r) => html`<span className="nht-mono">${r.entry_number}</span>` },
                         { key: 'date', label: 'Date' },
                         { key: 'reference', label: 'Reference' },
                         { key: 'narration', label: 'Narration' },
@@ -162,7 +162,7 @@ export function AccountingPage({ notify }) {
                     loading=${loading}
                     rows=${expenses}
                     columns=${[
-                        { key: 'expense_number', label: 'Voucher #', render: (r) => html`<span class="nht-mono">${r.expense_number}</span>` },
+                        { key: 'expense_number', label: 'Voucher #', render: (r) => html`<span className="nht-mono">${r.expense_number}</span>` },
                         { key: 'payee', label: 'Payee' },
                         { key: 'category_name', label: 'Expense Account' },
                         { key: 'amount', label: 'Amount', align: 'right', render: (r) => formatCurrency(r.amount) },

@@ -1,6 +1,7 @@
 -r base.txt
-gunicorn>=22.0.0
-whitenoise>=6.6.0
-celery>=5.3.0
-redis>=5.0.0
-django-celery-beat>=2.6.0
+gunicorn>=27.0.1
+whitenoise>=6.12.0
+celery>=5.7.0
+redis>=8.2.0
+# Celery Beat uses CELERY_BEAT_SCHEDULE with Celery's built-in PersistentScheduler
+# (django-celery-beat<=2.9.0 caps Django<6.1 and is not used in INSTALLED_APPS).

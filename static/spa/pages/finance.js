@@ -83,7 +83,7 @@ export function InvoicesPage({ notify }) {
                 loading=${loading}
                 rows=${invoices}
                 columns=${[
-                    { key: 'invoice_number', label: 'Invoice #', render: (r) => html`<span class="nht-mono">${r.invoice_number}</span>` },
+                    { key: 'invoice_number', label: 'Invoice #', render: (r) => html`<span className="nht-mono">${r.invoice_number}</span>` },
                     { key: 'member_name', label: 'Member' },
                     { key: 'total_amount', label: 'Total', align: 'right', render: (r) => formatCurrency(r.total_amount) },
                     { key: 'amount_paid', label: 'Paid', align: 'right', render: (r) => formatCurrency(r.amount_paid) },
@@ -224,7 +224,7 @@ export function PaymentsVouchersPage({ notify }) {
                     loading=${loading}
                     rows=${vouchers}
                     columns=${[
-                        { key: 'bank_slip_reference', label: 'Slip Ref', render: (r) => html`<span class="nht-mono">${r.bank_slip_reference}</span>` },
+                        { key: 'bank_slip_reference', label: 'Slip Ref', render: (r) => html`<span className="nht-mono">${r.bank_slip_reference}</span>` },
                         { key: 'invoice_number', label: 'Invoice' },
                         { key: 'member_name', label: 'Member' },
                         { key: 'amount', label: 'Amount', align: 'right', render: (r) => formatCurrency(r.amount) },
@@ -248,7 +248,7 @@ export function PaymentsVouchersPage({ notify }) {
                     loading=${loading}
                     rows=${payments}
                     columns=${[
-                        { key: 'payment_reference', label: 'Ref #', render: (r) => html`<span class="nht-mono">${r.payment_reference}</span>` },
+                        { key: 'payment_reference', label: 'Ref #', render: (r) => html`<span className="nht-mono">${r.payment_reference}</span>` },
                         { key: 'provider_transaction_id', label: 'M-Pesa / Slip' },
                         { key: 'invoice_number', label: 'Invoice' },
                         { key: 'method_display', label: 'Method' },
@@ -261,7 +261,7 @@ export function PaymentsVouchersPage({ notify }) {
                     loading=${loading}
                     rows=${receipts}
                     columns=${[
-                        { key: 'receipt_number', label: 'Receipt #', render: (r) => html`<span class="nht-mono">${r.receipt_number}</span>` },
+                        { key: 'receipt_number', label: 'Receipt #', render: (r) => html`<span className="nht-mono">${r.receipt_number}</span>` },
                         { key: 'invoice_number', label: 'Invoice #' },
                         { key: 'member_name', label: 'Member' },
                         { key: 'amount', label: 'Amount', align: 'right', render: (r) => formatCurrency(r.amount) },
@@ -301,7 +301,7 @@ export function PaymentsVouchersPage({ notify }) {
                     <${MUI.TextField} label="Slip / Deposit Ref" fullWidth value=${vForm.bank_slip_reference} onChange=${(e) => setVForm({ ...vForm, bank_slip_reference: e.target.value })} />
                     <${MUI.TextField} label="Bank Name" fullWidth value=${vForm.bank_name} onChange=${(e) => setVForm({ ...vForm, bank_name: e.target.value })} />
                     <${MUI.TextField} label="Amount (KES)" type="number" fullWidth value=${vForm.amount} onChange=${(e) => setVForm({ ...vForm, amount: e.target.value })} />
-                    <${MUI.TextField} label="Deposit Date" type="date" InputLabelProps=${{ shrink: true }} fullWidth value=${vForm.payment_date} onChange=${(e) => setVForm({ ...vForm, payment_date: e.target.value })} />
+                    <${MUI.TextField} label="Deposit Date" type="date" slotProps=${{ inputLabel: { shrink: true } }} fullWidth value=${vForm.payment_date} onChange=${(e) => setVForm({ ...vForm, payment_date: e.target.value })} />
                 </${MUI.Stack}>
             </${ResponsiveDialog}>
         </${MUI.Box}>
@@ -371,7 +371,7 @@ export function ReconciliationPage({ notify }) {
                 loading=${loading}
                 rows=${runs}
                 columns=${[
-                    { key: 'run_reference', label: 'Run Ref', render: (r) => html`<span class="nht-mono">${r.run_reference}</span>` },
+                    { key: 'run_reference', label: 'Run Ref', render: (r) => html`<span className="nht-mono">${r.run_reference}</span>` },
                     { key: 'executed_by_username', label: 'Executed By' },
                     { key: 'total_payments_checked', label: 'Checked' },
                     { key: 'matched_count', label: 'Matched' },

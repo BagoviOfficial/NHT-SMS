@@ -25,28 +25,28 @@ class Command(BaseCommand):
                 'description': 'One-time vehicle registration fee for admission to SACCO routes.'
             },
             {
-                'code': 'MONTHLY_SUB_14',
-                'name': 'Monthly SACCO Operations Levy (14-Seater)',
+                'code': 'MONTHLY_SUB_LIGHT',
+                'name': 'Monthly SACCO Operations Levy (Light Commercial Truck)',
                 'category': ServiceCategory.SUBSCRIPTION,
                 'is_statutory': False,
                 'amount': Decimal('2500.00'),
-                'description': 'Monthly operational subscription fee for 14-seater matatus.'
+                'description': 'Monthly operational subscription fee for light commercial trucks and courier vans.'
             },
             {
-                'code': 'MONTHLY_SUB_33',
-                'name': 'Monthly SACCO Operations Levy (Minibus)',
+                'code': 'MONTHLY_SUB_MEDIUM',
+                'name': 'Monthly SACCO Operations Levy (Medium Commercial Truck)',
                 'category': ServiceCategory.SUBSCRIPTION,
                 'is_statutory': False,
                 'amount': Decimal('3500.00'),
-                'description': 'Monthly operational subscription fee for 33-seater minibuses.'
+                'description': 'Monthly operational subscription fee for medium commercial trucks (8–15 tonnes).'
             },
             {
-                'code': 'MONTHLY_SUB_50',
-                'name': 'Monthly SACCO Operations Levy (50+ Bus)',
+                'code': 'MONTHLY_SUB_HEAVY',
+                'name': 'Monthly SACCO Operations Levy (Heavy Truck / Prime Mover & Trailer)',
                 'category': ServiceCategory.SUBSCRIPTION,
                 'is_statutory': False,
                 'amount': Decimal('5000.00'),
-                'description': 'Monthly operational subscription fee for 50+ passenger buses.'
+                'description': 'Monthly operational subscription fee for heavy commercial trucks, prime movers, tankers, and trailers.'
             },
             {
                 'code': 'RENEWAL_FEE',
@@ -70,7 +70,7 @@ class Command(BaseCommand):
                 'category': ServiceCategory.STATUTORY,
                 'is_statutory': True,
                 'amount': Decimal('3750.00'),
-                'description': 'Statutory pass-through fee for NTSA commercial PSV road license.'
+                'description': 'Statutory pass-through fee for NTSA commercial freight road service license.'
             },
             {
                 'code': 'WELFARE_LEVY',

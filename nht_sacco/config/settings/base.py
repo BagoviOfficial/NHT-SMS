@@ -34,7 +34,6 @@ ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 
 # Application definition
 DJANGO_APPS = [
-    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -183,11 +182,39 @@ SESSION_IDLE_TIMEOUT_MEMBER_SECONDS = env.int('SESSION_IDLE_TIMEOUT_MEMBER_SECON
 AXES_FAILURE_LIMIT = env.int('AXES_FAILURE_LIMIT', 5)
 AXES_COOLOFF_TIME = env.int('AXES_COOLOFF_TIME', 1)
 AXES_RESET_ON_SUCCESS = True
-AXES_LOCKOUT_TEMPLATE = 'accounts/lockout.html'
+AXES_LOCKOUT_TEMPLATE = 'spa/index.html'
+AXES_LOCKOUT_URL = '/accounts/lockout/'
 AXES_VERBOSE = True
 
-# Email Configuration
-EMAIL_BACKEND = env('EMAIL_BACKEND')
+# Email Configuration (Django 6.1+ MAILERS)
+def build_mailer_config(backend, *, env_parser):
+    """Build a Django 6.1+ MAILERS entry, supplying SMTP OPTIONS when SMTP is active."""
+    config = {'BACKEND': backend}
+    if backend == 'django.core.mail.backends.smtp.EmailBackend':
+        options = {
+            'host': env_parser('EMAIL_HOST', default='localhost'),
+            'port': env_parser.int('EMAIL_PORT', default=587),
+            'use_tls': env_parser.bool('EMAIL_USE_TLS', default=True),
+            'use_ssl': env_parser.bool('EMAIL_USE_SSL', default=False),
+        }
+        username = env_parser('EMAIL_HOST_USER', default='')
+        password = env_parser('EMAIL_HOST_PASSWORD', default='')
+        if username:
+            options['username'] = username
+        if password:
+            options['password'] = password
+        config['OPTIONS'] = options
+    return config
+
+
+DEFAULT_FROM_EMAIL = env(
+    'DEFAULT_FROM_EMAIL',
+    default='Northern Highways Transporters <info@nhttransporters.co.ke>',
+)
+
+MAILERS = {
+    'default': build_mailer_config(env('EMAIL_BACKEND'), env_parser=env),
+}
 
 # Logging configuration
 LOGGING = {

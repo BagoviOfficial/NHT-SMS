@@ -462,7 +462,7 @@ class CompanyProfile(models.Model):
         _('Official Document Footer'),
         max_length=300,
         blank=True,
-        default='Northern Highways Transporters SACCO Limited | Regulated PSV Cooperative',
+        default='Northern Highways Transporters SACCO Limited | Commercial Freight & Fleet Cooperative',
     )
     primary_color = models.CharField(_('Primary Brand Color (Hex)'), max_length=16, default='#10315C')
     secondary_color = models.CharField(_('Secondary Accent Color (Hex)'), max_length=16, default='#FF8A00')

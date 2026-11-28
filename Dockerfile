@@ -3,7 +3,7 @@
 # Northern Highways Transporters SACCO Management System
 # ==============================================================================
 
-FROM python:3.12-slim-bookworm AS base
+FROM python:3.15-slim AS base
 
 # Prevent Python from writing .pyc files and enable unbuffered logging
 ENV PYTHONDONTWRITEBYTECODE=1 \

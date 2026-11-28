@@ -19,8 +19,12 @@ DATABASES = {
     }
 }
 
-# In-memory email backend
-EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+# In-memory email mailer
+MAILERS = {
+    'default': {
+        'BACKEND': 'django.core.mail.backends.locmem.EmailBackend',
+    }
+}
 
 # Disable rate limiting during automated test suites
 AXES_ENABLED = False

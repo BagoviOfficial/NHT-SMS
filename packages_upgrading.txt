@@ -1,0 +1,40 @@
+Act as a Senior Full-Stack Engineer. Upgrade my project to the following target stack while maintaining full functionality, removing the Node.js/npm frontend build step, and serving React and Material UI directly via modern ES Module CDNs:
+
+- **Python:** 3.15
+- **Django:** 6.1.3 (along with compatible versions of all backend dependencies in `requirements.txt` / `pyproject.toml`)
+- **Frontend Architecture:** Zero-build native ES Modules via browser `<script type="importmap">` + `esm.sh` + `htm` (no `node_modules`, Webpack, Vite, or slow `@babel/standalone`)
+- **React:** 19.3.1 (via CDN)
+- **Material UI:** 9.6.0 (via CDN, including `@mui/material`, `@mui/icons-material`, `@emotion/react`, and `@emotion/styled`)
+
+### Execution Plan & Rules
+
+1. **Audit & Plan First:**
+   - Inspect my project structure, `requirements.txt` (or `pyproject.toml`), Django templates, static files, and existing React/MUI source code.
+   - Identify all backend dependencies that need version updates for Python 3.15 and Django 6.1.3.
+   - List all existing frontend packages in `package.json` (if present) and verify their CDN equivalents on `esm.sh` (or flag any npm-only libraries that need lightweight replacements).
+
+2. **Backend Upgrade (Python 3.15 & Django 6.1.3):**
+   - Update Python version references in environment files, Dockerfiles, CI/CD workflows, or virtual environment setups to `3.15`.
+   - Upgrade `Django` to `6.1.3` and update dependent packages (e.g., `djangorestframework`, `celery`, `psycopg`, etc.) to versions compatible with both Python 3.15 and Django 6.1.3.
+   - Refactor any deprecated Django APIs, settings, middleware, or URL routing patterns removed in Django 6.x.
+   - Ensure Django's static files (`STATICFILES_DIRS` / `STATIC_URL`) and Content Security Policy (CSP) headers (if configured) allow scripts, modules, and fonts from `https://esm.sh` and `https://googleapis.com`.
+
+3. **Frontend Migration to Native ES Modules & `htm` (React 19.3.1 & MUI 9.6.0):**
+   - Configure the base Django HTML template(s) with a `<script type="importmap">` pinning exact versions:
+     - `"react": "https://esm.sh"`
+     - `"react-dom/client": "https://esm.sh"`
+     - `"react/jsx-runtime": "https://esm.sh/jsx-runtime"`
+     - `"htm": "https://esm.sh"`
+     - `@mui/material@9.6.0`, `@mui/icons-material@9.6.0`, `@emotion/react@11`, and `@emotion/styled@11` with `?deps=react@19.3.1,react-dom@19.3.1` appended so `esm.sh` never loads duplicate React instances.
+   - Include Google Fonts (`Roboto` and `Material Icons`) in the base HTML `<head>`.
+   - **No Babel Standalone:** Convert all JSX files into standard browser-native `<script type="module">` JavaScript files using `htm.bind(React.createElement)` (e.g., ``html`<${Button} variant="contained">Click<//>` ``) so pages load instantaneously without client-side transpilation overhead.
+   - **Preserve Django CSRF Protection:** Ensure all `fetch` / API client calls automatically read the `csrftoken` cookie (or Django's `{% csrf_token %}` DOM element) and attach the `X-CSRFToken` header alongside `credentials: 'same-origin'` on all mutating (`POST`, `PUT`, `PATCH`, `DELETE`) requests.
+   - Resolve React 19 breaking changes across all components (e.g., `ref` as a prop instead of `forwardRef`, `createRoot` instead of `ReactDOM.render`, and removed legacy context/propTypes).
+   - Apply MUI v5 -> v6 -> v7 -> v9 migration changes across all components, themes, and styling (e.g., `Grid` v2 API, `slotProps` / `slots` replacing deprecated `*Props` APIs, theme palette/typography updates, and removed deprecated components).
+   - Remove obsolete Node.js build artifacts (`package.json`, `package-lock.json`, `vite.config.*`, `webpack.config.*`) once the CDN setup is verified, unless any backend tooling depends on them.
+
+4. **Verification:**
+   - Run `python manage.py check` and the existing backend test suite to verify zero errors or deprecation warnings.
+   - Start the Django development server and verify that all pages load cleanly, API mutations pass CSRF validation, and there are zero browser console errors, module resolution failures, or React hook mismatches.
+   - Summarize all modified/deleted files, breaking changes resolved, and any manual steps I need to take (such as updating my local Python 3.15 environment).
+

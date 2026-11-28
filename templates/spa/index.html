@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>{{ sacco_name|default:"Northern Highways Transporters SACCO" }} | NHT-SMS</title>
+    {% if initial_route == 'public-verify' %}<meta name="robots" content="noindex, nofollow">{% endif %}
+    <title>{{ page_title|default:"Workspace" }} | {{ sacco_name|default:"Northern Highways Transporters SACCO" }} | NHT-SMS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -21,7 +22,26 @@
         .nht-mono {
             font-family: 'JetBrains Mono', monospace;
         }
+        @media print {
+            .no-print { display: none !important; }
+        }
     </style>
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@19.3.1",
+            "react-dom": "https://esm.sh/react-dom@19.3.1",
+            "react-dom/client": "https://esm.sh/react-dom@19.3.1/client",
+            "react/jsx-runtime": "https://esm.sh/react@19.3.1/jsx-runtime",
+            "htm": "https://esm.sh/htm@3.1.1",
+            "@mui/material": "https://esm.sh/@mui/material@9.6.0?deps=react@19.3.1,react-dom@19.3.1",
+            "@mui/icons-material": "https://esm.sh/@mui/icons-material@9.6.0?deps=react@19.3.1,react-dom@19.3.1",
+            "@emotion/react": "https://esm.sh/@emotion/react@11?deps=react@19.3.1,react-dom@19.3.1",
+            "@emotion/styled": "https://esm.sh/@emotion/styled@11?deps=react@19.3.1,react-dom@19.3.1",
+            "apexcharts": "https://esm.sh/apexcharts@3.54.1"
+        }
+    }
+    </script>
 </head>
 <body>
     <div id="root"></div>
@@ -30,24 +50,23 @@
     {{ primary_color|json_script:"nht-primary-color" }}
     {{ secondary_color|json_script:"nht-secondary-color" }}
     {{ currency|json_script:"nht-currency" }}
+    {{ is_admin_portal|json_script:"nht-is-admin-portal" }}
+    {{ initial_route|default:""|json_script:"nht-initial-route" }}
+    {{ page_data|json_script:"nht-page-data" }}
 
     <script>
         window.__NHT_BOOTSTRAP__ = {
             sacco_name: JSON.parse(document.getElementById('nht-sacco-name').textContent),
             primary_color: JSON.parse(document.getElementById('nht-primary-color').textContent),
             secondary_color: JSON.parse(document.getElementById('nht-secondary-color').textContent),
-            currency: JSON.parse(document.getElementById('nht-currency').textContent)
+            currency: JSON.parse(document.getElementById('nht-currency').textContent),
+            is_admin_portal: JSON.parse(document.getElementById('nht-is-admin-portal').textContent),
+            initial_route: JSON.parse(document.getElementById('nht-initial-route').textContent),
+            page_data: JSON.parse(document.getElementById('nht-page-data').textContent || '{}')
         };
     </script>
 
-    <!-- CDN Dependencies: React 18, Material UI v5, HTM, ApexCharts -->
-    <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/@mui/material@5.16.7/umd/material-ui.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.1/dist/apexcharts.min.js"></script>
-
-    <!-- NHT-SMS Material UI SPA Application -->
+    <!-- NHT-SMS Native ES Module SPA Application (React 19.3.1 + MUI 9.6.0 + htm) -->
     <script type="module" src="{% static 'spa/app.js' %}"></script>
 </body>
 </html>

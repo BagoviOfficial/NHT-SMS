@@ -1,9 +1,9 @@
 # Northern Highways Transporters SACCO Management System (NHT-SMS)
 
-[![Release](https://img.shields.io/badge/Release-v1.4.0-blue.svg)](https://github.com/northernhighways/nht-sms)
+[![Release](https://img.shields.io/badge/Release-v1.5.0-blue.svg)](https://github.com/northernhighways/nht-sms)
 [![Security Standard](https://img.shields.io/badge/Security-OWASP%20ASVS%20Level%202-green.svg)](docs/SECURITY.md)
-[![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.14-blue.svg)](https://www.python.org/)
-[![Django](https://img.shields.io/badge/Django-6.1-green.svg)](https://www.djangoproject.com/)
+[![Python](https://img.shields.io/badge/Python-3.15-blue.svg)](https://www.python.org/)
+[![Django](https://img.shields.io/badge/Django-6.1.3-green.svg)](https://www.djangoproject.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-blue.svg)](https://www.postgresql.org/)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)]()
 
@@ -72,7 +72,7 @@ flowchart TD
 | **Multi-Channel Dispatch** | Decoupled notification adapters for Africa's Talking (SMS), Meta WhatsApp Cloud API, SMTP Email, and In-App notification center with member preference controls. |
 | **Member Self-Service** | Responsive portal (`/portal/`) with strict anti-IDOR checks, running balance statements, online document renewal submissions, and vehicle card generation. |
 | **SACCO Governance** | Maintenance order tracking with downtime analytics, incident grievance investigations, committee meeting agendas, and formal resolution voting records. |
-| **Unified REST API & Material UI SPA** | Unified DRF `/api/v1/` across all 18 apps powering a responsive zero-build React 18 + Material UI v5 SPA (`/app/`) with role-scoped navigation across all 11 personas (including `MEMBER` and `DRIVER` portals). |
+| **Unified REST API & Material UI SPA** | Unified DRF `/api/v1/` across all 18 apps powering a responsive zero-build React 19.3.1 + Material UI 9.6.0 ES Module SPA (`/app/` & `/admin/`) with `htm` and role-scoped navigation across all 11 personas (including `MEMBER` and `DRIVER` portals). |
 | **Payment Reconciliation & Statements** | Automated `PaymentReconciliationService` comparing payments, receipts, invoices, and GL journals, plus live Income & Expenditure and Balance Sheet reports. |
 | **Executive Analytics** | Executive dashboard with real-time operational metrics, branded compliance PDF report exports (`fpdf2`), and multi-tab financial Excel reconciliation workbooks (`openpyxl`). |
 
@@ -80,29 +80,30 @@ flowchart TD
 
 ## 3. Technology Stack
 
-- **Backend Runtime:** Python 3.12 / 3.14
-- **Web Framework:** Django 6.1.1 + Django REST Framework 3.18
-- **Database Engine:** PostgreSQL 16+ (with `psycopg` 3.3.6)
-- **Cache & Message Broker:** Redis 7+
-- **Background Processing:** Celery 5.4 + Celery Beat
-- **WSGI / Web Server:** Gunicorn 22.0 + Nginx 1.27
-- **Security & MFA:** `django-axes` 9.0 (brute-force defense) + `django-otp` 1.7 (TOTP MFA)
-- **Document Generation:** `fpdf2` 2.8 (PDF generation) + `openpyxl` 3.1 (Excel exports) + `qrcode` 8.2 (QR tokens)
-- **Testing Suite:** `pytest` 9.2 + `pytest-django` 4.14 (150 automated tests across 15 stages)
+- **Backend Runtime:** Python 3.15
+- **Web Framework:** Django 6.1.3 + Django REST Framework 3.18.3+
+- **Frontend Architecture:** Zero-build native ES Modules (`<script type="importmap">` + `esm.sh` + `htm` 3.1.1), React 19.3.1, Material UI 9.6.0, ApexCharts 3.54.1
+- **Database Engine:** PostgreSQL 16+ (with `psycopg` 3.3.9+)
+- **Cache & Message Broker:** Redis 7+ (`redis` 8.2+)
+- **Background Processing:** Celery 5.7+ + Celery Beat (`PersistentScheduler`)
+- **WSGI / Web Server:** Gunicorn 27.0+ + Nginx 1.27
+- **Security & MFA:** `django-axes` 9.1+ (brute-force defense) + `django-otp` 1.7.5+ (TOTP MFA)
+- **Document Generation:** `fpdf2` 2.9+ (PDF generation) + `openpyxl` 3.1.5+ (Excel exports) + `qrcode` 8.2 (QR tokens)
+- **Testing Suite:** `pytest` 9.2+ + `pytest-django` 4.14+ (165 automated tests across 16 stages)
 
 ---
 
 ## 4. Quick Start: Local Development
 
 ### 4.1 Prerequisites
-- Python 3.12+
+- Python 3.15
 - PostgreSQL 16+
 - Redis (optional for development; required for background queues)
 
 ### 4.2 Installation
 ```bash
 # 1. Clone repository
-git clone https://github.com/northernhighways/nht-sms.git
+git clone https://github.com/bagoviofficial/NHT-SMS.git
 cd nht-sms
 
 # 2. Create virtual environment

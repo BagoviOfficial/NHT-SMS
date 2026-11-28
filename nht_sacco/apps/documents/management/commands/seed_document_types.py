@@ -15,7 +15,7 @@ class Command(BaseCommand):
                 'is_mandatory_for_driver': False,
             },
             {
-                'name': 'PSV Commercial Insurance Certificate',
+                'name': 'Commercial Freight Insurance Certificate',
                 'category': DocumentCategory.INSURANCE,
                 'standard_validity_months': 12,
                 'reminder_thresholds': [30, 14, 7, 3, 0],
@@ -55,7 +55,7 @@ class Command(BaseCommand):
                 'is_mandatory_for_driver': False,
             },
             {
-                'name': 'Driving License PSV Endorsement',
+                'name': 'Driving License Commercial Endorsement (Class CE)',
                 'category': DocumentCategory.DRIVER_LICENSE,
                 'standard_validity_months': 36,
                 'reminder_thresholds': [30, 14, 7, 3, 0],

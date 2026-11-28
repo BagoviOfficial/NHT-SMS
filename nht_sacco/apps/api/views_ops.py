@@ -1,3 +1,4 @@
+from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -13,6 +14,7 @@ from nht_sacco.apps.accounts.permissions import (
     REGISTRY_OPS_ROLES,
     IsAuditorReadOnly,
     IsManagementStaff,
+    IsSystemAdmin,
     role_permission_factory,
 )
 from nht_sacco.apps.audit.models import AuditAction, AuditLog, AuditOutcome
@@ -26,6 +28,7 @@ from nht_sacco.apps.notifications.models import (
     CommunicationPreference,
     Notification,
     NotificationCategory,
+    NotificationTemplate,
 )
 from nht_sacco.apps.notifications.services import NotificationDispatcherService
 from nht_sacco.apps.reports.services import ExecutiveDashboardMetrics
@@ -39,6 +42,7 @@ from .serializers import (
     MaintenanceRecordSerializer,
     MeetingSerializer,
     NotificationSerializer,
+    NotificationTemplateSerializer,
     ResolutionSerializer,
     SparePartSerializer,
 )
@@ -238,6 +242,36 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
                 )
 
 
+class NotificationTemplateViewSet(viewsets.ModelViewSet):
+    queryset = NotificationTemplate.objects.all().order_by('code')
+    serializer_class = NotificationTemplateSerializer
+    permission_classes = [IsSystemAdmin]
+    filterset_fields = ['channel', 'is_active']
+    search_fields = ['code', 'name', 'subject']
+
+    def perform_create(self, serializer):
+        tpl = serializer.save()
+        AuditLog.log_action(
+            actor=self.request.user,
+            action=AuditAction.CREATE,
+            entity_type='NotificationTemplate',
+            entity_id=tpl.code,
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Created notification template {tpl.code}",
+        )
+
+    def perform_update(self, serializer):
+        tpl = serializer.save()
+        AuditLog.log_action(
+            actor=self.request.user,
+            action=AuditAction.UPDATE,
+            entity_type='NotificationTemplate',
+            entity_id=tpl.code,
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Updated notification template {tpl.code}",
+        )
+
+
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AuditLog.objects.all().order_by('-timestamp')
     serializer_class = AuditLogSerializer
@@ -257,8 +291,8 @@ class ReportSummaryAPIView(APIView):
             FINANCE_CHECKER_ROLES | {UserRole.AUDITOR}
         )
         return Response({
-            'compliance_pdf_url': '/reports/export/compliance-pdf/',
-            'financial_excel_url': '/reports/export/financial-excel/' if can_export_finance else None,
+            'compliance_pdf_url': reverse('reports:export_compliance_pdf'),
+            'financial_excel_url': reverse('reports:export_financial_excel') if can_export_finance else None,
             'can_export_finance': can_export_finance,
             'governance_summary': gov,
             'maintenance_summary': {k: str(v) for k, v in maint.items()},

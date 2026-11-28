@@ -1,25 +1,67 @@
 import { React, MUI, html, apiFetch, extractList, formatCurrency } from '../api.js';
 import { MaterialIcon, PageHeader, ResponsiveDataGrid, ResponsiveDialog, StatCard, StatusChip } from '../components.js';
+import { DEFAULT_COMMERCIAL_CATEGORIES, DEFAULT_FUEL_TYPES, VehicleFieldsSection, blankVehicleEntry } from './fleet.js';
+
+const PORTAL_SECTION_TAB = {
+    'dashboard': 0,
+    'vehicles': 0,
+    'vehicle-detail': 0,
+    'vehicle-card': 0,
+    'vehicle-register': 0,
+    'invoices': 1,
+    'invoice-detail': 1,
+    'receipts': 1,
+    'statement': 2,
+    'renewals': 3,
+    'renewal-apply': 3,
+    'preferences': 4,
+    'notifications': 5,
+    'complaints': 6,
+    'complaint-submit': 6,
+};
 
 export function MemberPortalPage({ notify }) {
-    const [tab, setTab] = React.useState(0);
+    const bootPortal = window.__NHT_BOOTSTRAP__?.page_data?.portal || {};
+    const bootSection = bootPortal.section || 'dashboard';
+    const [tab, setTab] = React.useState(PORTAL_SECTION_TAB[bootSection] ?? 0);
+    const [detailCard, setDetailCard] = React.useState(() => {
+        if (bootSection === 'vehicle-card' && bootPortal.vehicle_card) return { type: 'vehicle-card', data: bootPortal.vehicle_card };
+        if (bootSection === 'vehicle-detail' && bootPortal.vehicle) return { type: 'vehicle-detail', data: bootPortal.vehicle, documents: bootPortal.documents || [] };
+        if (bootSection === 'invoice-detail' && bootPortal.invoice) return { type: 'invoice-detail', data: bootPortal.invoice };
+        return null;
+    });
     const [vehicles, setVehicles] = React.useState([]);
     const [invoices, setInvoices] = React.useState([]);
     const [receipts, setReceipts] = React.useState([]);
     const [renewals, setRenewals] = React.useState([]);
     const [docTypes, setDocTypes] = React.useState([]);
+    const [notifications, setNotifications] = React.useState([]);
+    const [complaints, setComplaints] = React.useState([]);
+    const [categories, setCategories] = React.useState(DEFAULT_COMMERCIAL_CATEGORIES);
+    const [fuelTypes, setFuelTypes] = React.useState(DEFAULT_FUEL_TYPES);
     const [statement, setStatement] = React.useState(null);
     const [prefs, setPrefs] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
     const [stkTarget, setStkTarget] = React.useState(null);
     const [stkPhone, setStkPhone] = React.useState('');
-    const [rnwOpen, setRnwOpen] = React.useState(false);
+    const [rnwOpen, setRnwOpen] = React.useState(bootSection === 'renewal-apply');
     const [rnwForm, setRnwForm] = React.useState({ vehicle: '', document_type: '', notes: '' });
+    const [vehOpen, setVehOpen] = React.useState(bootSection === 'vehicle-register');
+    const [vehForm, setVehForm] = React.useState(blankVehicleEntry);
+    const [ticketOpen, setTicketOpen] = React.useState(bootSection === 'complaint-submit');
+    const [ticketForm, setTicketForm] = React.useState({
+        incident_type: 'COMPLAINT',
+        severity: 'MEDIUM',
+        vehicle: '',
+        location: '',
+        title: '',
+        description: '',
+    });
 
     const load = React.useCallback(async () => {
         setLoading(true);
         try {
-            const [vRes, iRes, rRes, rnRes, dtRes, stRes, prRes] = await Promise.all([
+            const [vRes, iRes, rRes, rnRes, dtRes, stRes, prRes, nRes, cRes, catRes] = await Promise.all([
                 apiFetch('/api/v1/vehicles/'),
                 apiFetch('/api/v1/invoices/'),
                 apiFetch('/api/v1/receipts/'),
@@ -27,6 +69,9 @@ export function MemberPortalPage({ notify }) {
                 apiFetch('/api/v1/document-types/'),
                 apiFetch('/api/v1/billing/statement/'),
                 apiFetch('/api/v1/notifications/preferences/').catch(() => null),
+                apiFetch('/api/v1/notifications/').catch(() => []),
+                apiFetch('/api/v1/incidents/').catch(() => []),
+                apiFetch('/api/v1/vehicles/categories/').catch(() => null),
             ]);
             setVehicles(extractList(vRes));
             setInvoices(extractList(iRes));
@@ -35,6 +80,12 @@ export function MemberPortalPage({ notify }) {
             setDocTypes(extractList(dtRes));
             setStatement(stRes);
             setPrefs(prRes);
+            setNotifications(extractList(nRes));
+            setComplaints(extractList(cRes));
+            if (catRes) {
+                setCategories(catRes.categories || []);
+                setFuelTypes(catRes.fuel_types || []);
+            }
         } catch (err) {
             notify(err.message, 'error');
         } finally {
@@ -77,6 +128,43 @@ export function MemberPortalPage({ notify }) {
         }
     };
 
+    const handleRegisterVehicle = async () => {
+        try {
+            await apiFetch('/api/v1/vehicles/', {
+                method: 'POST',
+                body: { ...vehForm, engine_number: vehForm.engine_number?.trim() || null },
+            });
+            notify('Vehicle submitted for Secretariat verification.', 'success');
+            setVehOpen(false);
+            setVehForm(blankVehicleEntry());
+            load();
+        } catch (err) {
+            notify(err.message, 'error');
+        }
+    };
+
+    const handleSubmitTicket = async () => {
+        try {
+            await apiFetch('/api/v1/incidents/', { method: 'POST', body: ticketForm });
+            notify('Support / complaint ticket submitted.', 'success');
+            setTicketOpen(false);
+            setTicketForm({ incident_type: 'COMPLAINT', severity: 'MEDIUM', vehicle: '', location: '', title: '', description: '' });
+            load();
+        } catch (err) {
+            notify(err.message, 'error');
+        }
+    };
+
+    const handleMarkRead = async (id) => {
+        try {
+            await apiFetch(`/api/v1/notifications/${id}/mark_read/`, { method: 'POST' });
+            notify('Notification marked as read.', 'info');
+            load();
+        } catch (err) {
+            notify(err.message, 'error');
+        }
+    };
+
     const outstanding = invoices.reduce((acc, inv) => acc + Number(inv.balance_due || 0), 0);
 
     return html`
@@ -85,20 +173,28 @@ export function MemberPortalPage({ notify }) {
                 title="Member Self-Service Portal"
                 subtitle="Manage your registered fleet, pay invoices via M-Pesa, view statements, and apply for renewals."
                 action=${html`
-                    <${MUI.Button} variant="contained" startIcon=${html`<${MaterialIcon} name="autorenew" />`} onClick=${() => setRnwOpen(true)}>
-                        Apply for Renewal
-                    </${MUI.Button}>
+                    <${MUI.Stack} direction="row" spacing=${1} flexWrap="wrap">
+                        <${MUI.Button} variant="outlined" startIcon=${html`<${MaterialIcon} name="local_shipping" />`} onClick=${() => setVehOpen(true)}>
+                            Register Vehicle
+                        </${MUI.Button}>
+                        <${MUI.Button} variant="outlined" startIcon=${html`<${MaterialIcon} name="report_problem" />`} onClick=${() => setTicketOpen(true)}>
+                            Submit Ticket
+                        </${MUI.Button}>
+                        <${MUI.Button} variant="contained" startIcon=${html`<${MaterialIcon} name="autorenew" />`} onClick=${() => setRnwOpen(true)}>
+                            Apply for Renewal
+                        </${MUI.Button}>
+                    </${MUI.Stack}>
                 `}
             />
 
             <${MUI.Grid} container spacing=${2} sx=${{ mb: 3 }}>
-                <${MUI.Grid} item xs=${12} sm=${4}>
-                    <${StatCard} title="My Fleet" value=${vehicles.length} subtitle="Registered PSVs" icon="directions_bus" color="primary" />
+                <${MUI.Grid} size=${{ xs: 12, sm: 4 }}>
+                    <${StatCard} title="My Fleet" value=${vehicles.length} subtitle="Registered Trucks & Trailers" icon="local_shipping" color="primary" />
                 </${MUI.Grid}>
-                <${MUI.Grid} item xs=${12} sm=${4}>
+                <${MUI.Grid} size=${{ xs: 12, sm: 4 }}>
                     <${StatCard} title="Balance Due" value=${formatCurrency(outstanding)} subtitle="${invoices.filter((i) => !i.is_fully_paid).length} open invoices" icon="receipt_long" color="warning" />
                 </${MUI.Grid}>
-                <${MUI.Grid} item xs=${12} sm=${4}>
+                <${MUI.Grid} size=${{ xs: 12, sm: 4 }}>
                     <${StatCard} title="Renewals" value=${renewals.length} subtitle="Permit & inspection requests" icon="autorenew" color="info" />
                 </${MUI.Grid}>
             </${MUI.Grid}>
@@ -109,7 +205,68 @@ export function MemberPortalPage({ notify }) {
                 <${MUI.Tab} label="Statement" />
                 <${MUI.Tab} label="Renewals" />
                 <${MUI.Tab} label="Preferences" />
+                <${MUI.Tab} label="Notifications (${notifications.length})" />
+                <${MUI.Tab} label="Tickets (${complaints.length})" />
             </${MUI.Tabs}>
+
+            ${detailCard && html`
+                <${MUI.Card} variant="outlined" sx=${{ p: 2.5, mb: 3 }}>
+                    <${MUI.Stack} direction="row" justifyContent="space-between" alignItems="center" sx=${{ mb: 1.5 }}>
+                        <${MUI.Typography} variant="h6" color="primary.main">
+                            ${detailCard.type === 'vehicle-card' ? `Compliance Card: ${detailCard.data.registration_number}` :
+                              detailCard.type === 'vehicle-detail' ? `Vehicle Record: ${detailCard.data.registration_number}` :
+                              `Invoice ${detailCard.data.invoice_number}`}
+                        </${MUI.Typography}>
+                        <${MUI.Button} size="small" onClick=${() => setDetailCard(null)}>Close</${MUI.Button}>
+                    </${MUI.Stack}>
+                    ${detailCard.type === 'vehicle-card' && html`
+                        <${MUI.Stack} direction=${{ xs: 'column', sm: 'row' }} spacing=${2} alignItems="center">
+                            ${detailCard.data.qr_data_uri && html`
+                                <img src=${detailCard.data.qr_data_uri} alt="QR Code" style=${{ width: 140, height: 140, borderRadius: 8, border: '1px solid #CBD5E1', padding: 4 }} />
+                            `}
+                            <${MUI.Stack} spacing=${1}>
+                                <${StatusChip} value=${detailCard.data.compliance} />
+                                ${detailCard.data.certificate_number && html`<${MUI.Typography} variant="body2">Certificate #: <strong className="nht-mono">${detailCard.data.certificate_number}</strong></${MUI.Typography}>`}
+                                <${MUI.Button} size="small" variant="outlined" href=${detailCard.data.verify_url} target="_blank">Open Public Verification</${MUI.Button}>
+                            </${MUI.Stack}>
+                        </${MUI.Stack}>
+                    `}
+                    ${detailCard.type === 'vehicle-detail' && html`
+                        <${MUI.Box}>
+                            <${MUI.Typography} variant="body2" sx=${{ mb: 1.5 }}>
+                                ${detailCard.data.make} ${detailCard.data.model} • <${StatusChip} value=${detailCard.data.compliance} />
+                            </${MUI.Typography}>
+                            <${ResponsiveDataGrid}
+                                rows=${detailCard.documents}
+                                emptyText="No documents uploaded for this vehicle."
+                                columns=${[
+                                    { key: 'type', label: 'Document Type' },
+                                    { key: 'reference_number', label: 'Ref #' },
+                                    { key: 'expiry_date', label: 'Expiry' },
+                                    { key: 'status', label: 'Status', render: (d) => html`<${StatusChip} value=${d.status} />` },
+                                ]}
+                            />
+                        </${MUI.Box}>
+                    `}
+                    ${detailCard.type === 'invoice-detail' && html`
+                        <${MUI.Box}>
+                            <${MUI.Typography} variant="body2" sx=${{ mb: 1.5 }}>
+                                Total: <strong>${formatCurrency(detailCard.data.total_amount)}</strong> • Balance Due: <strong>${formatCurrency(detailCard.data.balance_due)}</strong> • <${StatusChip} value=${detailCard.data.status} />
+                            </${MUI.Typography}>
+                            <${ResponsiveDataGrid}
+                                rows=${(detailCard.data.items || []).map((it, i) => ({ ...it, id: i }))}
+                                columns=${[
+                                    { key: 'service_name', label: 'Service' },
+                                    { key: 'description', label: 'Description' },
+                                    { key: 'quantity', label: 'Qty' },
+                                    { key: 'unit_price', label: 'Unit Price', align: 'right', render: (it) => formatCurrency(it.unit_price) },
+                                    { key: 'line_total', label: 'Total', align: 'right', render: (it) => formatCurrency(it.line_total) },
+                                ]}
+                            />
+                        </${MUI.Box}>
+                    `}
+                </${MUI.Card}>
+            `}
 
             ${tab === 0 && html`
                 <${ResponsiveDataGrid}
@@ -124,7 +281,12 @@ export function MemberPortalPage({ notify }) {
                             key: 'qr_token',
                             label: 'QR Badge',
                             align: 'right',
-                            render: (r) => html`<${MUI.Button} size="small" href="/verify/vehicle/${r.qr_token}/" target="_blank">Verify QR</${MUI.Button}>`,
+                            render: (r) => html`
+                                <${MUI.Stack} direction="row" spacing=${0.5} justifyContent="flex-end">
+                                    <${MUI.Button} size="small" href="/portal/vehicles/${r.id}/card/">Card</${MUI.Button}>
+                                    <${MUI.Button} size="small" href="/verify/vehicle/${r.qr_token}/" target="_blank">Verify QR</${MUI.Button}>
+                                </${MUI.Stack}>
+                            `,
                         },
                     ]}
                 />
@@ -252,6 +414,79 @@ export function MemberPortalPage({ notify }) {
                     <${MUI.TextField} label="Notes" fullWidth multiline rows=${2} value=${rnwForm.notes} onChange=${(e) => setRnwForm({ ...rnwForm, notes: e.target.value })} />
                 </${MUI.Stack}>
             </${ResponsiveDialog}>
+
+            ${tab === 5 && html`
+                <${ResponsiveDataGrid}
+                    loading=${loading}
+                    rows=${notifications}
+                    columns=${[
+                        { key: 'title', label: 'Title' },
+                        { key: 'message', label: 'Message' },
+                        { key: 'status', label: 'Status', render: (r) => html`<${StatusChip} value=${r.status} />` },
+                        {
+                            key: 'actions',
+                            label: 'Action',
+                            align: 'right',
+                            render: (r) => r.status !== 'READ' && html`
+                                <${MUI.Button} size="small" onClick=${() => handleMarkRead(r.id)}>Mark Read</${MUI.Button}>
+                            `,
+                        },
+                    ]}
+                />
+            `}
+
+            ${tab === 6 && html`
+                <${ResponsiveDataGrid}
+                    loading=${loading}
+                    rows=${complaints}
+                    columns=${[
+                        { key: 'ticket_number', label: 'Ticket #' },
+                        { key: 'title', label: 'Subject' },
+                        { key: 'severity', label: 'Severity', render: (r) => html`<${StatusChip} value=${r.severity} />` },
+                        { key: 'status', label: 'Status', render: (r) => html`<${StatusChip} value=${r.status} />` },
+                    ]}
+                />
+            `}
+
+            <${ResponsiveDialog}
+                open=${vehOpen}
+                onClose=${() => setVehOpen(false)}
+                title="Register Commercial Truck or Trailer"
+                maxWidth="md"
+                actions=${html`
+                    <${MUI.Button} onClick=${() => setVehOpen(false)}>Cancel</${MUI.Button}>
+                    <${MUI.Button} variant="contained" onClick=${handleRegisterVehicle}>Submit Vehicle</${MUI.Button}>
+                `}
+            >
+                <${MUI.Box} sx=${{ pt: 1 }}>
+                    <${VehicleFieldsSection}
+                        value=${vehForm}
+                        categories=${categories}
+                        fuelTypes=${fuelTypes}
+                        onChange=${setVehForm}
+                    />
+                </${MUI.Box}>
+            </${ResponsiveDialog}>
+
+            <${ResponsiveDialog}
+                open=${ticketOpen}
+                onClose=${() => setTicketOpen(false)}
+                title="Submit Grievance or Support Ticket"
+                actions=${html`
+                    <${MUI.Button} onClick=${() => setTicketOpen(false)}>Cancel</${MUI.Button}>
+                    <${MUI.Button} variant="contained" onClick=${handleSubmitTicket}>Submit Ticket</${MUI.Button}>
+                `}
+            >
+                <${MUI.Stack} spacing=${2} sx=${{ pt: 1 }}>
+                    <${MUI.TextField} label="Title" fullWidth value=${ticketForm.title} onChange=${(e) => setTicketForm({ ...ticketForm, title: e.target.value })} />
+                    <${MUI.TextField} label="Location" fullWidth value=${ticketForm.location} onChange=${(e) => setTicketForm({ ...ticketForm, location: e.target.value })} />
+                    <${MUI.TextField} select label="Vehicle (optional)" fullWidth value=${ticketForm.vehicle} onChange=${(e) => setTicketForm({ ...ticketForm, vehicle: e.target.value })}>
+                        <${MUI.MenuItem} value="">None</${MUI.MenuItem}>
+                        ${vehicles.map((v) => html`<${MUI.MenuItem} key=${v.id} value=${v.id}>${v.registration_number}</${MUI.MenuItem}>`)}
+                    </${MUI.TextField}>
+                    <${MUI.TextField} label="Description" fullWidth multiline rows=${3} value=${ticketForm.description} onChange=${(e) => setTicketForm({ ...ticketForm, description: e.target.value })} />
+                </${MUI.Stack}>
+            </${ResponsiveDialog}>
         </${MUI.Box}>
     `;
 }
@@ -276,18 +511,18 @@ export function DriverPortalPage({ notify }) {
     return html`
         <${MUI.Box}>
             <${PageHeader}
-                title="PSV Driver Self-Service Portal"
-                subtitle="Your driving licence validity, NTSA PSV badge status, and assigned vehicle compliance."
+                title="Commercial Driver Self-Service Portal"
+                subtitle="Your driving licence validity, NTSA commercial endorsement status, and assigned truck/trailer compliance."
             />
             <${MUI.Grid} container spacing=${2} sx=${{ mb: 3 }}>
-                <${MUI.Grid} item xs=${12} sm=${4}>
-                    <${StatCard} title="Driver Status" value=${drv.status} subtitle="DL: ${drv.driving_license_number}" icon="badge" color="primary" />
+                <${MUI.Grid} size=${{ xs: 12, sm: 4 }}>
+                    <${StatCard} title="Driver Status" value=${drv.status} subtitle="DL: ${drv.driving_license_number}${drv.dl_class ? ` (${drv.dl_class})` : ''}" icon="badge" color="primary" />
                 </${MUI.Grid}>
-                <${MUI.Grid} item xs=${12} sm=${4}>
+                <${MUI.Grid} size=${{ xs: 12, sm: 4 }}>
                     <${StatCard} title="DL Validity" value="${data.dl_days_remaining ?? '—'} days" subtitle="Expires ${drv.dl_expiry_date}" icon="credit_card" color="success" />
                 </${MUI.Grid}>
-                <${MUI.Grid} item xs=${12} sm=${4}>
-                    <${StatCard} title="PSV Badge" value="${data.psv_days_remaining ?? '—'} days" subtitle="${drv.psv_badge_number || 'N/A'}" icon="verified" color="info" />
+                <${MUI.Grid} size=${{ xs: 12, sm: 4 }}>
+                    <${StatCard} title="NTSA Endorsement" value="${data.psv_days_remaining ?? '—'} days" subtitle="${drv.psv_badge_number || 'N/A'}" icon="verified" color="info" />
                 </${MUI.Grid}>
             </${MUI.Grid}>
 

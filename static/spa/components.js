@@ -137,12 +137,14 @@ export function ResponsiveDataGrid({
                             onChange=${(e) => onSearchChange(e.target.value)}
                             placeholder=${searchPlaceholder}
                             sx=${{ minWidth: { sm: 260 } }}
-                            InputProps=${{
-                                startAdornment: html`
-                                    <${MUI.InputAdornment} position="start">
-                                        <${MaterialIcon} name="search" />
-                                    </${MUI.InputAdornment}>
-                                `,
+                            slotProps=${{
+                                input: {
+                                    startAdornment: html`
+                                        <${MUI.InputAdornment} position="start">
+                                            <${MaterialIcon} name="search" />
+                                        </${MUI.InputAdornment}>
+                                    `,
+                                },
                             }}
                         />
                     ` : html`<span />`}
@@ -161,7 +163,7 @@ export function ResponsiveDataGrid({
             ` : isDesktop ? html`
                 <${MUI.TableContainer}>
                     <${MUI.Table} size="small">
-                        <${MUI.TableHead} sx=${{ bgcolor: '#F8FAFC' }}>
+                        <${MUI.TableHead} sx=${{ bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : '#F8FAFC') }}>
                             <${MUI.TableRow}>
                                 ${columns.map((col) => html`
                                     <${MUI.TableCell}

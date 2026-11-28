@@ -297,3 +297,24 @@ class DiagnosticService:
             'timestamp': timezone.now().isoformat(),
             'services': results,
         }
+
+    @classmethod
+    def run_provider_check(cls, provider: str, user=None) -> Optional[Dict[str, Any]]:
+        """
+        Dispatches a single diagnostic check or full suite by provider slug.
+        Returns None if the provider identifier is unknown.
+        """
+        key = (provider or '').strip().lower()
+        if key == 'all':
+            return cls.run_all_diagnostics(user=user)
+        dispatch = {
+            'daraja': cls.check_daraja,
+            'africastalking': cls.check_africastalking,
+            'whatsapp': cls.check_whatsapp,
+            'smtp': cls.check_smtp,
+            'postgresql': cls.check_database,
+            'redis': cls.check_redis,
+            'celery': cls.check_celery,
+        }
+        handler = dispatch.get(key)
+        return handler() if handler else None

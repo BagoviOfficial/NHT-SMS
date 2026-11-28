@@ -2,7 +2,6 @@
 Root URL Configuration for NHT-SMS.
 """
 
-from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
@@ -35,17 +34,14 @@ def health_ready(request):
         'service': 'NHT-SMS',
     }, status=status_code)
 
-admin.site.site_header = "Northern Highways Transporters SACCO"
-admin.site.site_title = "NHT-SMS Admin"
-admin.site.index_title = "Enterprise Core Administration"
-
 urlpatterns = [
     # Health checks
     path('health/live/', health_live, name='health-live'),
     path('health/ready/', health_ready, name='health-ready'),
 
-    # Admin portal
-    path('admin/', admin.site.urls),
+    # Unified Material UI Admin Dashboard (replaces Django Core Admin)
+    path('admin/', SpaIndexView.as_view(is_admin_portal=True), name='admin_index'),
+    path('admin/<path:route>/', SpaIndexView.as_view(is_admin_portal=True), name='admin_route'),
 
     # Authentication & User Accounts
     path('accounts/', include('nht_sacco.apps.accounts.urls', namespace='accounts')),

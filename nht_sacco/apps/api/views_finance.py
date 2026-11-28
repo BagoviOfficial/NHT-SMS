@@ -1,5 +1,5 @@
 from decimal import Decimal
-from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.exceptions import PermissionDenied, ValidationError as DjangoValidationError
 from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
@@ -14,14 +14,15 @@ from nht_sacco.apps.accounts.permissions import (
     FINANCE_CHECKER_ROLES,
     FINANCE_STAFF_ROLES,
     role_permission_factory,
+    scope_queryset_for_member,
 )
 from nht_sacco.apps.accounting.models import Account, Expense, FinancialPeriod, JournalEntry
 from nht_sacco.apps.accounting.services import AccountingService
 from nht_sacco.apps.audit.models import AuditAction, AuditLog, AuditOutcome
 from nht_sacco.apps.billing.models import CreditNote, Invoice, InvoiceItem, InvoiceStatus, ServiceItem
+from nht_sacco.apps.billing.services import BillingStatementService
 from nht_sacco.apps.integrations.branding import DocumentBrandingService
 from nht_sacco.apps.members.models import Member
-from nht_sacco.apps.payments.daraja import DarajaClient
 from nht_sacco.apps.payments.models import (
     ManualPaymentVoucher,
     Payment,
@@ -32,6 +33,7 @@ from nht_sacco.apps.payments.models import (
     ReconciliationRun,
 )
 from nht_sacco.apps.payments.reconciliation import PaymentReconciliationService
+from nht_sacco.apps.payments.services import PaymentWorkflowService
 from .serializers import (
     AccountSerializer,
     ExpenseSerializer,
@@ -62,6 +64,33 @@ class ServiceItemViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated()]
         return [FinanceWriteOrAuditorRead()]
 
+    @action(detail=True, methods=['post'])
+    def set_price(self, request, pk=None):
+        if request.user.role == UserRole.AUDITOR and not request.user.is_superuser:
+            return Response({'error': 'Auditors hold read-only privileges.'}, status=status.HTTP_403_FORBIDDEN)
+        svc = self.get_object()
+        try:
+            amount = Decimal(str(request.data.get('amount', '0')))
+        except Exception:
+            return Response({'error': 'Invalid decimal amount.'}, status=status.HTTP_400_BAD_REQUEST)
+        if amount < Decimal('0.00'):
+            return Response({'error': 'Amount cannot be negative.'}, status=status.HTTP_400_BAD_REQUEST)
+        from nht_sacco.apps.billing.models import ServicePrice
+        ServicePrice.objects.create(
+            service_item=svc,
+            amount=amount,
+            effective_from=timezone.localdate(),
+        )
+        AuditLog.log_action(
+            actor=request.user,
+            action=AuditAction.UPDATE,
+            entity_type='ServicePrice',
+            entity_id=svc.code,
+            outcome=AuditOutcome.SUCCESS,
+            notes=f"Updated fee for {svc.code} ({svc.name}) to KES {amount}",
+        )
+        return Response(ServiceItemSerializer(svc).data)
+
 
 class InvoiceViewSet(viewsets.ModelViewSet):
     queryset = Invoice.objects.select_related('member', 'vehicle').prefetch_related('line_items__service_item').order_by('-issue_date', '-created_at')
@@ -71,13 +100,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     search_fields = ['invoice_number', 'member__first_name', 'member__last_name', 'member__membership_number']
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        user = self.request.user
-        if user.role == UserRole.MEMBER:
-            if hasattr(user, 'member_profile'):
-                return qs.filter(member=user.member_profile)
-            return qs.none()
-        return qs
+        return scope_queryset_for_member(super().get_queryset(), self.request.user, lookup='member')
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
@@ -141,24 +164,15 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         user = request.user
         if user.role == UserRole.MEMBER and hasattr(user, 'member_profile') and invoice.member != user.member_profile:
             return Response({'error': 'Access Denied: You do not own this invoice.'}, status=status.HTTP_403_FORBIDDEN)
-        if invoice.is_fully_paid:
-            return Response({'error': 'Invoice is already settled in full.'}, status=status.HTTP_400_BAD_REQUEST)
-
         phone = (request.data.get('phone_number') or invoice.member.phone_number or '').strip()
-        if not phone:
-            return Response({'error': 'Phone number is required for M-Pesa STK Push.'}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
-            res = DarajaClient().initiate_stk_push(
-                phone_number=phone,
-                amount=invoice.balance_due,
-                invoice=invoice,
-                account_reference=invoice.invoice_number,
-                transaction_desc=f"NHT {invoice.invoice_number[-8:]}",
-            )
-            if str(res.get('ResponseCode')) == '0':
+            ok, res = PaymentWorkflowService.initiate_invoice_stk(invoice=invoice, phone_number=phone)
+            if ok:
                 return Response({'success': True, 'data': res}, status=status.HTTP_200_OK)
-            return Response({'error': res.get('CustomerMessage') or res.get('ResponseDescription') or 'STK Push failed.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': res}, status=status.HTTP_400_BAD_REQUEST)
+        except DjangoValidationError as e:
+            msg = e.messages[0] if getattr(e, 'messages', None) else str(e)
+            return Response({'error': msg}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -206,12 +220,7 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['payment_reference', 'provider_transaction_id', 'invoice__invoice_number']
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        if self.request.user.role == UserRole.MEMBER:
-            if hasattr(self.request.user, 'member_profile'):
-                return qs.filter(member=self.request.user.member_profile)
-            return qs.none()
-        return qs
+        return scope_queryset_for_member(super().get_queryset(), self.request.user, lookup='member')
 
 
 class ReceiptViewSet(viewsets.ReadOnlyModelViewSet):
@@ -221,12 +230,7 @@ class ReceiptViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['receipt_number', 'payment__payment_reference', 'payment__invoice__invoice_number']
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        if self.request.user.role == UserRole.MEMBER:
-            if hasattr(self.request.user, 'member_profile'):
-                return qs.filter(payment__member=self.request.user.member_profile)
-            return qs.none()
-        return qs
+        return scope_queryset_for_member(super().get_queryset(), self.request.user, lookup='payment__member')
 
     @action(detail=True, methods=['get'])
     def download_pdf(self, request, pk=None):
@@ -260,62 +264,40 @@ class ManualPaymentVoucherViewSet(viewsets.ModelViewSet):
             notes=f"Maker submitted voucher {voucher.bank_slip_reference} for KES {voucher.amount}",
         )
 
+    def _review_voucher(self, request, action):
+        if not (request.user.is_superuser or request.user.role in FINANCE_CHECKER_ROLES):
+            return Response({'error': 'Finance Checker clearance required.'}, status=status.HTTP_403_FORBIDDEN)
+        voucher = self.get_object()
+        try:
+            res = PaymentWorkflowService.review_voucher(
+                voucher=voucher,
+                verifier=request.user,
+                action=action,
+                notes=request.data.get('notes', ''),
+                channel='SPA',
+            )
+        except PermissionDenied as e:
+            return Response({'error': str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except DjangoValidationError as e:
+            msg = e.messages[0] if getattr(e, 'messages', None) else str(e)
+            return Response({'error': msg}, status=status.HTTP_400_BAD_REQUEST)
+
+        if action == 'APPROVE':
+            receipt = res.get('receipt')
+            return Response({
+                'voucher': ManualPaymentVoucherSerializer(res['voucher']).data,
+                'receipt_number': receipt.receipt_number if receipt else None,
+            })
+        return Response(ManualPaymentVoucherSerializer(res['voucher']).data)
+
     @action(detail=True, methods=['post'])
     @transaction.atomic
     def approve(self, request, pk=None):
-        if not (request.user.is_superuser or request.user.role in FINANCE_CHECKER_ROLES):
-            return Response({'error': 'Finance Checker clearance required.'}, status=status.HTTP_403_FORBIDDEN)
-        voucher = self.get_object()
-        if voucher.status != ManualPaymentVoucher.Status.PENDING:
-            return Response({'error': f"Voucher is already {voucher.status}."}, status=status.HTTP_400_BAD_REQUEST)
-        if voucher.entered_by_id == request.user.id:
-            return Response({'error': 'Maker-Checker violation: You cannot approve a voucher you entered.'}, status=status.HTTP_403_FORBIDDEN)
-
-        voucher.status = ManualPaymentVoucher.Status.VERIFIED
-        voucher.verified_by = request.user
-        voucher.verified_at = timezone.now()
-        voucher.verification_notes = request.data.get('notes', '')
-        voucher.save()
-
-        payment = Payment.objects.create(
-            payment_reference=Payment.generate_payment_reference(),
-            invoice=voucher.invoice,
-            member=voucher.member,
-            method=PaymentMethod.BANK_TRANSFER if voucher.method == 'BANK_TRANSFER' else PaymentMethod.CASH,
-            amount=voucher.amount,
-            idempotency_key=f"MANUAL_{voucher.id}",
-            status=PaymentStatus.INITIATED,
-            phone_number=voucher.member.phone_number,
-            confirmed_at=timezone.now(),
-        )
-        settlement = AccountingService.record_payment_settlement(
-            payment=payment,
-            amount=voucher.amount,
-            provider_transaction_id=voucher.bank_slip_reference,
-            user=request.user,
-            notes=f"Manual voucher verified via SPA by {request.user.username}",
-        )
-        return Response({
-            'voucher': ManualPaymentVoucherSerializer(voucher).data,
-            'receipt_number': settlement['receipt'].receipt_number if settlement.get('receipt') else None,
-        })
+        return self._review_voucher(request, 'APPROVE')
 
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
-        if not (request.user.is_superuser or request.user.role in FINANCE_CHECKER_ROLES):
-            return Response({'error': 'Finance Checker clearance required.'}, status=status.HTTP_403_FORBIDDEN)
-        voucher = self.get_object()
-        if voucher.status != ManualPaymentVoucher.Status.PENDING:
-            return Response({'error': f"Voucher is already {voucher.status}."}, status=status.HTTP_400_BAD_REQUEST)
-        if voucher.entered_by_id == request.user.id:
-            return Response({'error': 'Maker-Checker violation: You cannot reject a voucher you entered.'}, status=status.HTTP_403_FORBIDDEN)
-
-        voucher.status = ManualPaymentVoucher.Status.REJECTED
-        voucher.verified_by = request.user
-        voucher.verified_at = timezone.now()
-        voucher.verification_notes = request.data.get('notes', '')
-        voucher.save()
-        return Response(ManualPaymentVoucherSerializer(voucher).data)
+        return self._review_voucher(request, 'REJECT')
 
 
 class ReconciliationRunViewSet(viewsets.ReadOnlyModelViewSet):
@@ -375,52 +357,26 @@ class MemberStatementAPIView(APIView):
         else:
             return Response({'error': 'member_id query parameter is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        invoices = member.invoices.all().order_by('issue_date', 'created_at')
-        payments = Payment.objects.filter(invoice__member=member, status=PaymentStatus.SUCCESS).select_related('invoice').order_by('confirmed_at', 'created_at')
-
-        entries = []
-        for inv in invoices:
-            entries.append({
-                'date': str(inv.issue_date),
-                'timestamp': inv.created_at.isoformat(),
-                'type': 'INVOICE',
-                'reference': inv.invoice_number,
-                'description': f"Invoice for {inv.vehicle.registration_number if inv.vehicle else 'SACCO Services'}",
-                'debit': str(inv.total_amount),
-                'credit': '0.00',
-            })
-        for p in payments:
-            dt = p.confirmed_at.date() if p.confirmed_at else p.created_at.date()
-            ts = p.confirmed_at or p.created_at
-            entries.append({
-                'date': str(dt),
-                'timestamp': ts.isoformat(),
-                'type': 'PAYMENT',
-                'reference': p.provider_transaction_id or p.payment_reference,
-                'description': f"Settlement towards {p.invoice.invoice_number} ({p.get_method_display()})",
-                'debit': '0.00',
-                'credit': str(p.amount),
-            })
-
-        entries.sort(key=lambda x: (x['date'], x['timestamp']))
-        bal = Decimal('0.00')
-        total_dr = Decimal('0.00')
-        total_cr = Decimal('0.00')
-        for e in entries:
-            dr = Decimal(e['debit'])
-            cr = Decimal(e['credit'])
-            bal += (dr - cr)
-            total_dr += dr
-            total_cr += cr
-            e['running_balance'] = str(bal)
-
+        statement = BillingStatementService.build_member_statement(member)
         return Response({
-            'member_name': member.full_name,
-            'membership_number': member.membership_number,
-            'entries': entries,
-            'total_debits': str(total_dr),
-            'total_credits': str(total_cr),
-            'current_balance': str(bal),
+            'member_name': statement['member_name'],
+            'membership_number': statement['membership_number'],
+            'entries': [
+                {
+                    'date': e['date_iso'],
+                    'timestamp': e['timestamp_iso'],
+                    'type': e['type'],
+                    'reference': e['reference'],
+                    'description': e['description'],
+                    'debit': str(e['debit']),
+                    'credit': str(e['credit']),
+                    'running_balance': str(e['running_balance']),
+                }
+                for e in statement['entries']
+            ],
+            'total_debits': str(statement['total_debits']),
+            'total_credits': str(statement['total_credits']),
+            'current_balance': str(statement['current_balance']),
         })
 
 

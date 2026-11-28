@@ -8,10 +8,31 @@ from django.utils.translation import gettext_lazy as _
 from nht_sacco.apps.members.models import Member
 
 class VehicleCategory(models.TextChoices):
-    MATATU_14 = 'MATATU_14', _('14-Seater PSV Matatu')
-    MINIBUS_33 = 'MINIBUS_33', _('33-Seater PSV Minibus')
-    BUS_50_PLUS = 'BUS_50_PLUS', _('50+ Seater Long-Distance Bus')
-    PARCEL_VAN = 'PARCEL_VAN', _('Dedicated Parcel & Courier Van')
+    LIGHT_TRUCK = 'LIGHT_TRUCK', _('Light Commercial Truck (3–7 Tonnes)')
+    MEDIUM_TRUCK = 'MEDIUM_TRUCK', _('Medium Commercial Truck (8–15 Tonnes)')
+    HEAVY_TRUCK = 'HEAVY_TRUCK', _('Heavy Commercial Truck (15+ Tonnes)')
+    PRIME_MOVER = 'PRIME_MOVER', _('Prime Mover / Tractor Head')
+    SEMI_TRAILER = 'SEMI_TRAILER', _('Semi-Trailer / Flatbed / Box Trailer')
+    TANKER = 'TANKER', _('Fuel / Bulk Liquid Tanker')
+    TIPPER = 'TIPPER', _('Tipper / Dump Truck')
+    PARCEL_VAN = 'PARCEL_VAN', _('Commercial Delivery / Courier Van')
+    # Legacy choices retained for backward compatibility with existing records
+    MATATU_14 = 'MATATU_14', _('14-Seater Carrier (Legacy)')
+    MINIBUS_33 = 'MINIBUS_33', _('33-Seater Carrier (Legacy)')
+    BUS_50_PLUS = 'BUS_50_PLUS', _('50+ Seater Carrier (Legacy)')
+
+
+COMMERCIAL_VEHICLE_CATEGORIES = [
+    VehicleCategory.HEAVY_TRUCK,
+    VehicleCategory.PRIME_MOVER,
+    VehicleCategory.SEMI_TRAILER,
+    VehicleCategory.MEDIUM_TRUCK,
+    VehicleCategory.LIGHT_TRUCK,
+    VehicleCategory.TANKER,
+    VehicleCategory.TIPPER,
+    VehicleCategory.PARCEL_VAN,
+]
+
 
 class VehicleStatus(models.TextChoices):
     PENDING = 'PENDING', _('Pending Verification')
@@ -23,6 +44,7 @@ class VehicleStatus(models.TextChoices):
 class FuelType(models.TextChoices):
     DIESEL = 'DIESEL', _('Diesel')
     PETROL = 'PETROL', _('Petrol')
+    NONE = 'NONE', _('N/A (Non-Motorized Trailer)')
     ELECTRIC = 'ELECTRIC', _('Electric')
     HYBRID = 'HYBRID', _('Hybrid')
 
@@ -33,18 +55,18 @@ class Vehicle(models.Model):
         max_length=20,
         unique=True,
         db_index=True,
-        help_text=_('Format: KDA 123A')
+        help_text=_('Format: KDA 123A or ZA 1234')
     )
     chassis_number = models.CharField(_('Chassis Number'), max_length=50, unique=True)
-    engine_number = models.CharField(_('Engine Number'), max_length=50, unique=True)
-    make = models.CharField(_('Make'), max_length=50, help_text=_('e.g. Toyota, Isuzu, Scania'))
-    model = models.CharField(_('Model'), max_length=50, help_text=_('e.g. HiAce, NQR, FVR'))
+    engine_number = models.CharField(_('Engine Number'), max_length=50, unique=True, null=True, blank=True)
+    make = models.CharField(_('Make'), max_length=50, help_text=_('e.g. Isuzu, Mercedes-Benz, Scania, Sinotruk, Trailer'))
+    model = models.CharField(_('Model'), max_length=50, help_text=_('e.g. Actros, FH16, NQR, 40ft Flatbed'))
     year_of_manufacture = models.PositiveIntegerField(_('Year of Manufacture'))
     category = models.CharField(
         _('Vehicle Category'),
         max_length=30,
         choices=VehicleCategory.choices,
-        default=VehicleCategory.MATATU_14
+        default=VehicleCategory.HEAVY_TRUCK
     )
     fuel_type = models.CharField(
         _('Fuel Type'),
@@ -53,8 +75,9 @@ class Vehicle(models.Model):
         default=FuelType.DIESEL
     )
     carrying_capacity = models.PositiveIntegerField(
-        _('Carrying Capacity'),
-        help_text=_('Seating capacity for passengers or tonnage')
+        _('Payload Capacity (Tonnes)'),
+        default=15,
+        help_text=_('Payload capacity in tonnes (or units)')
     )
     color = models.CharField(_('Color'), max_length=50, default='White with Sacco Stripes')
     current_owner = models.ForeignKey(
@@ -96,6 +119,9 @@ class Vehicle(models.Model):
     def save(self, *args, **kwargs):
         # Normalize registration number to uppercase without irregular spaces
         self.registration_number = self.registration_number.strip().upper()
+        if self.engine_number is not None:
+            cleaned_eng = self.engine_number.strip()
+            self.engine_number = cleaned_eng if cleaned_eng else None
         super().save(*args, **kwargs)
 
     def __str__(self):

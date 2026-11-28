@@ -16,8 +16,8 @@ export const NAV_SECTIONS = [
         group: 'Membership & Fleet',
         items: [
             { id: 'members', label: 'SACCO Members', icon: 'groups' },
-            { id: 'vehicles', label: 'Fleet Vehicles', icon: 'directions_bus' },
-            { id: 'drivers', label: 'PSV Drivers', icon: 'badge' },
+            { id: 'vehicles', label: 'Trucks & Trailers', icon: 'local_shipping' },
+            { id: 'drivers', label: 'Fleet Drivers', icon: 'badge' },
             { id: 'routes', label: 'Transit Routes', icon: 'alt_route' },
         ],
     },
@@ -52,6 +52,7 @@ export const NAV_SECTIONS = [
     {
         group: 'Administration',
         items: [
+            { id: 'superadmin', label: 'SuperAdmin Console', icon: 'admin_panel_settings' },
             { id: 'staff', label: 'Staff & Role Management', icon: 'manage_accounts' },
             { id: 'settings', label: 'System Config & Branding', icon: 'tune' },
             { id: 'audit', label: 'Audit Trail', icon: 'fingerprint' },
@@ -197,7 +198,7 @@ export function AppLayout({ me, activeRoute, onNavigate, onLogout, notify, theme
                                         </${MUI.ListItemIcon}>
                                         <${MUI.ListItemText}
                                             primary=${item.label}
-                                            primaryTypographyProps=${{ fontSize: '0.86rem', fontWeight: selected ? 700 : 500 }}
+                                            slotProps=${{ primary: { fontSize: '0.86rem', fontWeight: selected ? 700 : 500 } }}
                                         />
                                     </${MUI.ListItemButton}>
                                 `;
@@ -207,7 +208,7 @@ export function AppLayout({ me, activeRoute, onNavigate, onLogout, notify, theme
                 })}
             </${MUI.Box}>
 
-            ${(user.is_superuser || user.is_management_staff) && html`
+            ${(user.is_superuser || user.role === 'SUPER_ADMIN') && !window.location.pathname.startsWith('/admin') && html`
                 <${MUI.Divider} />
                 <${MUI.Box} sx=${{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                     <${MUI.Button}
@@ -217,7 +218,7 @@ export function AppLayout({ me, activeRoute, onNavigate, onLogout, notify, theme
                         startIcon=${html`<${MaterialIcon} name="admin_panel_settings" />`}
                         sx=${{ justifyContent: 'flex-start' }}
                     >
-                        Django Admin Core
+                        MUI Admin Console
                     </${MUI.Button}>
                 </${MUI.Box}>
             `}
@@ -285,6 +286,10 @@ export function AppLayout({ me, activeRoute, onNavigate, onLogout, notify, theme
                         open=${Boolean(menuAnchor)}
                         onClose=${() => setMenuAnchor(null)}
                     >
+                        <${MUI.MenuItem} onClick=${() => { setMenuAnchor(null); onNavigate('profile'); }}>
+                            <${MUI.ListItemIcon}><${MaterialIcon} name="account_circle" /></${MUI.ListItemIcon}>
+                            My Profile &amp; Security
+                        </${MUI.MenuItem}>
                         <${MUI.MenuItem} onClick=${() => { setMenuAnchor(null); setPwdOpen(true); }}>
                             <${MUI.ListItemIcon}><${MaterialIcon} name="key" /></${MUI.ListItemIcon}>
                             Change Password
@@ -307,7 +312,7 @@ export function AppLayout({ me, activeRoute, onNavigate, onLogout, notify, theme
                     <${MUI.Drawer}
                         variant="permanent"
                         open
-                        PaperProps=${{ sx: { width: DRAWER_WIDTH, boxSizing: 'border-box', borderRight: '1px solid rgba(15,23,42,0.08)' } }}
+                        slotProps=${{ paper: { sx: { width: DRAWER_WIDTH, boxSizing: 'border-box', borderRight: '1px solid rgba(15,23,42,0.08)' } } }}
                     >
                         ${drawerContent}
                     </${MUI.Drawer}>
@@ -316,8 +321,10 @@ export function AppLayout({ me, activeRoute, onNavigate, onLogout, notify, theme
                         variant="temporary"
                         open=${mobileOpen}
                         onClose=${() => setMobileOpen(false)}
-                        ModalProps=${{ keepMounted: true }}
-                        PaperProps=${{ sx: { width: DRAWER_WIDTH, boxSizing: 'border-box' } }}
+                        slotProps=${{
+                            root: { keepMounted: true },
+                            paper: { sx: { width: DRAWER_WIDTH, boxSizing: 'border-box' } },
+                        }}
                     >
                         ${drawerContent}
                     </${MUI.Drawer}>

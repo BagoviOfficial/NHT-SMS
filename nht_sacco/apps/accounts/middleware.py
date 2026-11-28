@@ -54,6 +54,9 @@ class SessionSecurityMiddleware:
                 allowed = (
                     path.startswith(pw_change_url) or
                     path.startswith(logout_url) or
+                    path.startswith('/api/v1/auth/password-change/') or
+                    path.startswith('/api/v1/auth/logout/') or
+                    path.startswith('/api/v1/auth/me/') or
                     path.startswith(static_url) or
                     path.startswith(media_url)
                 )

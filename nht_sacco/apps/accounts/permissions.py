@@ -3,21 +3,12 @@ Centralized DRF Role-Based Access Control (RBAC) & Anti-IDOR permission classes
 for NHT-SMS spanning all 11 operational and self-service personas.
 """
 
+from django.db.models import Q
 from rest_framework.permissions import BasePermission, SAFE_METHODS
-from .models import UserRole
+from .models import STAFF_ROLES, UserRole
 
 
-MANAGEMENT_ROLES = {
-    UserRole.SUPER_ADMIN,
-    UserRole.CHAIRMAN,
-    UserRole.SECRETARY,
-    UserRole.TREASURER,
-    UserRole.ACCOUNTANT,
-    UserRole.COMPLIANCE_OFFICER,
-    UserRole.RENEWAL_OFFICER,
-    UserRole.FIELD_OFFICER,
-    UserRole.AUDITOR,
-}
+MANAGEMENT_ROLES = set(STAFF_ROLES)
 
 REGISTRY_OPS_ROLES = {
     UserRole.SUPER_ADMIN,
@@ -143,7 +134,7 @@ class IsMemberUser(BasePermission):
 
 
 class IsDriverUser(BasePermission):
-    message = "Active PSV Driver profile required."
+    message = "Active Commercial Fleet Driver profile required."
 
     def has_permission(self, request, view):
         return bool(
@@ -174,3 +165,18 @@ def role_permission_factory(allowed_write_roles, allow_auditor_read=False):
             return False
 
     return RoleScopedPermission
+
+
+def scope_queryset_for_member(qs, user, lookup='member', q_builder=None):
+    """
+    Restricts a queryset to records belonging to `user.member_profile` when
+    the caller holds the MEMBER role, returning `qs.none()` if unlinked.
+    """
+    if getattr(user, 'role', None) != UserRole.MEMBER:
+        return qs
+    member = getattr(user, 'member_profile', None)
+    if not member:
+        return qs.none()
+    if q_builder is not None:
+        return qs.filter(q_builder(member))
+    return qs.filter(**{lookup: member})

@@ -10,13 +10,13 @@ from .validators import validate_regulatory_document
 
 class DocumentCategory(models.TextChoices):
     INSPECTION = 'INSPECTION', _('Vehicle Inspection Certificate')
-    INSURANCE = 'INSURANCE', _('Motor PSV Insurance Certificate')
+    INSURANCE = 'INSURANCE', _('Motor Commercial Insurance Certificate')
     KENHA_PERMIT = 'KENHA_PERMIT', _('KeNHA Road Authority Permit')
     NTSA_RSL = 'NTSA_RSL', _('NTSA Road Service Licence')
     COUNTY_PERMIT = 'COUNTY_PERMIT', _('County Transport Business Permit')
     SPEED_GOVERNOR = 'SPEED_GOVERNOR', _('Speed Governor Certificate')
     POLICE_CLEARANCE = 'POLICE_CLEARANCE', _('Police Clearance / Good Conduct')
-    DRIVER_LICENSE = 'DRIVER_LICENSE', _('Driving License PSV Endorsement')
+    DRIVER_LICENSE = 'DRIVER_LICENSE', _('Driving License Commercial Endorsement')
     SACCO_DOC = 'SACCO_DOC', _('SACCO Agreement / Bylaws')
     OTHER = 'OTHER', _('Other Approved Document')
 

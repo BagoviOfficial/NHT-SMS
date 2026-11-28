@@ -7,12 +7,11 @@ from unittest.mock import patch
 
 import openpyxl
 from PIL import Image
-from django.contrib import admin
+from django.conf import settings as django_settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import RequestFactory
 from django.urls import reverse
 from django.utils import timezone
 
@@ -149,6 +148,16 @@ def erp_bundle(db):
 class TestUnifiedMaterialUIAndTemplates:
     def test_unified_mui_across_interfaces_and_legacy_css_removed(self, client, erp_bundle):
         assert not os.path.exists('static/css/nht_brand.css')
+        assert not os.path.exists('static/css/mui_unified.css')
+
+        # Only ONE template exists across the entire project: templates/spa/index.html
+        html_templates = [
+            os.path.relpath(os.path.join(root, fname), 'templates').replace('\\', '/')
+            for root, _, files in os.walk('templates')
+            for fname in files
+            if fname.endswith('.html')
+        ]
+        assert html_templates == ['spa/index.html']
 
         # Public login & SPA shell use Material UI v5 without Bootstrap/Tailwind
         for url in [reverse('accounts:login'), '/app/']:
@@ -157,8 +166,10 @@ class TestUnifiedMaterialUIAndTemplates:
             assert 'cdn.jsdelivr.net/npm/bootstrap' not in html_body.lower()
             assert 'tailwindcss' not in html_body.lower()
             assert '@mui/material' in html_body
+            assert '/static/spa/app.js' in html_body
 
-        # Staff views (operations dashboard, reports, settings, Django admin)
+        # Staff views (operations dashboard, reports, settings, MUI /admin/ dashboard)
+        assert 'django.contrib.admin' not in django_settings.INSTALLED_APPS
         client.force_login(erp_bundle['super1'])
         for url in [
             reverse('accounts:dashboard'),
@@ -172,9 +183,16 @@ class TestUnifiedMaterialUIAndTemplates:
             assert 'bootstrap.min' not in body.lower()
             assert 'cdn.jsdelivr.net/npm/bootstrap' not in body.lower()
             assert 'tailwindcss' not in body.lower()
-            assert 'material-ui' in body.lower() or 'mui_unified.css' in body or 'admin_theme.css' in body
+            assert 'mui_unified.css' not in body
+            assert '@mui/material' in body
 
-        # Member portal uses unified Material UI
+        # /admin/ serves the Material UI Admin Dashboard SPA, not Django Core Admin
+        admin_body = client.get('/admin/').content.decode('utf-8')
+        assert '@mui/material' in admin_body
+        assert 'nht-is-admin-portal' in admin_body
+        assert 'Django administration' not in admin_body
+
+        # Member portal uses the same single Material UI template
         client.force_login(erp_bundle['member_user'])
         for url in [
             reverse('portal:dashboard'),
@@ -185,7 +203,9 @@ class TestUnifiedMaterialUIAndTemplates:
             assert resp.status_code == 200
             body = resp.content.decode('utf-8')
             assert 'bootstrap.min' not in body.lower()
-            assert 'mui_unified.css' in body
+            assert 'mui_unified.css' not in body
+            assert '@mui/material' in body
+            assert '/static/spa/app.js' in body
 
 
 @pytest.mark.django_db
@@ -240,24 +260,22 @@ class TestStaffMemberSeparationAndSuperAdminControls:
         assert created_member.user.is_superuser is False
 
     def test_super_admin_escalation_and_last_super_admin_protection(self, client, erp_bundle):
-        # Non-super-admin staff cannot access /api/v1/staff/ or grant SUPER_ADMIN
+        # Non-super-admin staff cannot access /api/v1/staff/, /api/v1/superadmin/, or grant SUPER_ADMIN
         client.force_login(erp_bundle['secretary'])
         assert client.get('/api/v1/staff/').status_code == 403
+        assert client.get('/api/v1/superadmin/overview/').status_code == 403
+        assert client.post('/api/v1/superadmin/clear-lockouts/', {}, content_type='application/json').status_code == 403
+        assert client.post('/api/v1/superadmin/terminate-sessions/', {}, content_type='application/json').status_code == 403
         assert client.post(
             f"/api/v1/staff/{erp_bundle['secretary'].pk}/assign_role/",
             {'role': UserRole.SUPER_ADMIN},
             content_type='application/json',
         ).status_code == 403
-
-        # Django Admin UserAdmin blocks ordinary staff from granting SUPER_ADMIN or deleting last Super Admin
-        rf = RequestFactory()
-        user_admin = admin.site._registry[User]
-        req_sec = rf.post('/admin/accounts/user/')
-        req_sec.user = erp_bundle['secretary']
-        target_sec = User.objects.get(pk=erp_bundle['secretary'].pk)
-        with pytest.raises(PermissionDenied):
-            target_sec.role = UserRole.SUPER_ADMIN
-            user_admin.save_model(req_sec, target_sec, form=None, change=True)
+        assert client.patch(
+            f"/api/v1/users/{erp_bundle['secretary'].pk}/",
+            {'role': UserRole.SUPER_ADMIN},
+            content_type='application/json',
+        ).status_code == 403
 
         # Super Admin cannot demote, deactivate, or delete the last active Super Admin
         client.force_login(erp_bundle['super1'])
@@ -268,13 +286,11 @@ class TestStaffMemberSeparationAndSuperAdminControls:
         )
         assert demote_res.status_code == 400
 
+        toggle_res = client.post(f"/api/v1/staff/{erp_bundle['super1'].pk}/toggle_active/")
+        assert toggle_res.status_code == 400
+
         del_res = client.delete(f"/api/v1/staff/{erp_bundle['super1'].pk}/")
         assert del_res.status_code == 400
-
-        req_sup = rf.post('/admin/accounts/user/')
-        req_sup.user = erp_bundle['super1']
-        with pytest.raises(PermissionDenied):
-            user_admin.delete_model(req_sup, erp_bundle['super1'])
 
         # Account recovery & activity endpoints
         rec_res = client.post(
@@ -290,6 +306,52 @@ class TestStaffMemberSeparationAndSuperAdminControls:
         assert act_res.status_code == 200
         assert 'login_history' in act_res.json()
         assert 'audit_logs' in act_res.json()
+
+        # MUI Admin SuperAdmin operations endpoints work end-to-end
+        ov_res = client.get('/api/v1/superadmin/overview/')
+        assert ov_res.status_code == 200
+        ov_json = ov_res.json()
+        assert 'users' in ov_json and 'security' in ov_json and 'registries' in ov_json
+
+        # Master registry CRUD via MUI Admin APIs: DocumentType, ServiceItem + price, NotificationTemplate, Sequences
+        dt_res = client.post('/api/v1/document-types/', {
+            'name': 'S16 Speed Limiter Cert',
+            'category': 'SPEED_GOVERNOR',
+            'standard_validity_months': 12,
+            'reminder_thresholds': [30, 14, 7],
+            'is_mandatory_for_vehicle': True,
+        }, content_type='application/json')
+        assert dt_res.status_code == 201
+
+        svc_res = client.post('/api/v1/service-items/', {
+            'code': 'S16-ADMIN-FEE',
+            'name': 'S16 Admin Service Fee',
+            'category': 'OTHER',
+            'is_statutory': False,
+        }, content_type='application/json')
+        assert svc_res.status_code == 201
+        price_res = client.post(f"/api/v1/service-items/{svc_res.json()['id']}/set_price/", {'amount': '2500.00'}, content_type='application/json')
+        assert price_res.status_code == 200
+        assert price_res.json()['default_amount'] == '2500.00'
+
+        tpl_res = client.post('/api/v1/notification-templates/', {
+            'code': 'S16_TEST_SMS',
+            'name': 'S16 Test SMS',
+            'channel': 'SMS',
+            'body_template': 'Hello {name}, test alert.',
+        }, content_type='application/json')
+        assert tpl_res.status_code == 201
+
+        assert client.get('/settings/api/v1/sequences/').status_code == 200
+        assert client.get('/settings/api/v1/health-logs/').status_code == 200
+
+        # Axes lockout clear & session termination
+        from axes.models import AccessAttempt
+        AccessAttempt.objects.create(username='locked_tester', ip_address='127.0.0.2', failures_since_start=5)
+        clr_res = client.post('/api/v1/superadmin/clear-lockouts/', {'username': 'locked_tester'}, content_type='application/json')
+        assert clr_res.status_code == 200
+        assert clr_res.json()['cleared'] >= 1
+        assert client.post('/api/v1/superadmin/terminate-sessions/', {}, content_type='application/json').status_code == 200
 
     def test_unlinked_member_cannot_enumerate_other_records(self, client, erp_bundle):
         client.force_login(erp_bundle['unlinked_member'])
@@ -619,3 +681,183 @@ class TestCentralCompanyBrandingAndDocumentVersioning:
         del_logo = client.delete('/settings/api/v1/company-profile/logo/?type=primary')
         assert del_logo.status_code == 200
         assert del_logo.json()['logo_url'] == ''
+
+
+@pytest.mark.django_db
+class TestMemberOnboardingVehiclesPortalAndCommercialFleet:
+    def test_commercial_vehicle_categories_endpoint_and_trailer_support(self, client, erp_bundle):
+        client.force_login(erp_bundle['secretary'])
+        res = client.get('/api/v1/vehicles/categories/')
+        assert res.status_code == 200
+        payload = res.json()
+        cat_values = {c['value'] for c in payload['categories']}
+        assert {'HEAVY_TRUCK', 'PRIME_MOVER', 'SEMI_TRAILER', 'TANKER', 'TIPPER'}.issubset(cat_values)
+        assert 'MATATU_14' not in cat_values
+        assert 'MINIBUS_33' not in cat_values
+        assert 'BUS_50_PLUS' not in cat_values
+        fuel_values = {f['value'] for f in payload['fuel_types']}
+        assert 'NONE' in fuel_values
+        assert 'DIESEL' in fuel_values
+
+    def test_member_creation_includes_trucks_trailers_and_portal_account(self, client, erp_bundle):
+        client.force_login(erp_bundle['secretary'])
+
+        res = client.post('/api/v1/members/', {
+            'first_name': 'Juma',
+            'last_name': 'Kilonzo',
+            'national_id': '55667788',
+            'phone_number': '+254722110099',
+            'email': 'juma.kilonzo@northernhighways.co.ke',
+            'county': 'Isiolo',
+            'category': MembershipCategory.FLEET_OWNER,
+            'next_of_kin_name': 'Grace Kilonzo',
+            'next_of_kin_relation': 'Spouse',
+            'next_of_kin_phone': '+254722110098',
+            'portal_username': 'jkilonzo',
+            'vehicles': [
+                {
+                    'registration_number': 'KDT 450Z',
+                    'chassis_number': 'CHS-ACTROS-450Z',
+                    'engine_number': 'ENG-OM471-450Z',
+                    'make': 'Mercedes-Benz',
+                    'model': 'Actros 2645',
+                    'year_of_manufacture': 2024,
+                    'category': VehicleCategory.PRIME_MOVER,
+                    'fuel_type': 'DIESEL',
+                    'carrying_capacity': 28,
+                },
+                {
+                    'registration_number': 'ZA 8891',
+                    'chassis_number': 'CHS-TRL-8891',
+                    'engine_number': '',
+                    'make': 'CIM',
+                    'model': '40ft Flatbed Semi-Trailer',
+                    'year_of_manufacture': 2024,
+                    'category': VehicleCategory.SEMI_TRAILER,
+                    'fuel_type': 'NONE',
+                    'carrying_capacity': 32,
+                },
+            ],
+        }, content_type='application/json')
+        assert res.status_code == 201
+        data = res.json()
+        assert data['has_portal_account'] is True
+        assert data['username'] == 'jkilonzo'
+        assert data['vehicle_count'] == 2
+        plates = {v['registration_number'] for v in data['vehicles']}
+        assert plates == {'KDT 450Z', 'ZA 8891'}
+
+        creds = data['provisioned_portal_credentials']
+        assert creds['username'] == 'jkilonzo'
+        assert creds['generated'] is True
+        assert creds['must_change_password'] is True
+
+        # Second member with another non-motorized trailer (blank engine_number) must not collide
+        res2 = client.post('/api/v1/members/', {
+            'first_name': 'Salim',
+            'last_name': 'Boru',
+            'national_id': '55667799',
+            'phone_number': '+254722110077',
+            'email': 'salim.boru@northernhighways.co.ke',
+            'county': 'Marsabit',
+            'category': MembershipCategory.INDIVIDUAL_OPERATOR,
+            'next_of_kin_name': 'Amina Boru',
+            'next_of_kin_relation': 'Spouse',
+            'next_of_kin_phone': '+254722110076',
+            'vehicles': [
+                {
+                    'registration_number': 'ZB 1122',
+                    'chassis_number': 'CHS-TRL-1122',
+                    'engine_number': '',
+                    'make': 'Sinotruk',
+                    'model': 'Box Semi-Trailer',
+                    'year_of_manufacture': 2023,
+                    'category': VehicleCategory.SEMI_TRAILER,
+                    'carrying_capacity': 30,
+                },
+            ],
+        }, content_type='application/json')
+        assert res2.status_code == 201
+        data2 = res2.json()
+        assert data2['has_portal_account'] is True
+        assert data2['vehicles'][0]['fuel_type'] == 'NONE'
+        assert data2['vehicles'][0]['engine_number'] is None
+
+        # Newly created member can log in with provisioned portal credentials, must change temp password, then view their fleet
+        client.logout()
+        login_res = client.post('/api/v1/auth/login/', {
+            'username': creds['username'],
+            'password': creds['temporary_password'],
+        }, content_type='application/json')
+        assert login_res.status_code == 200
+        assert login_res.json()['user']['role'] == UserRole.MEMBER
+        assert login_res.json()['user']['member_id'] == data['id']
+        assert login_res.json()['user']['must_change_password'] is True
+
+        # Forced password change clears temporary password gate
+        pw_change = client.post('/api/v1/auth/password-change/', {
+            'old_password': creds['temporary_password'],
+            'new_password': 'MemberNewStrong!2026',
+        }, content_type='application/json')
+        assert pw_change.status_code == 200
+
+        my_vehicles_res = client.get('/api/v1/vehicles/')
+        assert my_vehicles_res.status_code == 200
+        my_vehicles = my_vehicles_res.json()['results']
+        assert {v['registration_number'] for v in my_vehicles} == {'KDT 450Z', 'ZA 8891'}
+
+        # Member portal HTML vehicle registration works for non-motorized semi-trailer
+        portal_reg = client.post(reverse('portal:vehicle_register'), {
+            'registration_number': 'ZC 3344',
+            'chassis_number': 'CHS-TRL-3344',
+            'engine_number': '',
+            'make': 'CIM',
+            'model': '45ft Skeletal Trailer',
+            'year_of_manufacture': 2025,
+            'category': VehicleCategory.SEMI_TRAILER,
+            'fuel_type': 'NONE',
+            'carrying_capacity': 35,
+        }, follow=True)
+        assert portal_reg.status_code == 200
+        assert Vehicle.objects.filter(registration_number='ZC 3344', current_owner_id=data['id']).exists()
+
+    def test_member_creation_rolls_back_on_invalid_vehicle_and_supports_portal_reset(self, client, erp_bundle):
+        client.force_login(erp_bundle['secretary'])
+        before_users = User.objects.count()
+        before_members = Member.objects.count()
+
+        bad_res = client.post('/api/v1/members/', {
+            'first_name': 'Rollback',
+            'last_name': 'Tester',
+            'national_id': '66778899',
+            'phone_number': '+254733009911',
+            'email': 'rollback.tester@northernhighways.co.ke',
+            'county': 'Isiolo',
+            'category': MembershipCategory.INDIVIDUAL_OPERATOR,
+            'next_of_kin_name': 'Kin Rollback',
+            'next_of_kin_relation': 'Sibling',
+            'next_of_kin_phone': '+254733009912',
+            'vehicles': [
+                {
+                    'registration_number': '',  # invalid empty plate
+                    'chassis_number': 'CHS-BAD',
+                    'make': 'Isuzu',
+                    'model': 'FRR',
+                },
+            ],
+        }, content_type='application/json')
+        assert bad_res.status_code == 400
+        assert User.objects.count() == before_users
+        assert Member.objects.count() == before_members
+
+        # Existing member portal account reset/activation endpoint
+        reset_res = client.post(
+            f"/api/v1/members/{erp_bundle['member'].pk}/provision_portal_account/",
+            {'must_change_password': True},
+            content_type='application/json',
+        )
+        assert reset_res.status_code == 200
+        reset_data = reset_res.json()
+        assert reset_data['has_portal_account'] is True
+        assert reset_data['username'] == erp_bundle['member_user'].username
+        assert reset_data['temporary_password']

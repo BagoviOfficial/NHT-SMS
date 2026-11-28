@@ -6,14 +6,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404
 from .models import Document
 from nht_sacco.apps.accounts.models import UserRole
+from nht_sacco.apps.accounts.permissions import COMPLIANCE_STAFF_ROLES, RENEWAL_STAFF_ROLES
 from nht_sacco.apps.audit.models import AuditLog, AuditAction, AuditOutcome
 
-DOCUMENT_STAFF_ROLES = {
-    UserRole.SUPER_ADMIN,
-    UserRole.COMPLIANCE_OFFICER,
-    UserRole.RENEWAL_OFFICER,
+DOCUMENT_STAFF_ROLES = COMPLIANCE_STAFF_ROLES | RENEWAL_STAFF_ROLES | {
     UserRole.SECRETARY,
-    UserRole.CHAIRMAN,
     UserRole.AUDITOR,
 }
 

@@ -343,9 +343,15 @@ class TestExecutiveReportingAndExports:
         resp = client.get(reverse('reports:dashboard'))
         assert resp.status_code == 200
         content = resp.content.decode()
-        assert "Executive Reporting & Operations Dashboard" in content
-        assert "Fleet Compliance" in content
-        assert "Total Downtime" in content
+        assert "Executive Reports &amp; Exports" in content or "Executive Reports & Exports" in content
+        assert "@mui/material" in content
+        assert '"reports"' in content
+
+        summary_res = client.get('/api/v1/reports/summary/')
+        assert summary_res.status_code == 200
+        summary = summary_res.json()
+        assert 'compliance_rate' in summary
+        assert 'maintenance_summary' in summary
 
     def test_pdf_compliance_report_export(self, client, admin_user, vehicle_s7):
         client.force_login(admin_user)

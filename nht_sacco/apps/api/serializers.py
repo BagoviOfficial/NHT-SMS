@@ -1,9 +1,10 @@
 from decimal import Decimal
+from django.utils import timezone
 from rest_framework import serializers
 
 from nht_sacco.apps.accounts.models import User, UserRole, LoginHistory
 from nht_sacco.apps.members.models import Member
-from nht_sacco.apps.vehicles.models import Vehicle, VehicleOwnershipHistory, VehicleComplianceCard
+from nht_sacco.apps.vehicles.models import Vehicle, VehicleCategory, FuelType, VehicleOwnershipHistory, VehicleComplianceCard
 from nht_sacco.apps.drivers.models import Driver, DriverAssignment
 from nht_sacco.apps.routes.models import Route, VehicleRouteAssignment
 from nht_sacco.apps.documents.models import Document, DocumentType
@@ -95,11 +96,8 @@ class UserManagementSerializer(serializers.ModelSerializer):
         was_active_super = instance.is_active and (instance.role == UserRole.SUPER_ADMIN or instance.is_superuser)
         will_be_active_super = new_active and (new_role == UserRole.SUPER_ADMIN or (instance.is_superuser and new_role == instance.role))
         if was_active_super and not will_be_active_super:
-            from django.db.models import Q
-            other_exists = User.objects.filter(is_active=True).filter(
-                Q(role=UserRole.SUPER_ADMIN) | Q(is_superuser=True)
-            ).exclude(pk=instance.pk).exists()
-            if not other_exists:
+            from nht_sacco.apps.accounts.services import AccountSecurityService
+            if not AccountSecurityService.other_active_super_admin_exists(instance.pk):
                 raise serializers.ValidationError("Cannot deactivate or demote the last active Super Administrator.")
         if instance.role == UserRole.SUPER_ADMIN and new_role != UserRole.SUPER_ADMIN:
             instance.is_superuser = False
@@ -123,35 +121,88 @@ class MemberSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     category_display = serializers.CharField(source='get_category_display', read_only=True)
     username = serializers.CharField(source='user.username', read_only=True, default='')
+    portal_active = serializers.BooleanField(source='user.is_active', read_only=True, default=False)
+    has_portal_account = serializers.SerializerMethodField()
+    vehicles = serializers.SerializerMethodField()
+    vehicle_count = serializers.SerializerMethodField()
+    portal_username = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    portal_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    must_change_password = serializers.BooleanField(write_only=True, required=False, default=True)
 
     class Meta:
         model = Member
         fields = [
-            'id', 'user', 'username', 'membership_number', 'first_name', 'middle_name', 'last_name',
+            'id', 'user', 'username', 'portal_active', 'has_portal_account',
+            'portal_username', 'portal_password', 'must_change_password',
+            'membership_number', 'first_name', 'middle_name', 'last_name',
             'full_name', 'national_id', 'phone_number', 'email', 'postal_address', 'county',
             'category', 'category_display', 'status', 'status_display',
             'next_of_kin_name', 'next_of_kin_relation', 'next_of_kin_phone',
+            'vehicles', 'vehicle_count',
             'application_date', 'approval_date', 'approval_notes', 'created_at',
         ]
         read_only_fields = ['id', 'membership_number', 'application_date', 'approval_date', 'created_at']
+
+    def get_has_portal_account(self, obj):
+        return bool(obj.user_id and obj.user.is_active and obj.user.has_usable_password())
+
+    def get_vehicles(self, obj):
+        return [
+            {
+                'id': str(v.pk),
+                'registration_number': v.registration_number,
+                'chassis_number': v.chassis_number,
+                'engine_number': v.engine_number,
+                'make': v.make,
+                'model': v.model,
+                'year_of_manufacture': v.year_of_manufacture,
+                'category': v.category,
+                'category_display': v.get_category_display(),
+                'fuel_type': v.fuel_type,
+                'fuel_type_display': v.get_fuel_type_display(),
+                'carrying_capacity': v.carrying_capacity,
+                'color': v.color,
+                'status': v.status,
+                'qr_token': str(v.qr_token),
+            }
+            for v in obj.vehicles.all()
+        ]
+
+    def get_vehicle_count(self, obj):
+        return obj.vehicles.count()
 
 
 class VehicleSerializer(serializers.ModelSerializer):
     owner_name = serializers.CharField(source='current_owner.full_name', read_only=True)
     owner_membership_no = serializers.CharField(source='current_owner.membership_number', read_only=True)
     category_display = serializers.CharField(source='get_category_display', read_only=True)
+    fuel_type_display = serializers.CharField(source='get_fuel_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     compliance_status = serializers.SerializerMethodField()
+    engine_number = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=50)
 
     class Meta:
         model = Vehicle
         fields = [
             'id', 'registration_number', 'chassis_number', 'engine_number', 'make', 'model',
-            'year_of_manufacture', 'category', 'category_display', 'fuel_type',
+            'year_of_manufacture', 'category', 'category_display', 'fuel_type', 'fuel_type_display',
             'carrying_capacity', 'color', 'current_owner', 'owner_name', 'owner_membership_no',
             'status', 'status_display', 'qr_token', 'compliance_status', 'registered_at',
         ]
         read_only_fields = ['id', 'qr_token', 'registered_at']
+
+    def validate_engine_number(self, value):
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned if cleaned else None
+
+    def validate(self, attrs):
+        category = attrs.get('category', getattr(self.instance, 'category', VehicleCategory.HEAVY_TRUCK))
+        fuel_type = attrs.get('fuel_type', getattr(self.instance, 'fuel_type', None))
+        if category == VehicleCategory.SEMI_TRAILER and not fuel_type:
+            attrs['fuel_type'] = FuelType.NONE
+        return attrs
 
     def get_compliance_status(self, obj):
         from nht_sacco.apps.compliance.services import ComplianceService
@@ -211,25 +262,132 @@ class VehicleComplianceCardSerializer(serializers.ModelSerializer):
 
 
 class DriverSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False, allow_null=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     username = serializers.CharField(source='user.username', read_only=True, default='')
+    portal_active = serializers.BooleanField(source='user.is_active', read_only=True, default=False)
+    has_portal_account = serializers.SerializerMethodField()
+    dl_days_remaining = serializers.SerializerMethodField()
+    is_dl_expired = serializers.SerializerMethodField()
+    current_assignment = serializers.SerializerMethodField()
+    current_vehicle = serializers.SerializerMethodField()
+    current_vehicle_plate = serializers.SerializerMethodField()
+
+    vehicle = serializers.PrimaryKeyRelatedField(
+        queryset=Vehicle.objects.all(),
+        required=False,
+        allow_null=True,
+        write_only=True,
+    )
+    create_portal_account = serializers.BooleanField(write_only=True, required=False, default=False)
+    portal_username = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    portal_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    must_change_password = serializers.BooleanField(write_only=True, required=False, default=True)
 
     class Meta:
         model = Driver
         fields = [
-            'id', 'user', 'username', 'full_name', 'national_id', 'phone_number',
-            'driving_license_number', 'dl_expiry_date', 'psv_badge_number', 'psv_badge_expiry',
-            'emergency_contact_name', 'emergency_contact_phone', 'status', 'status_display', 'created_at',
+            'id', 'user', 'username', 'portal_active', 'has_portal_account',
+            'create_portal_account', 'portal_username', 'portal_password', 'must_change_password',
+            'full_name', 'national_id', 'phone_number', 'email',
+            'driving_license_number', 'dl_class', 'dl_issue_date', 'dl_expiry_date',
+            'dl_days_remaining', 'is_dl_expired',
+            'psv_badge_number', 'psv_badge_expiry',
+            'emergency_contact_name', 'emergency_contact_phone',
+            'status', 'status_display',
+            'vehicle', 'current_assignment', 'current_vehicle', 'current_vehicle_plate',
+            'created_at', 'updated_at',
         ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def to_internal_value(self, data):
+        if hasattr(data, 'copy'):
+            data = data.copy()
+        else:
+            data = dict(data)
+        if 'allocated_vehicle' in data and 'vehicle' not in data:
+            data['vehicle'] = data.pop('allocated_vehicle')
+        for key in ('vehicle', 'dl_issue_date', 'psv_badge_expiry'):
+            if data.get(key) == '':
+                data[key] = None
+        return super().to_internal_value(data)
+
+    def validate_driving_license_number(self, value):
+        return (value or '').strip().upper()
+
+    def validate_dl_class(self, value):
+        return (value or '').strip().upper()
+
+    def validate(self, attrs):
+        dl_issue = attrs.get('dl_issue_date', getattr(self.instance, 'dl_issue_date', None))
+        dl_expiry = attrs.get('dl_expiry_date', getattr(self.instance, 'dl_expiry_date', None))
+        if dl_issue and dl_expiry and dl_expiry < dl_issue:
+            raise serializers.ValidationError({
+                'dl_expiry_date': 'Driving license expiry date cannot be earlier than the issue date.'
+            })
+        return attrs
+
+    def get_has_portal_account(self, obj):
+        return bool(obj.user_id and obj.user.is_active and obj.user.has_usable_password())
+
+    def get_dl_days_remaining(self, obj):
+        if not obj.dl_expiry_date:
+            return None
+        return (obj.dl_expiry_date - timezone.localdate()).days
+
+    def get_is_dl_expired(self, obj):
+        if not obj.dl_expiry_date:
+            return False
+        return obj.dl_expiry_date < timezone.localdate()
+
+    def _get_active_assignment(self, obj):
+        for assignment in obj.assignments.all():
+            if assignment.is_current:
+                return assignment
+        return None
+
+    def get_current_assignment(self, obj):
+        assignment = self._get_active_assignment(obj)
+        if not assignment or not assignment.vehicle_id:
+            return None
+        v = assignment.vehicle
+        return {
+            'id': str(assignment.pk),
+            'vehicle_id': str(v.pk),
+            'vehicle_plate': v.registration_number,
+            'make_model': f"{v.make} {v.model}",
+            'category_display': v.get_category_display(),
+            'assigned_at': assignment.assigned_at.isoformat() if assignment.assigned_at else None,
+        }
+
+    def get_current_vehicle(self, obj):
+        assignment = self._get_active_assignment(obj)
+        return str(assignment.vehicle_id) if assignment and assignment.vehicle_id else None
+
+    def get_current_vehicle_plate(self, obj):
+        assignment = self._get_active_assignment(obj)
+        return assignment.vehicle.registration_number if assignment and assignment.vehicle_id else ''
 
 
 class DriverAssignmentSerializer(serializers.ModelSerializer):
     driver_name = serializers.CharField(source='driver.full_name', read_only=True)
+    driver_dl_number = serializers.CharField(source='driver.driving_license_number', read_only=True)
+    driver_status = serializers.CharField(source='driver.status', read_only=True)
     vehicle_plate = serializers.CharField(source='vehicle.registration_number', read_only=True)
+    vehicle_make_model = serializers.SerializerMethodField()
 
     class Meta:
         model = DriverAssignment
-        fields = ['id', 'driver', 'driver_name', 'vehicle', 'vehicle_plate', 'assigned_at', 'relieved_at', 'is_current']
+        fields = [
+            'id', 'driver', 'driver_name', 'driver_dl_number', 'driver_status',
+            'vehicle', 'vehicle_plate', 'vehicle_make_model',
+            'assigned_at', 'relieved_at', 'is_current',
+        ]
+
+    def get_vehicle_make_model(self, obj):
+        if not obj.vehicle_id:
+            return ''
+        return f"{obj.vehicle.make} {obj.vehicle.model}"
 
 
 class RouteSerializer(serializers.ModelSerializer):
@@ -575,6 +733,19 @@ class ResolutionSerializer(serializers.ModelSerializer):
         model = Resolution
         fields = ['id', 'resolution_number', 'meeting', 'meeting_title', 'title', 'description', 'votes_for', 'votes_against', 'votes_abstained', 'status', 'effective_date']
         read_only_fields = ['id', 'resolution_number']
+
+
+class NotificationTemplateSerializer(serializers.ModelSerializer):
+    channel_display = serializers.CharField(source='get_channel_display', read_only=True)
+
+    class Meta:
+        model = NotificationTemplate
+        fields = [
+            'id', 'code', 'name', 'channel', 'channel_display',
+            'subject', 'body_template', 'meta_template_name',
+            'is_active', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class NotificationSerializer(serializers.ModelSerializer):

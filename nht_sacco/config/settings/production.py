@@ -14,6 +14,14 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 # In production, simulated notification mode is explicitly disabled
 NOTIFICATION_SIMULATION_MODE = False
 
+# Production Email Mailer (defaults to SMTP unless explicitly overridden)
+MAILERS = {
+    'default': build_mailer_config(
+        os.getenv('EMAIL_BACKEND') or 'django.core.mail.backends.smtp.EmailBackend',
+        env_parser=env,
+    ),
+}
+
 # Security Headers & SSL Hardening
 SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', True)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -23,7 +31,6 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE = 'Lax'
-SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 
@@ -32,8 +39,15 @@ SECURE_HSTS_SECONDS = 31536000  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
-# Static files with WhiteNoise / Nginx
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Static files with WhiteNoise / Nginx (Django 6.x STORAGES)
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
 
 # Daraja Production Configuration
 MPESA_ENVIRONMENT = env('MPESA_ENVIRONMENT', default='live')

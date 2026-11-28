@@ -14,7 +14,7 @@ class UserRole(models.TextChoices):
     FIELD_OFFICER = 'FIELD_OFFICER', _('Field Officer')
     AUDITOR = 'AUDITOR', _('Auditor')
     MEMBER = 'MEMBER', _('SACCO Member')
-    DRIVER = 'DRIVER', _('PSV Driver')
+    DRIVER = 'DRIVER', _('Commercial Fleet Driver')
 
 
 STAFF_ROLES = (
@@ -93,16 +93,7 @@ class User(AbstractUser):
         if self.role == UserRole.SUPER_ADMIN:
             self.is_staff = True
             self.is_superuser = True
-        elif self.role in [
-            UserRole.CHAIRMAN,
-            UserRole.SECRETARY,
-            UserRole.TREASURER,
-            UserRole.ACCOUNTANT,
-            UserRole.COMPLIANCE_OFFICER,
-            UserRole.RENEWAL_OFFICER,
-            UserRole.FIELD_OFFICER,
-            UserRole.AUDITOR,
-        ]:
+        elif self.role in STAFF_ROLES:
             self.is_staff = True
         elif self.role in (UserRole.MEMBER, UserRole.DRIVER):
             if not self.is_superuser:
@@ -112,17 +103,7 @@ class User(AbstractUser):
 
     @property
     def is_management_staff(self):
-        return self.is_superuser or self.role in [
-            UserRole.SUPER_ADMIN,
-            UserRole.CHAIRMAN,
-            UserRole.SECRETARY,
-            UserRole.TREASURER,
-            UserRole.ACCOUNTANT,
-            UserRole.COMPLIANCE_OFFICER,
-            UserRole.RENEWAL_OFFICER,
-            UserRole.FIELD_OFFICER,
-            UserRole.AUDITOR,
-        ]
+        return self.is_superuser or self.role in STAFF_ROLES
 
     @property
     def is_secretary(self):
@@ -181,40 +162,6 @@ class User(AbstractUser):
     @property
     def is_driver(self):
         return self.role == UserRole.DRIVER
-
-    @property
-    def role_badge_color(self):
-        mapping = {
-            UserRole.SUPER_ADMIN: 'danger',
-            UserRole.CHAIRMAN: 'primary',
-            UserRole.SECRETARY: 'info',
-            UserRole.TREASURER: 'success',
-            UserRole.ACCOUNTANT: 'success',
-            UserRole.COMPLIANCE_OFFICER: 'warning',
-            UserRole.RENEWAL_OFFICER: 'warning',
-            UserRole.FIELD_OFFICER: 'secondary',
-            UserRole.AUDITOR: 'dark',
-            UserRole.MEMBER: 'primary',
-            UserRole.DRIVER: 'info',
-        }
-        return mapping.get(self.role, 'secondary')
-
-    @property
-    def role_icon(self):
-        mapping = {
-            UserRole.SUPER_ADMIN: 'shield-lock-fill',
-            UserRole.CHAIRMAN: 'award-fill',
-            UserRole.SECRETARY: 'card-checklist',
-            UserRole.TREASURER: 'cash-stack',
-            UserRole.ACCOUNTANT: 'calculator-fill',
-            UserRole.COMPLIANCE_OFFICER: 'shield-check',
-            UserRole.RENEWAL_OFFICER: 'arrow-repeat',
-            UserRole.FIELD_OFFICER: 'geo-alt-fill',
-            UserRole.AUDITOR: 'journal-check',
-            UserRole.MEMBER: 'person-badge',
-            UserRole.DRIVER: 'car-front-fill',
-        }
-        return mapping.get(self.role, 'person')
 
     @property
     def dashboard_url(self):

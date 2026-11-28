@@ -238,3 +238,10 @@ class CompanyProfileSerializer(serializers.ModelSerializer):
         if obj.monochrome_logo and obj.monochrome_logo.name:
             return f"/settings/api/v1/company-profile/logo-asset/?type=monochrome&v={obj.current_version}"
         return ''
+
+
+class NumberSequenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NumberSequence
+        fields = ['id', 'prefix', 'year', 'last_number', 'updated_at']
+        read_only_fields = fields

@@ -1,3 +1,4 @@
+import ApexCharts from 'apexcharts';
 import { React, MUI, html, apiFetch, formatCurrency, formatDateTime } from '../api.js';
 import { PageHeader, StatCard, StatusChip, ResponsiveDataGrid } from '../components.js';
 
@@ -17,14 +18,14 @@ export function DashboardPage({ me, notify }) {
     }, [notify]);
 
     React.useEffect(() => {
-        if (!data || !window.ApexCharts) return;
+        if (!data || !ApexCharts) return;
         const k = data.kpis;
         let compChart = null;
         let fleetChart = null;
 
         if (compChartRef.current) {
             compChartRef.current.innerHTML = '';
-            compChart = new window.ApexCharts(compChartRef.current, {
+            compChart = new ApexCharts(compChartRef.current, {
                 chart: { type: 'donut', height: 250 },
                 series: [k.compliant_vehicles || 0, k.delinquent_vehicles || 0],
                 labels: ['Compliant Fleet', 'Delinquent / Expired'],
@@ -36,7 +37,7 @@ export function DashboardPage({ me, notify }) {
 
         if (fleetChartRef.current) {
             fleetChartRef.current.innerHTML = '';
-            fleetChart = new window.ApexCharts(fleetChartRef.current, {
+            fleetChart = new ApexCharts(fleetChartRef.current, {
                 chart: { type: 'bar', height: 250, toolbar: { show: false } },
                 series: [{ name: 'Vehicles', data: (data.fleet_categories || []).map((c) => c.count) }],
                 xaxis: { categories: (data.fleet_categories || []).map((c) => c.category) },
@@ -68,7 +69,7 @@ export function DashboardPage({ me, notify }) {
             />
 
             <${MUI.Grid} container spacing=${2.2} sx=${{ mb: 3 }}>
-                <${MUI.Grid} item xs=${12} sm=${6} md=${3}>
+                <${MUI.Grid} size=${{ xs: 12, sm: 6, md: 3 }}>
                     <${StatCard}
                         title="SACCO Members"
                         value=${k.total_members}
@@ -77,7 +78,7 @@ export function DashboardPage({ me, notify }) {
                         color="primary"
                     />
                 </${MUI.Grid}>
-                <${MUI.Grid} item xs=${12} sm=${6} md=${3}>
+                <${MUI.Grid} size=${{ xs: 12, sm: 6, md: 3 }}>
                     <${StatCard}
                         title="Fleet & Compliance"
                         value="${k.compliance_rate}%"
@@ -86,7 +87,7 @@ export function DashboardPage({ me, notify }) {
                         color="success"
                     />
                 </${MUI.Grid}>
-                <${MUI.Grid} item xs=${12} sm=${6} md=${3}>
+                <${MUI.Grid} size=${{ xs: 12, sm: 6, md: 3 }}>
                     <${StatCard}
                         title="Certificates & Permits"
                         value="${k.expiring_certificates || 0} / ${k.expired_certificates || 0}"
@@ -95,7 +96,7 @@ export function DashboardPage({ me, notify }) {
                         color="warning"
                     />
                 </${MUI.Grid}>
-                <${MUI.Grid} item xs=${12} sm=${6} md=${3}>
+                <${MUI.Grid} size=${{ xs: 12, sm: 6, md: 3 }}>
                     <${StatCard}
                         title=${fin.restricted ? 'Active Transit Routes' : 'Collections Cleared'}
                         value=${fin.restricted ? (k.active_routes ?? (k.route_distribution || []).length) : formatCurrency(fin.total_collected)}
@@ -106,7 +107,7 @@ export function DashboardPage({ me, notify }) {
                 </${MUI.Grid}>
 
                 ${!fin.restricted && html`
-                    <${MUI.Grid} item xs=${12} sm=${6} md=${3}>
+                    <${MUI.Grid} size=${{ xs: 12, sm: 6, md: 3 }}>
                         <${StatCard}
                             title="Total Billed (Invoices)"
                             value=${formatCurrency(fin.total_invoiced)}
@@ -115,7 +116,7 @@ export function DashboardPage({ me, notify }) {
                             color="primary"
                         />
                     </${MUI.Grid}>
-                    <${MUI.Grid} item xs=${12} sm=${6} md=${3}>
+                    <${MUI.Grid} size=${{ xs: 12, sm: 6, md: 3 }}>
                         <${StatCard}
                             title="Approved Expenditure"
                             value=${formatCurrency(fin.total_expenses)}
@@ -124,7 +125,7 @@ export function DashboardPage({ me, notify }) {
                             color="warning"
                         />
                     </${MUI.Grid}>
-                    <${MUI.Grid} item xs=${12} sm=${6} md=${3}>
+                    <${MUI.Grid} size=${{ xs: 12, sm: 6, md: 3 }}>
                         <${StatCard}
                             title="Active Routes"
                             value=${k.active_routes || 0}
@@ -133,7 +134,7 @@ export function DashboardPage({ me, notify }) {
                             color="info"
                         />
                     </${MUI.Grid}>
-                    <${MUI.Grid} item xs=${12} sm=${6} md=${3}>
+                    <${MUI.Grid} size=${{ xs: 12, sm: 6, md: 3 }}>
                         <${StatCard}
                             title="Alerts & Approvals"
                             value="${k.system_alerts || 0} / ${k.pending_approvals || 0}"
@@ -146,15 +147,15 @@ export function DashboardPage({ me, notify }) {
             </${MUI.Grid}>
 
             <${MUI.Grid} container spacing=${2.5} sx=${{ mb: 3 }}>
-                <${MUI.Grid} item xs=${12} md=${5}>
+                <${MUI.Grid} size=${{ xs: 12, md: 5 }}>
                     <${MUI.Card} sx=${{ p: 2.5, height: '100%' }}>
                         <${MUI.Typography} variant="h6" sx=${{ mb: 1 }}>Fleet Compliance Breakdown</${MUI.Typography}>
                         <div ref=${compChartRef}></div>
                     </${MUI.Card}>
                 </${MUI.Grid}>
-                <${MUI.Grid} item xs=${12} md=${7}>
+                <${MUI.Grid} size=${{ xs: 12, md: 7 }}>
                     <${MUI.Card} sx=${{ p: 2.5, height: '100%' }}>
-                        <${MUI.Typography} variant="h6" sx=${{ mb: 1 }}>PSV Fleet Categories</${MUI.Typography}>
+                        <${MUI.Typography} variant="h6" sx=${{ mb: 1 }}>Commercial Fleet Categories</${MUI.Typography}>
                         <div ref=${fleetChartRef}></div>
                     </${MUI.Card}>
                 </${MUI.Grid}>
@@ -166,7 +167,7 @@ export function DashboardPage({ me, notify }) {
                     <${ResponsiveDataGrid}
                         rows=${data.recent_transactions}
                         columns=${[
-                            { key: 'reference', label: 'Ref #', render: (r) => html`<span class="nht-mono">${r.reference}</span>` },
+                            { key: 'reference', label: 'Ref #', render: (r) => html`<span className="nht-mono">${r.reference}</span>` },
                             { key: 'member_name', label: 'Member' },
                             { key: 'invoice_number', label: 'Invoice #' },
                             { key: 'method', label: 'Method' },

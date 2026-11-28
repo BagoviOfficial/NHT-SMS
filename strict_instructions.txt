@@ -1,0 +1,955 @@
+MASTER IMPLEMENTATION PROMPT
+
+NHT-SMS — Enterprise-Grade SACCO ERP Transformation
+
+Repository: https://github.com/BagoviOfficial/NHT-SMS
+Project: Northern Highways Transporters SACCO Management System
+Developer/Owner: Bagovi Technologies
+Target: Enterprise-grade, secure, modular SACCO ERP
+Working branch: "feature/unified-material-ui-enterprise-erp"
+
+---
+
+1. YOUR ROLE AND PRIMARY OBJECTIVE
+
+Act as a senior enterprise software architect, Django/Python engineer, React developer, database engineer, UI/UX designer, cybersecurity specialist and QA engineer.
+
+Your task is to conduct a comprehensive technical audit, repair existing defects and transform the entire NHT-SMS repository into a production-ready, enterprise-grade SACCO ERP.
+
+Do not merely redesign the dashboard or produce a visual prototype. Implement the transformation across the entire application, including its backend, frontend, database interactions, administration interfaces, APIs, business workflows, document generation, security controls and deployment configuration.
+
+Repository: https://github.com/BagoviOfficial/NHT-SMS/
+Clone the repository locally and work on current local directory.
+Otherwise, work directly against the repository wherever authorised tools permit. Do not stop at producing recommendations or code snippets.
+
+2. NON-NEGOTIABLE DEVELOPMENT PRINCIPLES
+
+1. Preserve the existing modular monolithic architecture unless a demonstrable technical reason justifies a change.
+2. Preserve existing business logic, integrations, historical records and production data.
+3. Never reset, drop, truncate or overwrite the production database.
+4. Never introduce destructive migrations or migrations that silently discard existing records.
+5. Inspect the existing codebase before modifying it.
+6. Maintain compatibility with existing database records and supported integrations.
+7. Use proper Django migrations for schema changes.
+8. Implement backend-enforced permissions; hiding frontend buttons is not access control.
+9. Avoid duplicated business logic and inconsistent implementations across interfaces.
+10. Use reusable components, services, validators and permission policies.
+11. Write automated tests for every significant new feature and bug fix.
+12. Document architectural changes, configuration requirements, deployment steps and operational procedures.
+13. Do not introduce mock data into production dashboards or present fabricated figures as real business information.
+14. Do not claim a feature works until it has been implemented and tested.
+
+Before changing anything, inspect the repository structure, installed dependencies, existing applications, database models, migrations, APIs, frontend architecture, authentication system, integrations and deployment configuration.
+
+3. COMPLETE USER INTERFACE UNIFICATION
+
+3.1 One design system
+
+The entire application must use Material UI (MUI) as its exclusive visual design system.
+
+Use React 18 and Material UI v5, loaded through pinned CDN resources where technically compatible with the existing architecture.
+
+The objective is to eliminate fragmented interfaces and establish one consistent enterprise application experience.
+
+Remove or replace:
+
+- Bootstrap-based interfaces.
+- Tailwind-based interfaces.
+- Legacy standalone HTML interfaces.
+- Duplicated dashboard designs.
+- Inconsistent navigation systems.
+- Competing themes and component libraries.
+- Unnecessary alternative interface implementations.
+
+Do not leave users with multiple visual design systems.
+
+3.2 Django administration
+
+The Django "/admin/" interface must also be redesigned to follow the Material UI visual language.
+
+Maintain Django's existing administrative functionality, security, authentication, model permissions and administrative workflows.
+
+Do not simply replace the Django admin URL with a frontend page that lacks backend administrative capabilities.
+
+Implement a maintainable approach that preserves Django administration while delivering a unified Material UI experience.
+
+3.3 Design standards
+
+Implement:
+
+- Responsive desktop, tablet and mobile layouts.
+- Consistent navigation and application menus.
+- Material UI data tables.
+- Search, filtering, sorting and pagination.
+- Reusable modal dialogs and forms.
+- Form validation and useful error messages.
+- Consistent notification and confirmation systems.
+- Accessible colour contrast and keyboard navigation.
+- Loading, empty and error states.
+- Light and dark themes where appropriate.
+
+Every page must look and behave like part of the same enterprise application.
+
+4. USER MANAGEMENT AND ROLE-BASED ACCESS CONTROL
+
+Audit and improve the existing authentication and user-management architecture.
+
+The system must distinguish clearly between:
+
+1. SACCO staff and administrators.
+2. Registered SACCO members.
+3. Other operational accounts, where applicable.
+
+Staff accounts and SACCO membership records must never be confused or merged into a single undifferentiated listing.
+
+4.1 Staff management
+
+Create a dedicated Staff Management section.
+
+Authorised administrators must be able to:
+
+- Register staff users.
+- View staff profiles.
+- Edit staff information.
+- Activate and deactivate accounts.
+- Assign staff roles.
+- Change existing staff roles.
+- Revoke inappropriate permissions.
+- Reset or initiate account recovery.
+- Review account activity and audit history.
+
+4.2 SACCO member management
+
+Create a separate Members section.
+
+Authorised staff must be able to:
+
+- Register new members.
+- View member profiles.
+- Edit member information.
+- Search and filter membership records.
+- Review membership applications.
+- Process membership approvals.
+- Suspend and reinstate membership where authorised.
+- Review membership history.
+- Generate membership documents.
+
+A member must not automatically receive staff privileges merely because the member has an account.
+
+4.3 Role enforcement
+
+Audit and preserve the existing role structure where appropriate, including:
+
+- SUPER_ADMIN
+- CHAIRMAN
+- SECRETARY
+- TREASURER
+- ACCOUNTANT
+- COMPLIANCE_OFFICER
+- RENEWAL_OFFICER
+- FIELD_OFFICER
+- AUDITOR
+- MEMBER
+- DRIVER
+
+Review the existing permission matrix and establish clear responsibilities for every role.
+
+Implement permissions at the Django backend, API and frontend levels.
+
+Protect sensitive operations through explicit authorisation checks.
+
+5. SUPER ADMINISTRATOR — GLOBAL SYSTEM AUTHORITY
+
+This is a mandatory core feature.
+
+The SUPER_ADMIN role must have comprehensive authority over the entire SACCO ERP.
+
+5.1 Global staff and role administration
+
+The Super Admin must be able to:
+
+- Create and manage staff accounts.
+- Assign roles to staff users.
+- Change existing staff roles.
+- Revoke roles and permissions.
+- Activate or deactivate staff accounts.
+- Review staff access and account activity.
+- Manage administrative access across all system modules.
+
+Only an authorised Super Admin may assign or grant the SUPER_ADMIN role.
+
+Prevent ordinary administrators from elevating themselves to Super Admin.
+
+Protect the system against accidental removal or deactivation of the last active Super Admin.
+
+5.2 Global system configuration
+
+Create a centralised System Configuration section accessible to Super Admins.
+
+It must provide control over:
+
+- SACCO identity and company information.
+- Branding and document appearance.
+- User and role settings.
+- Membership configuration.
+- Fleet and vehicle configuration.
+- Routes and operational settings.
+- Financial and accounting configuration.
+- Compliance and renewal settings.
+- Document numbering and templates.
+- Notifications and communication settings.
+- API and integration settings.
+- Security policies.
+- Audit and logging configuration.
+- Backup and maintenance settings.
+
+Configuration changes must be validated, permission-controlled and recorded in the audit trail.
+
+Sensitive configuration values, credentials and API secrets must never be exposed through ordinary logs or unauthorised interfaces.
+
+Super Admin authority must not bypass accounting integrity, audit requirements or maker-checker controls.
+
+6. VEHICLE COMPLIANCE CARD — SECURE QR VERIFICATION
+
+Implement a professional digital Vehicle Compliance Card for registered SACCO vehicles.
+
+Each issued compliance card must include a unique, secure QR code.
+
+6.1 Compliance card information
+
+The card should support the following information, where applicable:
+
+- SACCO/company logo.
+- Company name.
+- Vehicle registration number.
+- Vehicle reference or fleet number.
+- Registered owner or authorised operator.
+- Assigned route.
+- Compliance status.
+- Certificate/reference number.
+- Issue date.
+- Expiry date.
+- Issuing officer.
+- QR code for online verification.
+
+Use a professional, printable layout suitable for physical presentation and digital distribution.
+
+6.2 QR code security
+
+Generate a unique cryptographically secure verification token for every issued compliance certificate.
+
+The QR code must point to a public HTTPS verification endpoint, for example:
+
+"https://nhtsms.bagovi.com/verify/compliance/<secure-token>/"
+
+The token must:
+
+- Be unpredictable and sufficiently strong.
+- Be unique to the issued certificate.
+- Not expose member personal information.
+- Not contain sensitive vehicle or financial information.
+- Be protected against unauthorised modification or enumeration.
+- Be revocable when necessary.
+
+Store and validate verification tokens securely. Prefer storing a cryptographic hash of the token where the implementation permits secure verification.
+
+Do not use sequential database IDs as QR verification secrets.
+
+6.3 Public verification page
+
+A person scanning the QR code must be able to verify the certificate without logging into the SACCO system.
+
+The public verification page must display only the minimum information necessary to establish authenticity.
+
+It must check the live certificate status against the database rather than trusting information printed inside the QR code.
+
+Support the following verification outcomes:
+
+- VALID
+- EXPIRED
+- REVOKED
+- SUSPENDED
+- INVALID
+- SUPERSEDED
+
+The verification result must clearly communicate whether the compliance certificate is currently valid.
+
+Do not expose:
+
+- Member national identification numbers.
+- Personal contact information.
+- Private financial information.
+- Internal administrative records.
+- Login credentials.
+- Unnecessary personal information.
+
+Implement rate limiting, secure token validation, appropriate caching controls and protection against enumeration.
+
+6.4 Compliance lifecycle management
+
+Authorised staff must be able to:
+
+- Issue compliance cards.
+- View existing cards.
+- Download and print cards.
+- Renew certificates.
+- Revoke certificates.
+- Review certificate history.
+- Regenerate QR codes when security requires it.
+- Track expiry dates.
+- Identify expired or suspended vehicles.
+
+Record every issue, renewal, revocation and status change in the audit trail.
+
+A revoked or superseded certificate must not continue to appear valid merely because an old printed card still exists.
+
+7. CENTRAL COMPANY PROFILE AND BRANDING MANAGEMENT
+
+Implement a centralised Company Profile and Branding module under:
+
+"System Configuration → Company Profile & Branding"
+
+Only authorised Super Admins may modify these settings.
+
+7.1 Company profile
+
+Allow the Super Admin to configure:
+
+- SACCO/company legal name.
+- Trading name.
+- Physical address.
+- Postal address.
+- Telephone numbers.
+- Official email address.
+- Website.
+- Registration details.
+- Company identification information.
+- Document footer information.
+- Other relevant company metadata.
+
+7.2 Company logo management
+
+Provide an interface for the Super Admin to:
+
+- Upload the official company logo.
+- Preview the uploaded logo.
+- Replace the existing logo.
+- Remove the logo.
+- Upload an optional monochrome version where useful.
+
+Validate uploaded files by checking:
+
+- File extension.
+- MIME type.
+- Actual file signature.
+- File size.
+- Image dimensions.
+- Image processing safety.
+
+Store uploaded branding assets using managed storage rather than embedding arbitrary file paths in application code.
+
+Prevent malicious file uploads and unsafe image processing.
+
+7.3 Universal document branding
+
+The company logo must automatically appear in all newly generated official documents across the system.
+
+Implement a reusable central branding/document-generation service.
+
+Do not hardcode separate logo paths or duplicate branding logic in individual modules.
+
+The branding service must be used by all applicable document generators, including:
+
+- PDF documents.
+- Excel spreadsheets.
+- Membership certificates.
+- Vehicle compliance cards.
+- Invoices.
+- Receipts.
+- Payment statements.
+- Financial reports.
+- Accounting reports.
+- Membership reports.
+- Compliance reports.
+- Renewal reports.
+- Official letters.
+- Other printable SACCO documents.
+
+PDF requirements
+
+- Embed the actual company logo.
+- Maintain the logo's original proportions.
+- Use professional document headers and footers.
+- Include appropriate company information.
+- Support page numbering where appropriate.
+- Maintain consistent typography and layout.
+
+Excel requirements
+
+- Embed the actual logo as an image in the workbook.
+- Maintain the logo's proportions.
+- Use professional worksheet headings.
+- Preserve existing formulas and data.
+- Apply appropriate spreadsheet formatting.
+- Ensure the document remains editable.
+
+Other document formats
+
+Apply the same branding service to Word documents, printable certificates and other supported formats.
+
+7.4 Branding version history
+
+When the company logo or profile changes:
+
+- Newly generated documents must use the updated branding.
+- Previously issued documents must retain their original appearance unless formally reissued.
+- Maintain appropriate branding history or version references.
+- Avoid silently altering previously issued official certificates and records.
+
+If no logo has been uploaded, use a professional text-based company header as a fallback.
+
+8. ENTERPRISE DASHBOARD
+
+Rebuild the dashboard into a genuine enterprise SACCO management dashboard.
+
+All displayed statistics must come from actual database records and properly defined queries.
+
+Include relevant operational indicators, such as:
+
+- Total registered members.
+- Active members.
+- Pending membership applications.
+- Suspended members.
+- Registered vehicles.
+- Active vehicles.
+- Vehicles awaiting compliance.
+- Expiring compliance certificates.
+- Expired certificates.
+- Active routes.
+- Total collections.
+- Outstanding payments.
+- Membership fees.
+- Revenue and expenditure.
+- Outstanding balances.
+- Recent transactions.
+- Recent operational activities.
+- System alerts.
+- Pending approvals.
+
+Provide dashboards appropriate to the user's role.
+
+For example, financial staff should see relevant financial indicators, while compliance staff should see compliance and renewal indicators.
+
+Use efficient database queries, pagination and caching where appropriate.
+
+Do not use static figures or placeholder charts in production.
+
+9. FINANCIAL MANAGEMENT AND ACCOUNTING
+
+Conduct a comprehensive review of all existing financial modules.
+
+Implement reliable SACCO financial management with proper accounting controls.
+
+Review and improve:
+
+- Member payments.
+- Membership fees.
+- Contributions.
+- Receipts.
+- Invoices.
+- Payment allocations.
+- Outstanding balances.
+- Cashbook.
+- Bank transactions.
+- Income and expenditure.
+- Financial reporting.
+- General ledger.
+- Journal entries.
+- Chart of accounts.
+- Reconciliation.
+
+9.1 Accounting integrity
+
+Where double-entry accounting is implemented, enforce balanced journal entries.
+
+Posted financial transactions must not be silently edited or deleted.
+
+Use controlled reversal and adjustment procedures.
+
+Implement database transactions and appropriate locking to prevent duplicate payments, inconsistent balances and race conditions.
+
+9.2 Maker-checker controls
+
+Introduce maker-checker approval for sensitive financial activities where appropriate.
+
+The person initiating a sensitive transaction must not automatically approve their own transaction where separation of duties is required.
+
+Maintain complete financial audit trails.
+
+10. MEMBERSHIP MANAGEMENT
+
+Review and improve the entire membership lifecycle.
+
+Support:
+
+- Membership applications.
+- Registration.
+- Verification.
+- Approval.
+- Membership numbering.
+- Membership categories.
+- Membership status.
+- Member profiles.
+- Membership fees.
+- Member documents.
+- Member statements.
+- Suspension and reinstatement.
+- Membership renewal.
+- Historical membership records.
+
+10.1 Membership number integrity
+
+The existing membership-number generation logic must be reviewed.
+
+Avoid relying on "count() + 1" because simultaneous registrations can generate duplicate membership numbers.
+
+Implement a concurrency-safe allocation mechanism using appropriate database constraints, sequences, transactions or locking.
+
+Membership numbers must remain unique even under concurrent registrations.
+
+11. FLEET AND VEHICLE MANAGEMENT
+
+Review and improve the fleet module.
+
+Support:
+
+- Vehicle registration.
+- Vehicle ownership records.
+- Vehicle categories.
+- Vehicle status.
+- Route assignment.
+- Driver assignment.
+- Compliance documentation.
+- Insurance and inspection records.
+- Expiry tracking.
+- Vehicle history.
+- Compliance card generation.
+- QR verification.
+- Operational reporting.
+
+Ensure vehicle records are linked consistently to their relevant members, drivers and operational activities.
+
+12. ROUTES AND OPERATIONS
+
+Provide reliable route management and operational tracking.
+
+Support:
+
+- Route creation and modification.
+- Route assignment.
+- Vehicle allocation.
+- Driver allocation.
+- Route status.
+- Operational schedules.
+- Route-related reporting.
+- Relevant activity history.
+
+Prevent unauthorised changes to active operational records.
+
+13. DOCUMENT MANAGEMENT
+
+Implement a consistent document-management architecture.
+
+Support secure document uploads, storage, categorisation, retrieval and controlled access.
+
+Apply:
+
+- File validation.
+- Access permissions.
+- Document versioning where appropriate.
+- Audit logging.
+- Secure download controls.
+- Retention policies.
+- Centralised branding.
+
+Documents must not become publicly accessible simply because their URLs are known.
+
+Public QR verification must remain separate from private document storage.
+
+14. RENEWALS AND COMPLIANCE
+
+Review the existing renewal and compliance modules.
+
+Support:
+
+- Membership renewals.
+- Vehicle compliance renewals.
+- Expiry notifications.
+- Compliance status tracking.
+- Approval workflows.
+- Historical records.
+- Renewal reports.
+- Outstanding compliance actions.
+
+Use configurable notification schedules and avoid sending duplicate notifications.
+
+15. PAYMENT INTEGRATIONS AND MPESA
+
+Audit existing payment integrations, particularly Safaricom Daraja/M-Pesa.
+
+Preserve working integrations and repair broken implementations.
+
+Support:
+
+- Payment initiation.
+- Callback processing.
+- Transaction verification.
+- Payment reconciliation.
+- Receipt generation.
+- Duplicate callback protection.
+- Transaction status tracking.
+- Failed payment handling.
+
+Never trust an incoming callback without appropriate validation and transaction verification.
+
+Store API credentials securely using environment variables or an appropriate secrets-management mechanism.
+
+Never expose credentials in frontend code, logs or public API responses.
+
+16. API ARCHITECTURE
+
+Audit and improve the existing REST API.
+
+Maintain consistent API versioning and response formats.
+
+Implement:
+
+- Authentication.
+- Role-based authorisation.
+- Input validation.
+- Pagination.
+- Filtering.
+- Search.
+- Rate limiting.
+- Error handling.
+- API documentation.
+- Audit logging where appropriate.
+
+Ensure API permissions are equivalent to the permissions enforced by the web interface.
+
+Do not expose sensitive member, staff, financial or system configuration information through unauthorised API endpoints.
+
+17. CYBERSECURITY AND DATA PROTECTION
+
+Conduct a comprehensive application security audit.
+
+Review:
+
+- Authentication and session management.
+- Password security.
+- Access control.
+- CSRF protection.
+- XSS protection.
+- SQL injection risks.
+- File upload security.
+- API security.
+- Secrets management.
+- Session expiry.
+- Rate limiting.
+- Audit logging.
+- Database access.
+- Error handling.
+- Dependency vulnerabilities.
+- Security headers.
+- Backup protection.
+
+Apply secure Django and production deployment practices.
+
+Ensure that:
+
+- DEBUG is disabled in production.
+- SECRET_KEY is not exposed.
+- Database credentials are protected.
+- HTTPS is enforced.
+- Administrative endpoints are appropriately protected.
+- Sensitive records are accessible only to authorised users.
+- Security-relevant activities are auditable.
+
+Design data-handling procedures with applicable Kenyan data protection requirements in mind.
+
+18. DATABASE PERFORMANCE AND RELIABILITY
+
+Review database structure, relationships, constraints and query performance.
+
+Implement:
+
+- Appropriate database indexes.
+- Optimised querysets.
+- "select_related()" and "prefetch_related()" where appropriate.
+- Efficient pagination.
+- Transaction management.
+- Database constraints.
+- Safe migrations.
+- Consistent data validation.
+
+Identify and fix N+1 query problems and inefficient database operations.
+
+Do not introduce unnecessary schema complexity.
+
+19. TESTING AND QUALITY ASSURANCE
+
+Create or improve automated tests across all application modules.
+
+At minimum, test:
+
+Authentication and permissions
+
+- Login and logout.
+- Staff access.
+- Member access.
+- Role-based restrictions.
+- Super Admin privileges.
+- Prevention of unauthorised role elevation.
+- Protection against removal of the last active Super Admin.
+
+Membership
+
+- Registration.
+- Membership approval.
+- Membership-number uniqueness.
+- Concurrent registration.
+- Member editing.
+- Suspension and reinstatement.
+
+Financial management
+
+- Payment processing.
+- Duplicate transaction prevention.
+- Journal balancing.
+- Transaction reversal.
+- Maker-checker approval.
+- Financial audit history.
+
+Vehicle compliance
+
+- Compliance card generation.
+- QR code generation.
+- Secure token validation.
+- Public verification.
+- Expired certificates.
+- Revoked certificates.
+- Suspended certificates.
+- Invalid tokens.
+- Superseded certificates.
+- Prevention of private information leakage.
+
+Branding and documents
+
+- Logo upload.
+- Logo replacement.
+- Invalid file rejection.
+- PDF logo embedding.
+- Excel logo embedding.
+- Company information in generated documents.
+- Branding fallback when no logo exists.
+- Preservation of previously issued document branding.
+
+APIs and integrations
+
+- API authentication.
+- API permissions.
+- Invalid requests.
+- Payment callbacks.
+- Duplicate callbacks.
+- Integration error handling.
+
+General quality
+
+- Database migrations.
+- Regression tests.
+- Frontend build or runtime checks.
+- Responsive interface checks.
+- Performance checks.
+- Security checks.
+
+Do not mark the project production-ready while critical tests are failing.
+
+20. DEPLOYMENT AND PRODUCTION READINESS
+
+Inspect the existing deployment configuration before modifying it.
+
+Preserve working production settings and data.
+
+Review:
+
+- Environment variables.
+- Database configuration.
+- Static files.
+- Media files.
+- CDN resources.
+- Web server configuration.
+- Application server configuration.
+- HTTPS.
+- Background tasks.
+- Logging.
+- Backups.
+- Health checks.
+- Error monitoring.
+
+Provide:
+
+- Updated ".env.example".
+- Updated deployment instructions.
+- Database migration instructions.
+- Backup and restore procedures.
+- Production configuration guidance.
+- Rollback instructions.
+- Dependency documentation.
+
+Never commit production secrets.
+
+Do not execute destructive deployment commands.
+
+21. IMPLEMENTATION WORKFLOW
+
+Execute the work in the following order.
+
+Phase 1 — Repository audit
+
+- Inspect the complete repository.
+- Identify existing features and modules.
+- Identify bugs and architectural weaknesses.
+- Inspect models, migrations, APIs and frontend code.
+- Review deployment configuration.
+- Produce an implementation checklist.
+
+Phase 2 — Backend foundation
+
+- Repair existing bugs.
+- Improve models and relationships.
+- Implement permissions.
+- Add missing services and validation.
+- Create safe database migrations.
+- Preserve historical data.
+
+Phase 3 — Unified Material UI
+
+- Establish the unified design system.
+- Replace legacy interfaces.
+- Rebuild the dashboard.
+- Unify Django administration.
+- Separate staff and member management interfaces.
+
+Phase 4 — Super Admin and configuration
+
+- Implement global role management.
+- Implement system-wide configuration.
+- Implement central company profile and branding.
+- Protect sensitive settings.
+
+Phase 5 — SACCO ERP modules
+
+- Improve membership.
+- Improve finance and accounting.
+- Improve fleet and routes.
+- Implement secure compliance cards and QR verification.
+- Improve document management.
+- Improve renewals.
+- Repair integrations.
+
+Phase 6 — Security and optimisation
+
+- Conduct security review.
+- Optimise database operations.
+- Implement audit controls.
+- Review API permissions.
+- Validate file and token security.
+
+Phase 7 — Testing and deployment
+
+- Run automated tests.
+- Fix regressions.
+- Verify migrations.
+- Check frontend functionality.
+- Review deployment readiness.
+- Document the final implementation.
+
+22. GIT AND CHANGE MANAGEMENT
+
+Create and work on:
+
+"feature/unified-material-ui-enterprise-erp"
+
+Do not make unreviewed destructive changes to the main branch.
+
+Use meaningful commits.
+
+Preserve existing project history.
+
+Review all changes before merging.
+
+Where supported, create a pull request containing:
+
+- Implementation summary.
+- Architectural changes.
+- Database migration details.
+- Security improvements.
+- Test results.
+- Deployment instructions.
+- Known limitations.
+
+Do not merge changes that have not passed the required validation.
+
+23. FINAL ACCEPTANCE CRITERIA
+
+The transformation is complete only when all the following conditions are satisfied:
+
+1. The entire application uses one consistent Material UI design system.
+2. Legacy competing interface designs have been removed or replaced.
+3. Django administration follows the unified Material UI design while retaining its administrative functionality and security.
+4. Staff accounts and SACCO member records are managed separately.
+5. Authorised staff can create, view and edit SACCO members.
+6. Super Admin can assign, change and revoke staff roles.
+7. Only authorised Super Admins can grant Super Admin privileges.
+8. Super Admin can configure the entire system through a central configuration interface.
+9. Critical configuration changes are recorded in audit logs.
+10. Vehicle Compliance Cards contain secure QR codes.
+11. QR verification works through a public HTTPS endpoint without exposing private information.
+12. Compliance verification accurately reflects current certificate status.
+13. Super Admin can upload, preview, replace and manage the company logo.
+14. The central company logo appears automatically in newly generated PDFs and Excel documents, as well as other supported official documents.
+15. Previously issued documents retain their original branding unless formally reissued.
+16. Dashboard statistics reflect actual database records.
+17. Financial operations preserve accounting integrity.
+18. Membership numbers remain unique under concurrent registrations.
+19. Existing integrations continue to function.
+20. Backend and API permissions prevent unauthorised access.
+21. Automated tests cover critical workflows.
+22. Database migrations preserve existing production data.
+23. Deployment and backup procedures are documented.
+24. No unresolved critical security or data-integrity defects remain.
+
+24. FINAL DELIVERY REPORT
+
+At the end of implementation, provide a clear report containing:
+
+- Repository audit findings.
+- Bugs identified and fixed.
+- Modules implemented or upgraded.
+- Material UI changes.
+- Staff/member separation.
+- Super Admin capabilities.
+- QR compliance verification implementation.
+- Central branding and document-generation implementation.
+- Database changes and migrations.
+- Security improvements.
+- Test results, including failures.
+- Deployment readiness.
+- Files changed.
+- Git branch and commit references.
+- Pull request link, if created.
+- Outstanding issues or limitations.
+
+Clearly distinguish between completed, partially completed and unimplemented features.
+
+Final instruction: Treat this as a complete enterprise SACCO ERP engineering project, not a cosmetic redesign. Prioritise data integrity, security, maintainability, operational reliability and consistent user experience. Preserve existing business data and working functionality throughout the transformation.

@@ -86,18 +86,18 @@ class Command(BaseCommand):
             }
         )
 
-        # Seed Vehicles for Member 1
+        # Seed Commercial Trucks & Trailers for Member 1
         v1, _ = Vehicle.objects.get_or_create(
             registration_number='KDA 101A',
             defaults={
-                'chassis_number': 'CHS-TOYOTA-101A',
-                'engine_number': 'ENG-5L-101A',
-                'make': 'Toyota',
-                'model': 'HiAce Shark',
+                'chassis_number': 'CHS-ISUZU-101A',
+                'engine_number': 'ENG-4HK1-101A',
+                'make': 'Isuzu',
+                'model': 'FRR 90 Cargo Truck',
                 'year_of_manufacture': 2021,
-                'category': VehicleCategory.MATATU_14,
+                'category': VehicleCategory.MEDIUM_TRUCK,
                 'fuel_type': FuelType.DIESEL,
-                'carrying_capacity': 14,
+                'carrying_capacity': 10,
                 'color': 'White with Navy & Orange Stripes',
                 'current_owner': m1,
                 'status': VehicleStatus.ACTIVE,
@@ -108,14 +108,14 @@ class Command(BaseCommand):
         v2, _ = Vehicle.objects.get_or_create(
             registration_number='KDC 202B',
             defaults={
-                'chassis_number': 'CHS-ISUZU-202B',
-                'engine_number': 'ENG-4HG1-202B',
-                'make': 'Isuzu',
-                'model': 'NQR Minibus',
+                'chassis_number': 'CHS-ACTROS-202B',
+                'engine_number': 'ENG-OM471-202B',
+                'make': 'Mercedes-Benz',
+                'model': 'Actros 2645 Prime Mover',
                 'year_of_manufacture': 2022,
-                'category': VehicleCategory.MINIBUS_33,
+                'category': VehicleCategory.PRIME_MOVER,
                 'fuel_type': FuelType.DIESEL,
-                'carrying_capacity': 33,
+                'carrying_capacity': 28,
                 'color': 'White with Navy Stripes',
                 'current_owner': m1,
                 'status': VehicleStatus.ACTIVE,
@@ -123,19 +123,37 @@ class Command(BaseCommand):
             }
         )
 
-        # Seed Vehicles for Member 2
+        # Seed Prime Mover & Semi-Trailer for Member 2
         v3, _ = Vehicle.objects.get_or_create(
             registration_number='KDB 303C',
             defaults={
                 'chassis_number': 'CHS-SCANIA-303C',
                 'engine_number': 'ENG-DC13-303C',
                 'make': 'Scania',
-                'model': 'F310 Tour Bus',
+                'model': 'R450 Heavy Truck',
                 'year_of_manufacture': 2023,
-                'category': VehicleCategory.BUS_50_PLUS,
+                'category': VehicleCategory.HEAVY_TRUCK,
                 'fuel_type': FuelType.DIESEL,
-                'carrying_capacity': 54,
+                'carrying_capacity': 25,
                 'color': 'White with Full SACCO Livery',
+                'current_owner': m2,
+                'status': VehicleStatus.ACTIVE,
+                'created_by': admin_user,
+            }
+        )
+
+        v4, _ = Vehicle.objects.get_or_create(
+            registration_number='ZA 4012',
+            defaults={
+                'chassis_number': 'CHS-TRL-4012',
+                'engine_number': None,
+                'make': 'CIM',
+                'model': '40ft Tri-Axle Flatbed Trailer',
+                'year_of_manufacture': 2023,
+                'category': VehicleCategory.SEMI_TRAILER,
+                'fuel_type': FuelType.NONE,
+                'carrying_capacity': 32,
+                'color': 'White with SACCO Stripes',
                 'current_owner': m2,
                 'status': VehicleStatus.ACTIVE,
                 'created_by': admin_user,
@@ -168,7 +186,7 @@ class Command(BaseCommand):
                 'phone_number': '+254733333331',
                 'driving_license_number': 'DL-NTSA-1001',
                 'dl_expiry_date': today + timedelta(days=365),
-                'psv_badge_number': 'PSV-2026-001',
+                'psv_badge_number': 'COM-2026-001',
                 'psv_badge_expiry': today + timedelta(days=365),
                 'emergency_contact_name': 'Amina Jama',
                 'emergency_contact_phone': '+254733333332',
@@ -191,7 +209,7 @@ class Command(BaseCommand):
                 'phone_number': '+254744444441',
                 'driving_license_number': 'DL-NTSA-1002',
                 'dl_expiry_date': today + timedelta(days=200),
-                'psv_badge_number': 'PSV-2026-002',
+                'psv_badge_number': 'COM-2026-002',
                 'psv_badge_expiry': today + timedelta(days=200),
                 'emergency_contact_name': 'Grace Wanjiku',
                 'emergency_contact_phone': '+254744444442',

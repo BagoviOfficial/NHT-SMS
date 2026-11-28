@@ -1,7 +1,6 @@
 import json
-from django.shortcuts import render, redirect
+from django.shortcuts import redirect
 from django.views import View
-from django.views.generic import TemplateView
 from django.http import JsonResponse, HttpResponse
 from django.contrib import messages
 from django.utils import timezone
@@ -13,6 +12,8 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from nht_sacco.config.mui import render_mui_app
+
 from .models import (
     SystemConfiguration,
     ConfigurationHistory,
@@ -22,6 +23,7 @@ from .models import (
     ConfigDataType,
     CompanyProfile,
     BrandingVersion,
+    NumberSequence,
 )
 from .crypto import CryptoService
 from .services import ConfigurationService
@@ -45,6 +47,7 @@ from .serializers import (
     ConfigurationChangeReviewSerializer,
     CompanyProfileSerializer,
     BrandingVersionSerializer,
+    NumberSequenceSerializer,
 )
 
 
@@ -52,43 +55,20 @@ from .serializers import (
 # Web Administration Portal Views
 # ==============================================================================
 
-class SystemSettingsView(AuditorOrAdminRequiredMixin, TemplateView):
+class SystemSettingsView(AuditorOrAdminRequiredMixin, View):
     """
     Main Administration & Configuration Centre Web Portal.
-    Presents categorized settings, secrets masking, rollback timeline, and live diagnostics.
+    Renders the unified Material UI SPA directly on the Settings & Branding route.
     """
-    template_name = 'admin/settings/settings_index.html'
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        all_configs = SystemConfiguration.objects.all().order_by('category', 'key')
-        
-        # Prepare masked/display values for each item
-        configs_by_cat = {
-            ConfigCategory.INTEGRATIONS: [],
-            ConfigCategory.BUSINESS: [],
-            ConfigCategory.APPLICATION: [],
-            ConfigCategory.SECURITY: [],
-            ConfigCategory.SYSTEM: [],
-        }
-
-        for c in all_configs:
-            if c.is_secret:
-                c.display_val = CryptoService.mask_secret(c.raw_value)
-            else:
-                c.display_val = ConfigurationService._cast_value(c.raw_value, c.data_type, is_secret=False)
-            
-            cat_list = configs_by_cat.get(c.category)
-            if cat_list is not None:
-                cat_list.append(c)
-
-        ctx['configs_by_cat'] = configs_by_cat
-        ctx['categories'] = ConfigCategory.choices
-        ctx['active_tab'] = self.request.GET.get('tab', 'INTEGRATIONS')
-        ctx['history_logs'] = ConfigurationHistory.objects.all().select_related('setting').order_by('-timestamp')[:20]
-        ctx['health_logs'] = IntegrationHealthLog.objects.all().order_by('-tested_at')[:10]
-        ctx['is_auditor_only'] = getattr(self.request.user, 'role', None) == 'AUDITOR' and not self.request.user.is_superuser
-        return ctx
+    def get(self, request, *args, **kwargs):
+        is_auditor_only = getattr(request.user, 'role', None) == 'AUDITOR' and not request.user.is_superuser
+        return render_mui_app(
+            request,
+            initial_route='settings',
+            page_title='System Configuration & Branding',
+            page_data={'is_auditor_only': is_auditor_only},
+            extra_context={'is_auditor_only': is_auditor_only},
+        )
 
 
 class SystemSettingsUpdateView(SystemAdminRequiredMixin, View):
@@ -214,25 +194,9 @@ class ProviderConnectionTestView(AuditorOrAdminRequiredMixin, View):
     """
     def post(self, request, *args, **kwargs):
         provider = request.POST.get('provider', '').lower()
-        if provider == 'daraja':
-            res = DiagnosticService.check_daraja()
-        elif provider == 'africastalking':
-            res = DiagnosticService.check_africastalking()
-        elif provider == 'whatsapp':
-            res = DiagnosticService.check_whatsapp()
-        elif provider == 'smtp':
-            res = DiagnosticService.check_smtp()
-        elif provider == 'postgresql':
-            res = DiagnosticService.check_database()
-        elif provider == 'redis':
-            res = DiagnosticService.check_redis()
-        elif provider == 'celery':
-            res = DiagnosticService.check_celery()
-        elif provider == 'all':
-            res = DiagnosticService.run_all_diagnostics(user=request.user)
-        else:
+        res = DiagnosticService.run_provider_check(provider, user=request.user)
+        if res is None:
             return JsonResponse({'status': 'error', 'message': f"Unknown provider '{provider}'"}, status=400)
-
         return JsonResponse(res)
 
 
@@ -249,6 +213,26 @@ class ConfigurationViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuditorOrSystemAdmin]
     filterset_fields = ['category', 'is_secret', 'data_type']
     search_fields = ['key', 'title', 'description']
+
+    @action(detail=True, methods=['get'])
+    def history(self, request, pk=None):
+        config = self.get_object()
+        entries = config.history.order_by('-version')[:25]
+        return Response(ConfigurationHistorySerializer(entries, many=True).data)
+
+
+class NumberSequenceViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = NumberSequence.objects.all().order_by('prefix', '-year')
+    serializer_class = NumberSequenceSerializer
+    permission_classes = [IsAuditorOrSystemAdmin]
+    search_fields = ['prefix']
+
+
+class IntegrationHealthLogViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = IntegrationHealthLog.objects.all().order_by('-tested_at')
+    serializer_class = IntegrationHealthLogSerializer
+    permission_classes = [IsAuditorOrSystemAdmin]
+    filterset_fields = ['service_name', 'status']
 
 
 class ConfigurationUpdateAPIView(views.APIView):
@@ -381,24 +365,7 @@ class ProviderTestAPIView(views.APIView):
         serializer = ConnectionTestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         provider = serializer.validated_data['provider']
-
-        if provider == 'daraja':
-            res = DiagnosticService.check_daraja()
-        elif provider == 'africastalking':
-            res = DiagnosticService.check_africastalking()
-        elif provider == 'whatsapp':
-            res = DiagnosticService.check_whatsapp()
-        elif provider == 'smtp':
-            res = DiagnosticService.check_smtp()
-        elif provider == 'postgresql':
-            res = DiagnosticService.check_database()
-        elif provider == 'redis':
-            res = DiagnosticService.check_redis()
-        elif provider == 'celery':
-            res = DiagnosticService.check_celery()
-        elif provider == 'all':
-            res = DiagnosticService.run_all_diagnostics(user=request.user)
-
+        res = DiagnosticService.run_provider_check(provider, user=request.user)
         return Response(res, status=status.HTTP_200_OK)
 
 

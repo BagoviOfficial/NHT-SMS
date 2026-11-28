@@ -81,12 +81,12 @@ export function ComplianceCardsPage({ notify }) {
 
             ${stats && html`
                 <${MUI.Grid} container spacing=${2} sx=${{ mb: 3 }}>
-                    <${MUI.Grid} item xs=${6} sm=${4} md=${2}><${StatCard} title="Valid" value=${stats.valid} icon="verified_user" color="success" /></${MUI.Grid}>
-                    <${MUI.Grid} item xs=${6} sm=${4} md=${2}><${StatCard} title="Expiring ≤30d" value=${stats.expiring_30_days} icon="schedule" color="warning" /></${MUI.Grid}>
-                    <${MUI.Grid} item xs=${6} sm=${4} md=${2}><${StatCard} title="Expired" value=${stats.expired} icon="event_busy" color="error" /></${MUI.Grid}>
-                    <${MUI.Grid} item xs=${6} sm=${4} md=${2}><${StatCard} title="Revoked" value=${stats.revoked} icon="gpp_bad" color="error" /></${MUI.Grid}>
-                    <${MUI.Grid} item xs=${6} sm=${4} md=${2}><${StatCard} title="Suspended" value=${stats.suspended} icon="pause_circle" color="warning" /></${MUI.Grid}>
-                    <${MUI.Grid} item xs=${6} sm=${4} md=${2}><${StatCard} title="Superseded" value=${stats.superseded} icon="published_with_changes" color="info" /></${MUI.Grid}>
+                    <${MUI.Grid} size=${{ xs: 6, sm: 4, md: 2 }}><${StatCard} title="Valid" value=${stats.valid} icon="verified_user" color="success" /></${MUI.Grid}>
+                    <${MUI.Grid} size=${{ xs: 6, sm: 4, md: 2 }}><${StatCard} title="Expiring ≤30d" value=${stats.expiring_30_days} icon="schedule" color="warning" /></${MUI.Grid}>
+                    <${MUI.Grid} size=${{ xs: 6, sm: 4, md: 2 }}><${StatCard} title="Expired" value=${stats.expired} icon="event_busy" color="error" /></${MUI.Grid}>
+                    <${MUI.Grid} size=${{ xs: 6, sm: 4, md: 2 }}><${StatCard} title="Revoked" value=${stats.revoked} icon="gpp_bad" color="error" /></${MUI.Grid}>
+                    <${MUI.Grid} size=${{ xs: 6, sm: 4, md: 2 }}><${StatCard} title="Suspended" value=${stats.suspended} icon="pause_circle" color="warning" /></${MUI.Grid}>
+                    <${MUI.Grid} size=${{ xs: 6, sm: 4, md: 2 }}><${StatCard} title="Superseded" value=${stats.superseded} icon="published_with_changes" color="info" /></${MUI.Grid}>
                 </${MUI.Grid}>
             `}
 
@@ -114,7 +114,7 @@ export function ComplianceCardsPage({ notify }) {
                     </${MUI.TextField}>
                 `}
                 columns=${[
-                    { key: 'certificate_number', label: 'Certificate #', render: (r) => html`<span class="nht-mono"><strong>${r.certificate_number}</strong></span>` },
+                    { key: 'certificate_number', label: 'Certificate #', render: (r) => html`<span className="nht-mono"><strong>${r.certificate_number}</strong></span>` },
                     { key: 'registration_number', label: 'Plate', render: (r) => html`<strong>${r.registration_number}</strong>` },
                     { key: 'fleet_number', label: 'Fleet #' },
                     { key: 'assigned_route_name', label: 'Route' },
@@ -160,7 +160,7 @@ export function ComplianceCardsPage({ notify }) {
                         ${vehicles.map((v) => html`<${MUI.MenuItem} key=${v.id} value=${v.id}>${v.registration_number} (${v.owner_name})</${MUI.MenuItem}>`)}
                     </${MUI.TextField}>
                     <${MUI.TextField} label="Fleet / Reference No (Optional)" fullWidth value=${form.fleet_number} onChange=${(e) => setForm({ ...form, fleet_number: e.target.value })} />
-                    <${MUI.TextField} label="Expiry Date (Defaults to +1 Year)" type="date" InputLabelProps=${{ shrink: true }} fullWidth value=${form.expiry_date} onChange=${(e) => setForm({ ...form, expiry_date: e.target.value })} />
+                    <${MUI.TextField} label="Expiry Date (Defaults to +1 Year)" type="date" slotProps=${{ inputLabel: { shrink: true } }} fullWidth value=${form.expiry_date} onChange=${(e) => setForm({ ...form, expiry_date: e.target.value })} />
                     <${MUI.TextField} label="Notes" fullWidth multiline rows=${2} value=${form.notes} onChange=${(e) => setForm({ ...form, notes: e.target.value })} />
                 </${MUI.Stack}>
             </${ResponsiveDialog}>
@@ -317,8 +317,8 @@ export function DocumentsPage({ notify }) {
                         ${vehicles.map((v) => html`<${MUI.MenuItem} key=${v.id} value=${v.id}>${v.registration_number}</${MUI.MenuItem}>`)}
                     </${MUI.TextField}>
                     <${MUI.TextField} label="Certificate / Policy Number" fullWidth value=${form.reference_number} onChange=${(e) => setForm({ ...form, reference_number: e.target.value })} />
-                    <${MUI.TextField} label="Issue Date" type="date" InputLabelProps=${{ shrink: true }} fullWidth value=${form.issue_date} onChange=${(e) => setForm({ ...form, issue_date: e.target.value })} />
-                    <${MUI.TextField} label="Expiry Date" type="date" InputLabelProps=${{ shrink: true }} fullWidth value=${form.expiry_date} onChange=${(e) => setForm({ ...form, expiry_date: e.target.value })} />
+                    <${MUI.TextField} label="Issue Date" type="date" slotProps=${{ inputLabel: { shrink: true } }} fullWidth value=${form.issue_date} onChange=${(e) => setForm({ ...form, issue_date: e.target.value })} />
+                    <${MUI.TextField} label="Expiry Date" type="date" slotProps=${{ inputLabel: { shrink: true } }} fullWidth value=${form.expiry_date} onChange=${(e) => setForm({ ...form, expiry_date: e.target.value })} />
                     <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange=${(e) => setFileObj(e.target.files?.[0] || null)} />
                 </${MUI.Stack}>
             </${ResponsiveDialog}>
@@ -452,7 +452,7 @@ export function RenewalsPage({ notify }) {
                 loading=${loading}
                 rows=${rows}
                 columns=${[
-                    { key: 'request_number', label: 'Request #', render: (r) => html`<span class="nht-mono">${r.request_number}</span>` },
+                    { key: 'request_number', label: 'Request #', render: (r) => html`<span className="nht-mono">${r.request_number}</span>` },
                     { key: 'member_name', label: 'Member' },
                     { key: 'vehicle_plate', label: 'Vehicle' },
                     { key: 'document_type_name', label: 'Document' },

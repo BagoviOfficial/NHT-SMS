@@ -36,7 +36,7 @@ export function MaintenancePage({ notify }) {
                 loading=${loading}
                 rows=${records}
                 columns=${[
-                    { key: 'work_order_number', label: 'Work Order', render: (r) => html`<span class="nht-mono">${r.work_order_number}</span>` },
+                    { key: 'work_order_number', label: 'Work Order', render: (r) => html`<span className="nht-mono">${r.work_order_number}</span>` },
                     { key: 'vehicle_plate', label: 'Vehicle' },
                     { key: 'type_display', label: 'Type' },
                     { key: 'scheduled_date', label: 'Scheduled' },
@@ -98,7 +98,7 @@ export function IncidentsPage({ notify }) {
                 loading=${loading}
                 rows=${rows}
                 columns=${[
-                    { key: 'ticket_number', label: 'Ticket #', render: (r) => html`<span class="nht-mono">${r.ticket_number}</span>` },
+                    { key: 'ticket_number', label: 'Ticket #', render: (r) => html`<span className="nht-mono">${r.ticket_number}</span>` },
                     { key: 'title', label: 'Subject' },
                     { key: 'severity', label: 'Severity', render: (r) => html`<${StatusChip} value=${r.severity === 'CRITICAL' || r.severity === 'HIGH' ? 'REJECTED' : 'PENDING'} label=${r.severity} />` },
                     { key: 'vehicle_plate', label: 'Vehicle', render: (r) => r.vehicle_plate || '—' },
@@ -177,7 +177,7 @@ export function GovernancePage({ notify }) {
                     loading=${loading}
                     rows=${meetings}
                     columns=${[
-                        { key: 'meeting_number', label: 'Meeting #', render: (r) => html`<span class="nht-mono">${r.meeting_number}</span>` },
+                        { key: 'meeting_number', label: 'Meeting #', render: (r) => html`<span className="nht-mono">${r.meeting_number}</span>` },
                         { key: 'committee_name', label: 'Committee' },
                         { key: 'title', label: 'Purpose' },
                         { key: 'scheduled_date', label: 'Date', render: (r) => formatDateTime(r.scheduled_date) },
@@ -190,7 +190,7 @@ export function GovernancePage({ notify }) {
                     loading=${loading}
                     rows=${resolutions}
                     columns=${[
-                        { key: 'resolution_number', label: 'Resolution #', render: (r) => html`<span class="nht-mono">${r.resolution_number}</span>` },
+                        { key: 'resolution_number', label: 'Resolution #', render: (r) => html`<span className="nht-mono">${r.resolution_number}</span>` },
                         { key: 'title', label: 'Title' },
                         { key: 'votes_for', label: 'For / Against', render: (r) => `${r.votes_for} / ${r.votes_against}` },
                         { key: 'status', label: 'Status', render: (r) => html`<${StatusChip} value=${r.status} />` },

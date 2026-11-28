@@ -265,7 +265,8 @@ class TestElevenRoleRBACAndSPA:
     def test_spa_shell_and_no_hardcoded_passwords(self, client, roles_bundle):
         login_html = client.get(reverse('accounts:login')).content.decode('utf-8')
         assert 'Admin@NHT2026!' not in login_html
-        assert '/app/' in login_html
+        assert '@mui/material' in login_html
+        assert '/static/spa/app.js' in login_html
 
         spa_res = client.get('/app/')
         assert spa_res.status_code == 200

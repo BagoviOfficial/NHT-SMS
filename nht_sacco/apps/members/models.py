@@ -5,8 +5,8 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
 class MembershipCategory(models.TextChoices):
-    INDIVIDUAL_OPERATOR = 'INDIVIDUAL', _('Individual Matatu / PSV Owner')
-    FLEET_OWNER = 'FLEET_OWNER', _('Fleet Owner (Multiple Vehicles)')
+    INDIVIDUAL_OPERATOR = 'INDIVIDUAL', _('Individual Truck / Commercial Owner')
+    FLEET_OWNER = 'FLEET_OWNER', _('Fleet Owner (Multiple Trucks & Trailers)')
     CORPORATE = 'CORPORATE', _('Corporate Transport Operator')
 
 class MembershipStatus(models.TextChoices):
